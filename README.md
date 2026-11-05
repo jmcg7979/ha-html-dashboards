@@ -45,7 +45,7 @@ You'll be editing JavaScript, though mostly lists of entity ids.
 7. **Build it:** `engine/_dev/assemble.sh sites/<yours>/dash /tmp/dash`.
 8. **Copy `/tmp/dash/` to `/config/www/dash/`** on Home Assistant.
 9. **Open `http://<ha>:8123/local/dash/start.html?d=main`.** HA doesn't serve a bare folder URL, so include the file name.
-10. **On phones,** add a Webpage dashboard in the HA app with `/local/dash/start.html?d=mobile`.
+10. **To open it from HA's sidebar,** add a Webpage dashboard with that same URL (`/local/dash/start.html?d=mobile` on phones). The dashboard hides HA's top bar there; add `&chrome=1` to keep it.
 
 ## Security
 Don't take this section's word for it: it's a map for checking, and the prompt above asks your tool to do that.

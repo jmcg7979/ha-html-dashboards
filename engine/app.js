@@ -9,7 +9,7 @@ import { initPopups } from './core/popup.js';
 import { initAlerts, alertCardTypes } from './core/alerts.js';
 import { ambient } from './core/ambient.js';
 import { icon, esc } from './core/dom.js';
-import { phoneNav, markView } from './core/phone.js';
+import { phoneNav, markView, hideHAChrome } from './core/phone.js';
 import { fluidScale } from './core/scale.js';
 import { reloadWhenIdle } from './core/reload.js';
 import { startDiscovery } from './core/discover.js';
@@ -31,6 +31,7 @@ async function boot() {
     document.documentElement.dataset.adapted = 'phone'; dash.views = dash.views.map((v) => (v.pages ? phoneView(v) : v)); }
   fluidScale(profile, parseFloat(q.get('s')) || 0);   // --s follows the screen (core/scale.js); ?s= forces it
   document.title = dash.title || 'Home';
+  hideHAChrome();   // inside a Webpage dashboard: no HA top bar above ours (core/phone.js)
   await completeLogin();
   if (dash.ambient) ambient(dash.ambient.sun, dash.ambient.weather);
 

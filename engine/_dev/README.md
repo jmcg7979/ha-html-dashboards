@@ -10,7 +10,7 @@ Plain HTML/CSS/JS modules, no build step. Served by HA from `/config/www/dash/` 
 | `app.js` | Boot: loads `dashboards/<d>.js`, applies the profile, builds the view, connects |
 | `home.js` (site) | The site: entity ids and groups shared by every dashboard |
 | `dashboards/*.js` (site) | One file per dashboard: views, sections, cards and their options (layout only). `main.js` = wall panel / desktop, `mobile.js` = phones |
-| `core/phone.js` | Phone shell: bottom tab bar (`tabs` in the dashboard), More sheet, swipe-down sheets, hides HA's top bar inside a Webpage dashboard (`&chrome=1` keeps it) |
+| `core/phone.js` | Phone shell: bottom tab bar (`tabs` in the dashboard), More sheet, swipe-down sheets, hides HA's top bar inside a full-page Webpage dashboard in every layout (`&chrome=1` keeps it) |
 | `cards/*.js` | One file per card type. `export default (cfg, ctx) => HTMLElement` |
 | `core/auth.js` | Sign-in (reuses the browser's HA login, else HA's sign-in page; no tokens in files) |
 | `core/ha.js` | Websocket, filtered `subscribe_entities`, service calls, signed paths |

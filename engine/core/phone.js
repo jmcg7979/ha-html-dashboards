@@ -36,7 +36,6 @@ export function phoneNav(dash, name) {
     if (ev.target === sheet) closeMore();
   });
   swipeToClose(sheet.querySelector('.popup'), closeMore);
-  if (host && new URLSearchParams(location.search).get('chrome') !== '1') hideHAChrome(host);
   safeArea();
   window.addEventListener('dash:camfull', (e) => camFull(e.detail, host));
 }
@@ -124,22 +123,28 @@ export function haHost() {
   try { const f = window.frameElement; return f && f.ownerDocument && f.ownerDocument !== document ? f : null; } catch (e) { return null; }
 }
 
-// HA's top bar for a Webpage dashboard lives in a shadow root above our iframe (hass-subpage, or a top-app-bar in newer
-// releases). Style it away from in here; if HA's structure changes, nothing happens and HA's bar simply stays.
-// The More sheet's "Home Assistant menu" replaces the bar's menu button.
-function hideHAChrome(frame) {
+// HA's top bar for a Webpage dashboard lives in a shadow root above our iframe: hui-root in a Lovelace panel view, or hass-subpage /
+// a top-app-bar in ha-panel-iframe. Style it away from in here, in every layout; &chrome=1 keeps it, and if HA's structure changes,
+// nothing happens and HA's bar simply stays. A Webpage card inside a normal dashboard is left alone: that bar belongs to the dashboard.
+// On a phone, the More sheet's "Home Assistant menu" replaces the bar's menu button.
+export function hideHAChrome(frame = haHost()) {
+  if (!frame || new URLSearchParams(location.search).get('chrome') === '1') return;
   const css = `.toolbar, .header, ha-top-app-bar-fixed .mdc-top-app-bar, .top-app-bar { display: none !important; }
-    :host { --header-height: 0px !important; } .content, .main-content { top: 0 !important; padding-top: 0 !important; height: 100% !important; }`;
-  const add = (root) => { if (root.querySelector('style[data-dash]')) return; const s = frame.ownerDocument.createElement('style'); s.dataset.dash = '1'; s.textContent = css; root.appendChild(s); };
-  // every element with a shadow root between our iframe and <ha-panel-iframe> (inclusive): that's where the bar is
-  let n = frame;
-  for (let hops = 0; n && hops < 12; hops++) {
+    :host { --header-height: 0px !important; } .content, .main-content { top: 0 !important; padding-top: 0 !important; height: 100% !important; }
+    #view, hui-view-container { padding-top: 0 !important; min-height: 100vh !important; }`;
+  const hosts = [];
+  let n = frame, panel = false;   // every element with a shadow root from our iframe up to the bar's owner: the bar is in one of them
+  for (let hops = 0; n && hops < 16; hops++) {
     const p = n.parentNode;
     n = p && p.nodeType === 11 ? p.host : p;          // 11 = a shadow root: continue from its host
     if (!n || n.nodeType !== 1) break;
-    if (n.shadowRoot) add(n.shadowRoot);
-    if (n.localName === 'ha-panel-iframe') break;
+    if (n.localName === 'hui-panel-view') panel = true;
+    if (n.shadowRoot) hosts.push(n);
+    if (n.localName === 'ha-panel-iframe') { panel = true; break; }
+    if (n.localName === 'hui-root') break;
   }
+  if (!panel) return;
+  hosts.forEach(({ shadowRoot: root }) => { if (root.querySelector('style[data-dash]')) return; const s = frame.ownerDocument.createElement('style'); s.dataset.dash = '1'; s.textContent = css; root.appendChild(s); });
   frame.style.height = '100%';
 }
 
