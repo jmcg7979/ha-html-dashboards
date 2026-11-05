@@ -1,22 +1,30 @@
-/* ---------- weather ---------- */
-.weather { display: flex; flex-direction: column; gap: var(--sp-10); }
+/* ---------- weather (Home) ---------- */
+/* A Main page has to fit the screen; a phone page scrolls, so the same card takes more room there (same materials, different density). */
+.weather { --wx-icon: calc(76px * var(--s)); --wx-temp: var(--fs-hero-l); --wx-chart: calc(106px * var(--s)); --wx-day-icon: calc(28px * var(--s)); display: flex; flex-direction: column; gap: var(--sp-8); }
+:root[data-profile="phone"] .weather { --wx-icon: calc(100px * var(--s)); --wx-temp: var(--fs-hero-xl); --wx-chart: calc(164px * var(--s)); --wx-day-icon: calc(42px * var(--s)); gap: var(--sp-14); }
 .wnow { display: flex; align-items: center; gap: var(--sp-8); margin-top: calc(-4px * var(--s)); }
-.wicon img { width: calc(76px * var(--s)); height: calc(76px * var(--s)); display: block; margin: calc(-8px * var(--s)) calc(-4px * var(--s)); }
-.wtemp { font: 600 var(--fs-hero-l)/1 var(--font-display); letter-spacing: -0.03em; font-variation-settings: "opsz" 96; }
+.wicon img { width: var(--wx-icon); height: var(--wx-icon); display: block; margin: calc(-8px * var(--s)) calc(-4px * var(--s)); }
+.wtemp { font: 600 var(--wx-temp)/1 var(--font-display); letter-spacing: -0.03em; font-variation-settings: "opsz" 96; }
 .wdesc { min-width: 0; padding-left: var(--sp-6); }
-.wfacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
-.wfacts > div { display: flex; flex-direction: column; }
-.wfacts b { font-size: var(--fs-name); font-weight: var(--fw-strong); }
-.wcurve { width: 100%; height: calc(98px * var(--s)); overflow: visible; }
+.weather .wcond { font-size: var(--fs-title); }
+.weather .wxhours { height: var(--wx-chart); }
+.weather .wfacts { padding: var(--sp-8) 0; }
+.weather .wfacts .sti b { font: 600 var(--fs-name)/1.3 var(--font); letter-spacing: 0; }
+:root[data-profile="phone"] .weather .wfacts { padding: var(--sp-12) 0; }
+:root[data-profile="phone"] .weather .wfacts .stl { font-size: var(--fs-detail); }
+:root[data-profile="phone"] .weather .wfacts .sti b { font: 600 var(--fs-figure)/1.2 var(--font-display); letter-spacing: -0.01em; }
+/* the next days: one well, hairlines between; the rain line is always there, so a rainy day doesn't change the height */
+.wdays { display: grid; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); padding: var(--sp-6) 0; border-radius: var(--tile-radius); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); }
+:root[data-profile="phone"] .wdays { padding: var(--sp-12) 0; }
+.wdays:empty { display: none; }
+.wday { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; border-left: 1px solid var(--hairline); }
+.wday:first-child { border-left: 0; }
+.wday img { width: var(--wx-day-icon); height: var(--wx-day-icon); }
+.wdn { font-size: var(--fs-detail); color: var(--text-2); }
+.wdt { display: flex; align-items: baseline; gap: var(--sp-4); }
+.wdt b { font-size: var(--fs-item); font-weight: var(--fw-strong); }
+.wdt span { font-size: var(--fs-detail); color: var(--text-2); }
+.wpp { min-height: 1lh; font-size: var(--fs-meta); color: rgb(var(--mist)); font-weight: 600; }
+/* drawings shared with the Weather page's chart (cards/wx-hours.js) */
 .wline { fill: none; stroke: rgb(var(--lamp)); stroke-width: 2; stroke-linecap: round; }
 .wdot { fill: var(--ink); stroke: rgb(var(--lamp)); stroke-width: 1.6; }
-.wt { fill: var(--text); font: 600 10px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
-.wh { fill: var(--text-3); font: 500 9.5px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
-.wrain { fill: rgb(var(--mist)); font: 600 9.5px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
-.wdays { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-4); }
-.wday { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: var(--sp-6) 0; border-radius: var(--r-12); background: var(--veil); }
-.wday img { width: calc(36px * var(--s)); height: calc(36px * var(--s)); }
-.wday b { font-size: var(--fs-sub); }
-.wday .sub { font-size: var(--fs-small); }
-.wpp { font-size: var(--fs-micro); color: rgb(var(--mist)); font-weight: 600; }
-

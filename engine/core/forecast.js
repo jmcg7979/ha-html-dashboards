@@ -1,10 +1,11 @@
 // Shared forecast loader: weather.get_forecasts per entity + type, cached and refreshed every 30 min.
 // forecast(entity, 'hourly' | 'daily' | 'twice_daily', (list, meta) => {}, fallback) calls back now (if cached) and on every refresh.
-// fallback { lat, lon }: when HA returns no forecast (the NWS entity goes unavailable whenever its observation station
+// fallback { lat?, lon? } (left out: HA's home location, core/location.js): when HA returns no forecast (the NWS entity goes unavailable whenever its observation station
 // stops reporting, and HA skips unavailable entities), the same NWS forecast is read straight from api.weather.gov in the
 // browser, mapped to HA's format; meta = { source: 'weather.gov', updated: Date } then (null = HA). HA is tried again on every refresh.
 // Both failing: the last list comes again with meta = { failed: true, updated: Date }, so a card can say how old it is.
 import { request, onReady, connected } from './ha.js';
+import { where } from './location.js';
 import { timeOpts } from './units.js';
 
 const cache = {};
@@ -15,7 +16,7 @@ export function forecast(entity, type, fn, fallback) {
     c = cache[k] = { list: null, meta: null, fns: new Set(), fb: fallback };
     const done = (list, meta) => { c.list = list; c.meta = meta; c.at = new Date(); c.fns.forEach((f) => f(list, meta)); };
     const lost = () => { if (c.list) { c.meta = { failed: true, updated: c.at }; c.fns.forEach((f) => f(c.list, c.meta)); } };
-    const direct = () => (c.fb && (type === 'hourly' || type === 'twice_daily') ? nwsDirect(c.fb, type).then((r) => done(r.list, { source: 'weather.gov', updated: r.updated })) : Promise.reject());
+    const direct = () => (c.fb && (type === 'hourly' || type === 'twice_daily') ? where(c.fb).then((at) => (at ? nwsDirect(at, type) : Promise.reject(new Error('no location')))).then((r) => done(r.list, { source: 'weather.gov', updated: r.updated })) : Promise.reject());
     const load = () => request({ type: 'call_service', domain: 'weather', service: 'get_forecasts', service_data: { type }, target: { entity_id: entity }, return_response: true })
       .then((x) => { const list = ((x.response || {})[entity] || {}).forecast || []; if (list.length) done(list, null); else return direct(); })
       .catch(() => direct().catch(lost));
@@ -26,6 +27,7 @@ export function forecast(entity, type, fn, fallback) {
     last = Date.now();
   }
   if (fallback && !c.fb) c.fb = fallback;
+  if (fallback) where(fallback);   // read it now: the fallback is needed when HA is having trouble
   c.fns.add(fn); if (c.list) fn(c.list, c.meta);
 }
 
@@ -56,6 +58,18 @@ function nwsCondition(icon, day) {
 }
 // "weather.gov · 4:52 PM" for a card's source line
 export const viaLine = (meta) => (meta && meta.failed ? `Forecast not updating · from ${meta.updated.toLocaleTimeString([], timeOpts({ hour: 'numeric', minute: '2-digit' }))}` : meta ? `weather.gov direct (HA's NWS is down) · ${meta.updated.toLocaleTimeString([], timeOpts({ hour: 'numeric', minute: '2-digit' }))}` : '');
+
+// Forecast list -> one entry per calendar day: { date, hi, lo, cond, day (has a daytime period), short, pp, text: [[Day|Night, words]] }.
+// Takes both shapes: 'twice_daily' (a day and a night period per date) and 'daily' (one entry, low in templow).
+export function byDay(list) {
+  const by = new Map();
+  list.forEach((p) => { const dt = new Date(p.datetime), k = dt.toDateString(); if (!by.has(k)) by.set(k, { date: dt, text: [] }); const d = by.get(k);
+    if (p.is_daytime !== false) { d.hi = p.temperature; d.cond = p.condition; d.day = true; d.short = p.short_description || p.detailed_description; if (p.templow != null) d.lo = p.templow; }
+    else { d.lo = p.temperature; if (!d.cond) { d.cond = p.condition; d.short = p.short_description || p.detailed_description; } }
+    d.pp = Math.max(d.pp || 0, p.precipitation_probability || 0);
+    if (p.detailed_description) d.text.push([p.is_daytime === false ? 'Night' : 'Day', p.detailed_description]); });
+  return [...by.values()];
+}
 
 // HA condition -> Meteocons file (assets/weather) and words
 export const ICON = { 'clear-night': 'clear-night', sunny: 'clear-day', partlycloudy: 'partly-cloudy-day', cloudy: 'cloudy', fog: 'fog', rainy: 'rain', pouring: 'rain', lightning: 'thunderstorms', 'lightning-rainy': 'thunderstorms-rain', snowy: 'snow', 'snowy-rainy': 'sleet', hail: 'hail', windy: 'wind', 'windy-variant': 'wind', exceptional: 'not-available' };

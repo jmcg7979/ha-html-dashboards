@@ -63,6 +63,10 @@ Live video, events and recordings all go through the [Frigate integration](https
 ## Media
 `core/players.js`. One entry in `players` can be up to three HA entities: `entity` (Cast: what's playing, art), `power` (Android TV Remote: real power, apps, volume), `ma` (Music Assistant: queue; defaults to `<entity>_ma`). Controls appear only if an entity supports them, so a plain `media_player` works with `{ entity, name }`. `group: true` marks a speaker group. Each player needs its `#media-<object id>` pop-up; the example builds them in a loop.
 
+What's shown depends on what each app tells Cast: Spotify, YouTube, SoundCloud give title and artist; HBO Max a title; Hulu, Netflix and Prime Video nothing beyond playing or paused, and Hulu a position. `core/apps.js` gives those a logo and colour instead; add an app there (Cast `app_name`, Android TV Remote package, colour, logo).
+
+Which entity is believed: a TV's `power` entity reading `off` overrides Cast, because Spotify on a Chromecast follows the account and reports a session while the TV is off. Music Assistant counts only with an `active_queue`; without one it is mirroring Cast. It supplies art but is not a source. An app marked `follows` in `core/apps.js` counts on a TV only when it is in front (or, playing, behind the screensaver).
+
 ## Vacuum
 The `vacuum` tile and the buttons work with any `vacuum`. The `area-pick` card calls `vacuum.clean_area`, so `areas` (`[[id, 'Name'], …]`) must use ids your integration accepts. `image` shows a map if you have an `image` entity for it. `fan_speed` and `fan_speed_list` are standard attributes.
 
@@ -75,6 +79,7 @@ The `vacuum` tile and the buttons work with any `vacuum`. The `area-pick` card c
 - `weather` card: any `weather` entity that supports forecasts through `weather.get_forecasts`, anywhere in the world.
 - `wx-now`, `wx-days`, `wx-hours` and `radar` are built for the US: the NWS integration, api.weather.gov, and radar and METAR from the Iowa Environmental Mesonet. Outside the US, remove the Weather view and keep the `weather` card.
 - These cards fetch from the browser when HA has no data: `api.weather.gov`, `api.open-meteo.com`, `mesonet.agron.iastate.edu`.
+- Location comes from HA after sign-in (Settings > System > General), so leave `lat` / `lon` out: files under `/local` are readable without a login. A card's own `lat` / `lon` override it.
 - The `weather` card shows HA's own numbers and units. `wx-*` is °F and mph.
 - `nws.iem` (`{ station, network, name }`) adds an airport's METAR. `nws.now` is `sensor.outdoor_temperature` from `weather_now.yaml`; leave it out and the browser picks the freshest source itself.
 

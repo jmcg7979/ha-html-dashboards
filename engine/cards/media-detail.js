@@ -2,14 +2,16 @@
 // { type: 'media-detail', player: { entity, name, power, remote, ma, apps }, targets: [{ entity, name, icon }], apps: [{ name, pkg }] }
 //   left:  big art, title / artist / album, progress (tap to seek), transport, volume, power + stop
 //   right: tabs — Up next (Music Assistant queue), Play on (move the music to another MA player/group), Remote (TV d-pad, keys, apps)
-// The pop-up's backdrop takes its colours from the art (core/artcolor.js). Every control appears only if an active entity
+// The pop-up's backdrop takes its colours from the art (core/artcolor.js), or the app's when it has none (core/apps.js). A TV with
+// no Music Assistant queue shows only the Remote, no tabs: Up next and Play on would have nothing to act on. Every control appears only if an active entity
 // supports it (core/players.js picks Music Assistant, then Cast, then the TV remote).
 import { h, esc, icon, setText, setHTML, toggle, mmss } from '../core/dom.js';
 import { st, watch, tick, optimistic, tapStart } from '../core/store.js';
 import { call, request } from '../core/ha.js';
 import { run } from '../core/actions.js';
-import { F, idsOf, now, pick, maOf, maLive, sources } from '../core/players.js';
-import { artColors } from '../core/artcolor.js';
+import { F, idsOf, now, pick, maLive, sources, elapsed, statusLine } from '../core/players.js';
+import { artColors, tint } from '../core/artcolor.js';
+import { appLogo } from '../core/apps.js';
 import { artUrl, powerAction } from './media.js';
 
 const REPEAT_NEXT = { off: 'all', all: 'one', one: 'off' };
@@ -18,7 +20,7 @@ const btnI = (a, ic, label, cls = 'rbtn') => `<button class="${cls}" data-a="${a
 
 export default function mediaDetail(cfg) {
   const p = cfg.player, targets = cfg.targets || [], apps = p.apps || cfg.apps || [];
-  const ma = maOf(p), hasRemote = !!p.remote;
+  const hasRemote = !!p.remote;
   const tabs = [['next', 'Up next', 'playlist-music'], ['on', 'Play on', 'speaker-multiple'], hasRemote && ['remote', 'Remote', 'remote-tv']].filter(Boolean);
   const el = h(`<div class="mdet">
     <div class="mmain">
@@ -49,27 +51,22 @@ export default function mediaDetail(cfg) {
   let tab = null, artKey = null, popup = null, queueKey = null;
 
   // ---- backdrop from the art ----
-  const paint = (url) => {
-    popup = popup || el.closest('.popup'); if (!popup || artKey === url) return; artKey = url;
+  const paint = (url, brand) => {
+    const key = url || (brand ? brand.color : '');
+    popup = popup || el.closest('.popup'); if (!popup || artKey === key) return; artKey = key;
     popup.classList.add('amb');
-    artColors(url).then((c) => {
-      if (artKey !== url) return;
+    (url ? artColors(url) : Promise.resolve(brand ? tint(brand.color) : null)).then((c) => {
+      if (artKey !== key) return;
       popup.classList.toggle('amb-art', !!c);
       if (c) { popup.style.setProperty('--amb-a', c.a); popup.style.setProperty('--amb-b', c.b); popup.style.setProperty('--t', c.accent); }
       else { popup.style.removeProperty('--amb-a'); popup.style.removeProperty('--amb-b'); popup.style.setProperty('--t', 'var(--plum)'); }
     });
   };
 
-  // position now = media_position + time since media_position_updated_at while playing
-  const position = (n) => {
-    const a = n.a; if (a.media_position == null) return null;
-    let s = +a.media_position;
-    if (n.state === 'playing' && a.media_position_updated_at) s += (Date.now() - new Date(a.media_position_updated_at)) / 1000;
-    return a.media_duration ? Math.min(s, +a.media_duration) : s;
-  };
   const drawProgress = () => {
-    const n = now(p), d = n && +n.a.media_duration, s = n && position(n);
-    const show = !!(n && d && s != null); $('.mprog').hidden = !show; if (!show) return;
+    const n = now(p), d = n && +n.a.media_duration, s = n && elapsed(n);
+    if (n && n.bare) setText($('.martist'), statusLine(n));
+    const show = !!(n && d > 0 && s != null); $('.mprog').hidden = !show; if (!show) return;
     const w = (100 * s / d).toFixed(2) + '%'; fill.style.width = w; knob.style.left = w;
     setText(pos, mmss(s)); setText(dur, '−' + mmss(d - s)); toggle(bar, 'seek', !!pick(p, F.SEEK));
   };
@@ -110,14 +107,16 @@ export default function mediaDetail(cfg) {
     popup = popup || el.closest('.popup');
     if (!n) { if (popup) popup.classList.remove('amb-art'); artKey = null; return; }
     const url = artUrl(n.pic);
-    setHTML(art, url ? `<img alt="" src="${esc(url)}">` : `${icon(p.power ? 'television-play' : 'music')}${n.app || n.title ? `<span>${esc(n.app || n.title)}</span>` : ''}`);
-    paint(url);
+    const brand = url ? null : n.brand;
+    setHTML(art, url ? `<img alt="" src="${esc(url)}">` : brand ? appLogo(brand) : `${icon(p.power ? 'television-play' : 'music')}${n.app || n.title ? `<span>${esc(n.app || n.title)}</span>` : ''}`);
+    toggle(art, 'branded', !!brand); if (brand) art.style.setProperty('--app', brand.color);
+    paint(url, n.brand);
     setText($('.mapp'), n.app); setText($('.mtrack'), n.title); setText($('.martist'), n.artist); setText($('.malbum'), n.album);
-    $('.mapp').hidden = !n.app; $('.malbum').hidden = !n.album; $('.martist').hidden = !n.artist;
+    $('.mapp').hidden = !n.app; $('.malbum').hidden = !n.album; $('.martist').hidden = !(n.artist || (n.bare && statusLine(n)));
     drawProgress();
     const has = (bit) => !!pick(p, bit);
-    btn('prev').hidden = !has(F.PREV); btn('next').hidden = !has(F.NEXT);
-    btn('play').hidden = !(has(F.PAUSE) || has(F.PLAY));
+    btn('prev').hidden = n.bare || !has(F.PREV); btn('next').hidden = n.bare || !has(F.NEXT);
+    btn('play').hidden = n.screen || !(has(F.PAUSE) || has(F.PLAY));
     setHTML(btn('play'), icon(n.state === 'on' ? 'play-pause' : n.state === 'playing' ? 'pause' : 'play'));
     const sh = pick(p, F.SHUFFLE), rp = pick(p, F.REPEAT);
     btn('shuffle').hidden = !sh; if (sh) toggle(btn('shuffle'), 'on', !!st(sh).attributes.shuffle);
@@ -141,9 +140,10 @@ export default function mediaDetail(cfg) {
     });
     setText(el.querySelector('[data-note="on"]'), src ? 'Moves the music and its queue; it stops here.' : 'Play on works when Music Assistant is playing here.');
     if (hasRemote) { const act = (st(p.remote) || { attributes: {} }).attributes.current_activity; el.querySelectorAll('.mappb').forEach((b) => toggle(b, 'on', b.dataset.app === act)); }
-    if (!tab) {   // first draw: a TV only on in its own app opens on the remote; otherwise the queue
-      showTab(hasRemote && onlyRemote ? 'remote' : 'next');
-    } else if (tab === 'next') loadQueue(false);
+    const remoteOnly = hasRemote && !src;   // a TV with no MA queue: Up next and Play on have nothing to act on
+    $('.mtabs').hidden = remoteOnly;
+    if (!tab || (remoteOnly && tab !== 'remote')) showTab(remoteOnly ? 'remote' : 'next');
+    else if (tab === 'next') loadQueue(false);
   };
   watch([...idsOf(p), p.remote, ...targets.map((t) => t.entity)].filter(Boolean), draw);
   new IntersectionObserver((en) => { if (en[en.length - 1].isIntersecting) draw(); }).observe(el);   // the first draw runs before the card is in its pop-up

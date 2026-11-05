@@ -1,10 +1,12 @@
 /* ---------- radar: now + HRRR forecast loop (cards/radar.js) ---------- */
-.radar { position: relative; border-radius: var(--panel-radius); overflow: hidden; background: rgb(var(--deep-rgb)); box-shadow: inset 0 0 0 1px var(--edge); }
+.radar { position: relative; border-radius: var(--panel-radius); overflow: hidden; background: rgb(var(--deep-rgb)); }
 .radar .rmap { position: absolute; inset: 0; background: rgb(var(--deep-rgb)); }
+/* the map covers the card, so the panel's edge and glass go on top of it (under the controls): otherwise the dark map melts into the page */
+.radar::after { content: ""; position: absolute; inset: 0; z-index: 490; border-radius: inherit; background: var(--glass); box-shadow: inset 0 0 0 1px var(--hairline); pointer-events: none; }
 .radar .rerr { display: flex; height: 100%; align-items: center; justify-content: center; color: var(--text-2); }
 .radar .rtop { position: absolute; z-index: 500; top: var(--sp-12); left: var(--sp-12); right: var(--sp-12); display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
-.radar .rbadge { padding: var(--sp-4) var(--sp-10); border-radius: var(--r-pill); font-size: var(--fs-small); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: rgba(var(--sage), var(--a-20)); color: rgb(var(--sage)); box-shadow: inset 0 0 0 1px rgba(var(--sage), var(--a-50)); }
-.radar .rbadge.fc { background: rgba(var(--lamp), var(--a-20)); color: rgb(var(--lamp)); box-shadow: inset 0 0 0 1px rgba(var(--lamp), var(--a-50)); }
+.radar .rbadge { padding: var(--sp-4) var(--sp-10); border-radius: var(--r-pill); font-size: var(--fs-small); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: linear-gradient(rgba(var(--sage), var(--a-20)), rgba(var(--sage), var(--a-20))), rgb(var(--deep-rgb)); color: rgb(var(--sage)); box-shadow: inset 0 0 0 1px rgba(var(--sage), var(--a-50)); }
+.radar .rbadge.fc { background: linear-gradient(rgba(var(--lamp), var(--a-20)), rgba(var(--lamp), var(--a-20))), rgb(var(--deep-rgb)); color: rgb(var(--lamp)); box-shadow: inset 0 0 0 1px rgba(var(--lamp), var(--a-50)); }
 .radar .rsrc { font-size: var(--fs-micro); color: var(--text-3); background: rgba(var(--deep-rgb), .6); padding: 2px 6px; border-radius: 6px; }
 .radar .rbar { position: absolute; z-index: 500; left: var(--sp-10); right: var(--sp-10); bottom: var(--sp-10); display: flex; align-items: center; gap: var(--sp-12);
   padding: var(--sp-8) var(--sp-12); border-radius: var(--r-16); background: rgba(var(--ink-rgb), .82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: inset 0 0 0 1px var(--hairline); }

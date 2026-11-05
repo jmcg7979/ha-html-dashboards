@@ -2,13 +2,15 @@
 // While a speaker group plays, the speakers in it are folded into the group's row (its pop-up lists them).
 // { type: 'media', title: 'Playing', buttons: [...heading buttons],
 //   players: [{ entity, name, power: 'media_player.x_remote', ma: 'media_player.x_ma' }] }   (core/players.js)
-// Row: art, name, title, artist; one power button (the TV's real power when it has a remote entity, else stop casting),
+// A TV whose remote says off is never listed, and no app can claim a TV it isn't on (core/players.js).
+// Row: art, name, title, artist; an app that publishes no title and art (Hulu, Netflix…) gets its logo, colour and playing state instead (core/apps.js). One power button (the TV's real power when it has a remote entity, else stop casting),
 // next, play/pause. Tap the row for the player's pop-up (#media-<object id>: cards/media-detail.js).
 import { h, esc, icon, setText, setHTML, toggle } from '../core/dom.js';
-import { st, watch } from '../core/store.js';
+import { st, watch, tick } from '../core/store.js';
 import { run } from '../core/actions.js';
 import { origin } from '../core/auth.js';
-import { F, idsOf, isLive, now, pick, slug, collapse } from '../core/players.js';
+import { F, idsOf, isLive, now, pick, slug, collapse, statusLine } from '../core/players.js';
+import { appLogo } from '../core/apps.js';
 import heading from './heading.js';
 
 export const artUrl = (pic) => (pic ? (pic.startsWith('http') ? pic : origin + pic) : '');
@@ -35,18 +37,20 @@ export default function media(cfg, ctx) {
     list.appendChild(r);
     return { p, r, art: r.querySelector('.art'), bg: r.querySelector('.mbg'), title: r.querySelector('.mtrack'), artist: r.querySelector('.martist'), play: r.querySelector('.play'), next: r.querySelector('[data-a="next"]') };
   });
+  const line = (x, n) => setText(x.artist, n.artist || (n.bare ? statusLine(n) : n.app));
+  tick(() => rows.forEach((x) => { const n = !x.r.hidden && now(x.p); if (n && n.bare) line(x, n); }));   // the "18:52 in" counts up
   watch(cfg.players.flatMap(idsOf), () => {
     let any = false;
     const { hidden, members } = collapse(cfg.players);   // speakers inside a playing group fold into the group's row
     rows.forEach((x) => {
       const live = isLive(x.p) && !hidden.has(x.p.entity); x.r.hidden = !live; if (!live) return; any = true;
       const m = members.get(x.p.entity); x.r.style.order = m ? -1 : 0;   // a playing group goes to the top
-      const n = now(x.p), url = artUrl(n.pic);
-      setHTML(x.art, url ? `<img alt="" src="${esc(url)}">` : icon(x.p.power ? 'television-play' : 'music'));
+      const n = now(x.p), url = artUrl(n.pic), brand = url ? null : n.brand;
+      setHTML(x.art, url ? `<img alt="" src="${esc(url)}">` : brand ? appLogo(brand) : icon(x.p.power ? 'television-play' : 'music'));
+      toggle(x.r, 'branded', !!brand); if (brand) x.r.style.setProperty('--app', brand.color);
       if (x.bg.dataset.u !== url) { x.bg.dataset.u = url; x.bg.style.backgroundImage = url ? `url("${url.replace(/"/g, '%22')}")` : ''; }
-      setText(x.title, n.title); setText(x.artist, n.artist || n.app);
-      const canPlay = !!(pick(x.p, F.PAUSE) || pick(x.p, F.PLAY));
-      x.play.hidden = !canPlay; x.next.hidden = !pick(x.p, F.NEXT);
+      setText(x.title, n.title); line(x, n);
+      x.play.hidden = n.screen || !(pick(x.p, F.PAUSE) || pick(x.p, F.PLAY)); x.next.hidden = n.bare || !pick(x.p, F.NEXT);
       setHTML(x.play, icon(n.state === 'on' ? 'play-pause' : n.state === 'playing' ? 'pause' : 'play')); toggle(x.play, 'on', true);
     });
     ctx.setVisible(any);

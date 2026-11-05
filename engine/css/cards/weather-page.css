@@ -8,19 +8,21 @@
 .wxc { font: 600 var(--fs-title) var(--font); }
 .wxtext { font-size: var(--fs-sub); color: var(--text-2); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .wxdays { display: flex; flex-direction: column; gap: 2px; }
-.wxday { display: grid; grid-template-columns: calc(52px * var(--s)) calc(36px * var(--s)) calc(36px * var(--s)) calc(32px * var(--s)) minmax(0, 1fr) calc(32px * var(--s)); align-items: center; gap: 0 var(--sp-6); padding: var(--sp-6) var(--sp-6); border-radius: var(--r-10); text-align: left; font-size: var(--fs-sub); }
+.wxday { display: grid; grid-template-columns: calc(52px * var(--s)) calc(36px * var(--s)) calc(38px * var(--s)) calc(34px * var(--s)) minmax(0, 1fr) calc(34px * var(--s)); align-items: center; gap: 0 var(--sp-6); padding: var(--sp-4) var(--sp-6); border-radius: var(--r-10); text-align: left; font-size: var(--fs-item); }
+:root[data-profile="phone"] .wxday { padding-top: var(--sp-8); padding-bottom: var(--sp-8); }   /* a phone page scrolls, it has no height to save */
 .wxday.open { background: var(--veil-faint); }
 .wxdn { font-weight: 600; }
-.wxdi img { width: calc(34px * var(--s)); height: calc(34px * var(--s)); display: block; }
-.wxpp { font-size: var(--fs-small); color: rgb(var(--mist)); font-weight: 600; }
+.wxdi img { width: calc(32px * var(--s)); height: calc(32px * var(--s)); display: block; }
+:root[data-profile="phone"] .wxdi img { width: calc(38px * var(--s)); height: calc(38px * var(--s)); }
+.wxpp { font-size: var(--fs-detail); color: rgb(var(--mist)); font-weight: 600; }
 .wxlo { color: var(--text-2); text-align: right; }
 .wxhi { font-weight: 600; }
 .wxbar { position: relative; height: 6px; border-radius: 3px; background: var(--grid-line); }
 .wxbar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, rgb(var(--mist)), rgb(var(--lamp))); }
-.wxlong { grid-column: 1 / -1; font-size: var(--fs-small); color: var(--text-2); line-height: 1.45; padding: var(--sp-6) 0 var(--sp-4); }
+.wxlong { grid-column: 1 / -1; font-size: var(--fs-detail); color: var(--text-2); line-height: 1.45; padding: var(--sp-6) 0 var(--sp-4); }
 .wxlong b { color: var(--text); }
 .wxhours svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.wxarea { fill: rgba(var(--lamp), var(--a-12)); }
 .wxrain { fill: rgba(var(--mist), var(--a-35)); }
-.wxt2 { fill: var(--text); font: 600 11px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
+.wxt2 { fill: var(--text); font: 600 var(--fs-meta) var(--font); text-anchor: middle; }
+.wxrl { fill: rgb(var(--mist)); font: 600 var(--fs-meta) var(--font); text-anchor: middle; }
 

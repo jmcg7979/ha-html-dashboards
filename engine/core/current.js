@@ -5,11 +5,12 @@
 // The freshest observation no older than `maxAge` minutes wins (measured beats modelled); Open-Meteo fills in otherwise.
 // current(cfg, (c) => {}) calls back with { source, label, time (ms), condition, temperature, humidity, dew_point,
 //   wind_speed, wind_bearing, wind_gust_speed (mph), pressure (inHg), visibility (mi) } whenever anything changes.
-// cfg: { entity: 'weather.home_nws', lat, lon, iem: { station: 'ABC', network: 'KS_ASOS', name: 'Local airport' }, maxAge: 75,
+// cfg: { entity: 'weather.home_nws', lat, lon (left out: HA's home location, core/location.js), iem: { station: 'ABC', network: 'KS_ASOS', name: 'Local airport' }, maxAge: 75,
 //        ha: 'sensor.outdoor_temperature' }
 // When HA has the same logic (packages/weather_now.yaml -> `ha` sensor, attributes condition/humidity/…/source/observed),
 // that is used and the browser fetches nothing; the browser path stays as the fallback while the sensor is unavailable.
 import { st, watch } from './store.js';
+import { where } from './location.js';
 
 const MIN = 60e3;
 const kt = (v) => (v == null ? null : v * 1.15078);
@@ -75,15 +76,16 @@ export function current(cfg, fn) {
           pick(); }).catch(() => {});
       load(); setInterval(() => { if (!document.hidden) load(); }, 5 * MIN);
     }
-    if (cfg.lat != null) {
-      const load = () => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${cfg.lat}&longitude=${cfg.lon}&current=temperature_2m,relative_humidity_2m,dew_point_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=GMT&timeformat=unixtime`, { cache: 'no-store' })
+    where(cfg).then((at) => {
+      if (!at) return;
+      const load = () => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat}&longitude=${at.lon}&current=temperature_2m,relative_humidity_2m,dew_point_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=GMT&timeformat=unixtime`, { cache: 'no-store' })
         .then((r) => r.json()).then((j) => { const c = j.current; if (!c) return;
           om = { source: 'model', label: 'Open-Meteo', time: c.time * 1000, condition: wmoCondition(c.weather_code, c.is_day), temperature: c.temperature_2m, humidity: c.relative_humidity_2m,
             dew_point: c.dew_point_2m, wind_speed: c.wind_speed_10m, wind_bearing: c.wind_direction_10m, wind_gust_speed: c.wind_gusts_10m,
             pressure: c.pressure_msl != null ? c.pressure_msl * 0.02953 : null, visibility: c.visibility != null ? c.visibility / ((j.current_units || {}).visibility === 'ft' ? 5280 : 1609.34) : null };
           pick(); }).catch(() => {});
       load(); setInterval(() => { if (!document.hidden) load(); }, 10 * MIN);
-    }
+    });
   }
   watch([cfg.entity, cfg.ha].filter(Boolean), pick);
   setInterval(pick, MIN);   // ages roll over

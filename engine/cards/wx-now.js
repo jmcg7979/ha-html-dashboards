@@ -1,15 +1,16 @@
 // Weather page, conditions now (NWS). Laid out to fill a tall panel (grow: true):
 //   alerts (red banners) · hero: big icon, temperature, condition, today's high/low · tonight (and NWS text when it has some)
 //   · eight fact tiles at the bottom: wind, gusts, rain chance, humidity, dew point, pressure, sunrise, sunset.
-// If it doesn't all fit the panel (e.g. while an alert banner shows), it drops the NWS text first, then the tonight row.
+// If it doesn't all fit the panel (e.g. while an alert banner shows), it drops the NWS text first, then the tonight row, then the alert's headline.
 // "Now" comes from the freshest source (core/current.js: NWS observation, airport METAR via IEM, Open-Meteo); a line under the
 // condition names the source and the time of the reading, so an old reading is never passed off as current.
-// { type: 'wx-now', entity: 'weather.home_nws', alerts: 'sensor.nws_alerts', sun: 'sun.sun', lat, lon, iem: { station, network, name }, maxAge: 75 }
+// { type: 'wx-now', entity: 'weather.home_nws', alerts: 'sensor.nws_alerts', sun: 'sun.sun', lat, lon, iem: { station, network, name }, maxAge: 75 }   lat, lon: optional, default HA's home location
 import { h, esc, icon, setHTML } from '../core/dom.js';
 import { st, watch, tick } from '../core/store.js';
 import { forecast, TEXT, wxIcon, wxImg, compass } from '../core/forecast.js';
 import { current } from '../core/current.js';
 import { timeOpts } from '../core/units.js';
+import { stripCell } from './strip.js';
 
 export const panel = true;   // on a page: its own glass panel (core/layout.js)
 
@@ -17,7 +18,7 @@ const r = (v) => (v == null || isNaN(v) ? '–' : Math.round(v));
 const t = (iso) => (iso ? new Date(iso).toLocaleTimeString([], timeOpts({ hour: 'numeric', minute: '2-digit' })) : '–');
 
 export default function wxNow(cfg) {
-  const el = h('<div class="wxnow"><div class="wxalerts"></div><div class="wxhero"></div><div class="wxnext"></div><div class="wxfacts"></div></div>');
+  const el = h('<div class="wxnow"><div class="wxalerts"></div><div class="wxhero"></div><div class="wxnext"></div><div class="wxfacts strip"></div></div>');
   let periods = [], hours = [], cur = null;
   const draw = () => {
     const w = st(cfg.entity), sun = st(cfg.sun || 'sun.sun'); if (!w) return;
@@ -52,23 +53,23 @@ export default function wxNow(cfg) {
       ['gauge', 'Pressure', a.pressure != null ? (+a.pressure).toFixed(2) + ' in' : '–'],
       ['weather-sunset-up', 'Sunrise', sun ? t(sun.attributes.next_rising) : '–'],
       ['weather-sunset-down', 'Sunset', sun ? t(sun.attributes.next_setting) : '–']];
-    setHTML(el.querySelector('.wxfacts'), facts.map(([i, n, v]) => `<div class="wxf"><span class="sub">${icon(i)}${n}</span><b>${esc(v)}</b></div>`).join(''));
+    setHTML(el.querySelector('.wxfacts'), facts.map(([i, n, v]) => stripCell(n, '', v, icon(i))).join(''));
 
     const al = (((st(cfg.alerts) || {}).attributes || {}).Alerts || []);
     setHTML(el.querySelector('.wxalerts'), al.map((x) => `<div class="wxalert"><b>${esc(x.Event || x.Headline || 'Weather alert')}</b><span>${esc(x.Headline || '')}</span></div>`).join(''));
     fit();
   };
-  // drop the least important rows until the panel fits (never the temperature, alerts or facts)
+  // drop the least important rows until the panel fits (never the temperature, an alert's name or the facts)
   const fit = () => {
-    el.classList.remove('drop1', 'drop2');
+    el.classList.remove('drop1', 'drop2', 'drop3');
     if (!el.clientHeight) return;
-    for (const c of ['drop1', 'drop2']) { if (el.scrollHeight <= el.clientHeight + 1) return; el.classList.add(c); }
+    for (const c of ['drop1', 'drop2', 'drop3']) { if (el.scrollHeight <= el.clientHeight + 1) return; el.classList.add(c); }
   };
   new ResizeObserver(fit).observe(el);
   watch([cfg.entity, cfg.alerts, cfg.sun || 'sun.sun'], draw);
   current({ entity: cfg.entity, lat: cfg.lat, lon: cfg.lon, iem: cfg.iem, maxAge: cfg.maxAge, ha: cfg.ha }, (c) => { cur = c; draw(); });
-  forecast(cfg.entity, 'twice_daily', (l) => { periods = l; draw(); }, cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon } : null);
-  forecast(cfg.entity, 'hourly', (l) => { hours = l.filter((x) => new Date(x.datetime) > Date.now() - 3600e3); draw(); }, cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon } : null);
+  forecast(cfg.entity, 'twice_daily', (l) => { periods = l; draw(); }, { lat: cfg.lat, lon: cfg.lon });
+  forecast(cfg.entity, 'hourly', (l) => { hours = l.filter((x) => new Date(x.datetime) > Date.now() - 3600e3); draw(); }, { lat: cfg.lat, lon: cfg.lon });
   let last = 0; tick(() => { if (Date.now() - last > 60e3) { last = Date.now(); draw(); } });   // staleness and the hour roll over
   return el;
 }

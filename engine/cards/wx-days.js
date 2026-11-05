@@ -2,7 +2,7 @@
 // temperature scale; tap a day for the full day and night forecast text.
 // { type: 'wx-days', entity: 'weather.home_nws', days: 7, fallback: { lat, lon } }   fallback: see core/forecast.js
 import { h, esc, setHTML } from '../core/dom.js';
-import { forecast, wxIcon, wxImg, viaLine } from '../core/forecast.js';
+import { forecast, byDay, wxIcon, wxImg, viaLine } from '../core/forecast.js';
 
 export const panel = true;   // on a page: its own glass panel (core/layout.js)
 
@@ -24,13 +24,7 @@ export default function wxDays(cfg) {
   };
   forecast(cfg.entity, 'twice_daily', (list, meta) => {
     via = viaLine(meta);
-    const by = new Map();
-    list.forEach((p) => { const dt = new Date(p.datetime), k = dt.toDateString(); if (!by.has(k)) by.set(k, { date: dt, text: [] }); const d = by.get(k);
-      if (p.is_daytime !== false) { d.hi = p.temperature; d.cond = p.condition; d.day = true; d.short = p.short_description || p.detailed_description; }
-      else { d.lo = p.temperature; if (!d.cond) { d.cond = p.condition; d.short = p.short_description || p.detailed_description; } }
-      d.pp = Math.max(d.pp || 0, p.precipitation_probability || 0);
-      if (p.detailed_description) d.text.push([p.is_daytime === false ? 'Night' : 'Day', p.detailed_description]); });
-    days = [...by.values()].slice(0, cfg.days || 7); draw();
+    days = byDay(list).slice(0, cfg.days || 7); draw();
   }, cfg.fallback);
   el.addEventListener('click', (ev) => { const b = ev.target.closest('.wxday'); if (!b) return; open = open === +b.dataset.i ? -1 : +b.dataset.i; draw(); });
   return el;

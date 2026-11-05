@@ -14,3 +14,8 @@
 .mrow .sb { padding: 0; background: var(--hairline); color: var(--text); }
 .mrow .sb.play { background: rgba(var(--t), var(--a-90)); color: var(--ink); }
 
+/* an app with no art: its logo on a dark tile, its colour washed across the row (core/apps.js sets --app) */
+.mrow.branded .mbg { inset: 0; filter: none; opacity: 1; background: linear-gradient(100deg, rgba(var(--app), var(--a-26)), transparent 72%); }
+.mrow.branded .art { background: var(--ink); color: rgb(var(--app)); }
+.mrow.branded .art svg { width: var(--icon-btn); height: var(--icon-btn); }
+.wordmark { font: 700 var(--fs-small) var(--font-display); letter-spacing: -0.01em; text-align: center; }

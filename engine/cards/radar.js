@@ -3,8 +3,10 @@
 //   now:      nexrad-n0q-900913 (base reflectivity mosaic, every 5 minutes)
 //   forecast: hrrr::REFD-F<minutes>-<run>  (HRRR simulated reflectivity, 15-minute steps to 18 h, new run hourly ~1 h 50 min after its start)
 // Base map: CARTO dark (no labels under the radar, labels above it); CARTO needs an API key (`cartoKey`, from home.js).
+// lat, lon: optional, default HA's home location (core/location.js)
 // { type: 'radar', lat, lon, zoom: 7, height: 452, cartoKey: '…', ranges: [[3, 15], [6, 30], [12, 60]] (hours, minutes per frame), range: 1 (default index) }
 // Leaflet (vendor/) and every frame's tiles load once the card is on screen; the loop runs only while it is visible.
+import { where } from '../core/location.js';
 import { h, esc, icon, toggle } from '../core/dom.js';
 import { loadLeaflet } from './map.js';
 import { timeOpts } from '../core/units.js';
@@ -77,14 +79,15 @@ export default function radar(cfg) {
   }
 
   function start() {
-    loadLeaflet().then((lf) => {
+    Promise.all([loadLeaflet(), where(cfg)]).then(([lf, at]) => {
+      if (!at) throw new Error('no location');
       L = lf;
-      map = L.map(mapEl, { zoomControl: false, attributionControl: false, zoomSnap: 0.5 }).setView([cfg.lat, cfg.lon], cfg.zoom || 7);
+      map = L.map(mapEl, { zoomControl: false, attributionControl: false, zoomSnap: 0.5 }).setView([at.lat, at.lon], cfg.zoom || 7);
       map.createPane('radar').style.zIndex = 350; map.createPane('labels').style.zIndex = 450; map.getPane('labels').style.pointerEvents = 'none';
       const carto = (style) => `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}.png?key=${encodeURIComponent(cfg.cartoKey || '')}`;
       L.tileLayer(carto('dark_nolabels'), { maxZoom: 12 }).addTo(map);
       L.tileLayer(carto('dark_only_labels'), { maxZoom: 12, pane: 'labels' }).addTo(map);
-      L.circleMarker([cfg.lat, cfg.lon], { radius: 6, color: '#0d1017', weight: 2, fillColor: '#f2b35e', fillOpacity: 1, interactive: false, pane: 'labels' }).addTo(map);
+      L.circleMarker([at.lat, at.lon], { radius: 6, color: '#0d1017', weight: 2, fillColor: '#f2b35e', fillOpacity: 1, interactive: false, pane: 'labels' }).addTo(map);
       build();
     }).catch(() => { mapEl.innerHTML = `<div class="rerr">${esc('Radar unavailable')}</div>`; });
   }

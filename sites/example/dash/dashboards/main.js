@@ -28,7 +28,7 @@ const home = {
     ] },
     { span: 1, panel: false, cards: [
       { type: 'heading', title: 'Weather', buttons: [{ icon: 'radar', action: { view: 'weather' } }] },
-      { type: 'weather', entity: H.weather, sun: 'sun.sun', compact: true },
+      { type: 'weather', entity: H.weather, sun: 'sun.sun' },
       { type: 'heading', title: 'Calendar', buttons: [{ icon: 'calendar-month', action: { nav: '#calendar' } }] },
       { type: 'agenda', calendars: H.calendars, days: 7, limit: 3, follow: true, compact: true },
     ] },

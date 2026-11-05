@@ -29,7 +29,7 @@ const home = { id: 'home', title: 'Home', icon: 'home-variant', sections: [
     { type: 'media', title: 'Playing', players: H.players },
 
     { type: 'heading', title: 'Weather', buttons: [{ icon: 'radar', action: { view: 'weather' } }] },
-    { type: 'weather', entity: H.weather, sun: 'sun.sun', compact: true },
+    { type: 'weather', entity: H.weather, sun: 'sun.sun' },
     { type: 'heading', title: 'Coming up', buttons: [{ icon: 'calendar-month', action: { nav: '#calendar' } }] },
     { type: 'agenda', calendars: H.calendars, days: 7, limit: 4, follow: true, empty: 'Nothing this week.', compact: true },
   ] },

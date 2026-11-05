@@ -1,5 +1,5 @@
 /* ---------- contrast pass (2026-10-22): idle tiles keep a visible outline; active tiles tint as a whole ---------- */
-.tile, .rclim, .bbtn, .mrow, .people, .orow, .thermo, .trow, .wday, .chip, .imagecard { box-shadow: inset 0 0 0 1px var(--edge); }
+.tile, .rclim, .bbtn, .mrow, .people, .orow, .thermo, .trow, .chip, .imagecard { box-shadow: inset 0 0 0 1px var(--edge); }
 .tile.on { background: linear-gradient(135deg, rgba(var(--t), var(--a-26)), rgba(var(--t), var(--a-08))); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
 .tile.on > .ic.on { background: rgba(var(--t), var(--a-30)); box-shadow: 0 0 16px rgba(var(--t), var(--a-35)); }
 .tile.on .sub { color: rgb(var(--t)); }

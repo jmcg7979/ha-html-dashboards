@@ -28,6 +28,7 @@ wss.on('connection',ws=>{ ws.send(JSON.stringify({type:'auth_required'}));
   else if(m.type==='auth/current_user') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{id:process.env.MOCK_USER||'u1',name:process.env.MOCK_USER?'Wall Panel':user,is_admin:!process.env.MOCK_USER}}));
   else if(m.type==='subscribe_entities'){ subId=m.id; ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:null})); const a={}; for(const k of m.entity_ids) if(S[k]) a[k]={s:S[k].s,a:S[k].a,lc:S[k].lc}; ws.send(JSON.stringify({id:m.id,type:'event',event:{a}})); }
   else if(m.type==='ping') ws.send(JSON.stringify({id:m.id,type:'pong'}));
+  else if(m.type==='get_config') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{latitude:39.05,longitude:-95.68}}));
   else if(m.type==='get_states') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:Object.keys(S).map(k=>({entity_id:k,state:S[k].s}))}));
   else if(m.type==='logbook/get_events') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:[{when:Date.now()/1000-7200,state:'armed_away',entity_id:m.entity_ids[0],context_user_id:'u1'},{when:Date.now()/1000-3600,state:'disarmed',entity_id:m.entity_ids[0],context_user_id:'u2'}]}));
   else if(m.type==='recorder/statistics_during_period') { const r={}, P=m.period==='day'?86400e3:3600e3, first=Date.now()-40*86400e3; let t=Math.max(Date.parse(m.start_time), first); t=Math.ceil(t/P)*P;

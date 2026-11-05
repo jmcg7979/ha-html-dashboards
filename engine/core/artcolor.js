@@ -16,6 +16,12 @@ export function artColors(url) {
   return cache.get(url);
 }
 
+// The same three colours from a single 'r, g, b' colour (an app's, when it has no art).
+export function tint(color) {
+  const [r, g, b] = color.split(',').map(Number), [h, s] = hsl(r, g, b), sat = Math.min(0.75, Math.max(0.25, s));
+  return { a: rgb(h, sat, 0.34), b: rgb(h, Math.min(0.5, sat), 0.1), accent: rgb(h, Math.min(0.85, sat + 0.15), 0.74) };
+}
+
 function analyse(img) {
   const n = 24, c = document.createElement('canvas'); c.width = c.height = n;
   const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, n, n);
