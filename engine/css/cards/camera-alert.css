@@ -1,0 +1,7 @@
+/* ---------- camera alert popup: above other pop-ups, sized to the video ---------- */
+.camalert { z-index: 40; }
+.camalert .popup { width: min(96vw, calc((100vh - 2 * var(--page-pad) - 96px * var(--s)) * var(--cam-ratio, 1.523))); width: min(96vw, calc((100dvh - 2 * var(--page-pad) - 96px * var(--s)) * var(--cam-ratio, 1.523))); box-shadow: 0 0 0 3px rgb(var(--ember)), 0 28px 80px rgba(0, 0, 0, .7); border-color: transparent; }
+.camalert .phead .ic { animation: pulse 1.2s ease-in-out infinite; }
+.camalert .pbody { padding: 0 var(--sp-12) var(--sp-12); }
+.camalert .camera { border-radius: var(--r-14); }
+

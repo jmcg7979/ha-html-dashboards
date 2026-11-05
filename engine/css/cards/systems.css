@@ -1,0 +1,169 @@
+/* ---------- Systems (dashboards/systems.js): full-height pages, map, host panels, meters, traces ---------- */
+:root:not([data-profile="phone"]) .pview:has(> .vpage.fill:not([hidden])) { height: 100vh; height: 100dvh; }
+:root:not([data-profile="phone"]) .vpage.fill { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+.vpage.fill > .section { display: flex; flex-direction: column; min-height: 0; }
+/* the same for a view without tabs ({ fill: true }, e.g. Printer) */
+:root:not([data-profile="phone"]) .view.fill:not(.vpage) { height: 100vh; height: 100dvh; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+.view.fill > .section { display: flex; flex-direction: column; min-height: 0; }
+.sgrid.rows > .cell { min-height: 0; display: flex; flex-direction: column; }
+.sgrid.rows > .cell > * { flex: 1; min-height: 0; }
+.cell.glass > .chart { background: none; box-shadow: none; padding: 0; }
+.chart.fit { display: flex; flex-direction: column; height: 100%; }
+.chart.fit .cplot { flex: 1; min-height: calc(90px * var(--s)); }
+
+/* trace: a 24-hour line with a soft fill, sized by its box */
+.spark { position: relative; --t: var(--mist); }
+.spark svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.sline { fill: none; stroke: rgb(var(--t)); stroke-width: 1.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+
+/* host panel */
+.host { display: flex; flex-direction: column; gap: var(--sp-12); height: 100%; min-height: 0; --t: var(--sage); }
+.host.tappable { cursor: pointer; }
+.hh { display: flex; align-items: center; gap: var(--sp-12); }
+.hh .ic { width: var(--ic-l); height: var(--ic-l); background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); box-shadow: 0 0 22px rgba(var(--t), var(--a-20)); }
+.hh .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hname { font: 600 var(--fs-title)/1.2 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.host .hbadge { flex: none; }
+.host .hwhy.ok { background: var(--veil-faint); color: var(--text-3); font-weight: 500; }
+.host .hwhy { padding: var(--sp-8) var(--sp-12); border-radius: var(--r-12); background: rgba(var(--t), var(--a-12)); color: rgb(var(--t)); font-weight: 600; min-height: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hmeters { display: flex; flex-direction: column; gap: var(--gap); flex: 1; min-height: 0; }
+.meter { flex: 1; min-height: calc(86px * var(--s)); display: grid; grid-template-columns: calc(116px * var(--s)) minmax(0, 1fr); align-items: stretch; border-radius: var(--tile-radius);
+  background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; --t: var(--sage); }
+.mtr-a { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--sp-8) var(--sp-6); min-width: 0; }
+.mtr-g { position: relative; width: 100%; max-width: calc(96px * var(--s)); }
+.mtr-g svg { width: 100%; height: auto; display: block; overflow: visible; }
+.mtr-t { fill: none; stroke: var(--grid-line); stroke-width: 8; stroke-linecap: round; }
+.mtr-v { fill: none; stroke: rgb(var(--t)); stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 0 5px rgba(var(--t), var(--a-50))); }
+.mtr-n { position: absolute; left: 0; right: 0; bottom: -3px; text-align: center; font: 600 var(--fs-figure)/1 var(--font-display); }
+.mtr-n small { font-size: .55em; font-weight: 500; color: var(--text-2); margin-left: 1px; }
+.mtr-l { font-size: var(--fs-row); font-weight: 600; margin-top: var(--sp-6); }
+.mtr-d { font-size: var(--fs-meta); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.mtr-d:empty { display: none; }
+.mtr-s { position: relative; border-left: 1px solid var(--hairline); }
+.mtr-s .spark { position: absolute; inset: calc(26px * var(--s)) 0 0 0; }
+.mtr-hi { position: absolute; top: var(--sp-8); right: var(--sp-10); font-size: var(--fs-meta); color: var(--text-3); white-space: pre; }
+/* meterRow: a host card's meters side by side (big screens only), so a card sharing a column with another fits its half
+   of a full-height page; phones keep them stacked (too narrow for gauge + trace side by side) */
+:root:not([data-profile="phone"]) .hmeters.row { flex-direction: row; }
+:root:not([data-profile="phone"]) .hmeters.row .meter { flex: 1 1 0; min-width: 0; }
+:root:not([data-profile="phone"]) .host.compact .hwhy, :root:not([data-profile="phone"]) .host.compact .hfacts { display: none; }
+/* capacity bars */
+.hcap { display: flex; flex-direction: column; gap: var(--sp-12); }
+.cap { display: grid; grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--sp-6); font-size: var(--fs-row); --t: var(--sage); }
+.clab { color: var(--text-2); }
+.cdet { font-weight: 600; }
+.ctrack { grid-column: 1 / -1; }   /* bar template: base.css */
+/* facts */
+.hfacts { display: flex; flex-direction: column; }
+.fact { display: flex; align-items: center; gap: var(--sp-10); padding: var(--row-pad) 2px; border-top: 1px solid var(--hairline); font-size: var(--fs-row); min-width: 0; }
+.fact svg { width: var(--icon-row); height: var(--icon-row); color: var(--text-3); }
+.flab { color: var(--text-2); flex: none; }
+.fval { flex: 1; min-width: 0; text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fact.toned .fval, .fact.toned svg { color: rgb(var(--t)); }
+.hctl { display: flex; gap: var(--gap); }
+.hctl .sb { flex: 1; justify-content: center; }
+.hctl.note { height: var(--chip-h); align-items: center; justify-content: center; gap: var(--sp-6); border-radius: var(--r-pill); background: var(--veil-faint); color: var(--text-3); font-size: var(--fs-sub); }
+.hctl.note svg { width: var(--icon-xs); height: var(--icon-xs); }
+/* access points: narrow panels */
+.ap .host { gap: var(--sp-10); }
+.ap .hh .ic { width: var(--ic-s); height: var(--ic-s); }
+.ap .hname { font-size: var(--fs-name); }
+.ap .hbadge { padding: 0; width: calc(28px * var(--s)); justify-content: center; }
+.ap .hbadge span, .ap .hwhy { display: none; }
+.ap .hmeters { min-height: calc(120px * var(--s)); }
+.ap .mtr-n { font-size: var(--fs-title); }
+.ap .flab { display: none; }
+
+/* the map */
+.cell.topo-cell { padding: var(--sp-16); }
+.topo { position: relative; height: 100%; display: grid; column-gap: calc(62px * var(--s)); }
+.tlinks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.tl { fill: none; stroke: var(--edge-strong); stroke-width: 2; }
+.tl.l1 { stroke: rgba(var(--lamp), var(--a-50)); }
+.tdot { position: absolute; left: calc(-2.5px * var(--s)); top: calc(-2.5px * var(--s)); width: calc(5px * var(--s)); height: calc(5px * var(--s)); border-radius: 50%; pointer-events: none; z-index: 0;
+  background: rgb(var(--mist)); box-shadow: 0 0 6px 1px rgba(var(--mist), var(--a-80)); will-change: transform; }
+.tnode { position: relative; z-index: 1; align-self: center; display: flex; align-items: center; gap: var(--sp-8); min-width: 0; padding: var(--sp-8) var(--sp-8) var(--sp-8) var(--sp-8);
+  border-radius: var(--r-16); background: var(--raised); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-30)), 0 4px 14px rgba(0, 0, 0, .25); text-align: left; --t: var(--sage); }
+.tnode.warn { background: linear-gradient(135deg, rgba(var(--t), var(--a-20)), rgba(var(--t), var(--a-08))), var(--raised); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-50)), 0 0 18px rgba(var(--t), var(--a-16)); }
+.tic { width: calc(28px * var(--s)); height: calc(28px * var(--s)); border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); }
+.tic svg { width: var(--icon-xs); height: var(--icon-xs); }
+.ttx { display: flex; flex-direction: column; min-width: 0; }
+.tname { font-weight: 600; font-size: var(--fs-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tmet { font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tdots { position: absolute; top: calc(-4px * var(--s)); right: var(--sp-10); display: flex; gap: 3px; }
+.tdots i { width: calc(7px * var(--s)); height: calc(7px * var(--s)); border-radius: 50%; background: rgb(var(--sage)); box-shadow: 0 0 0 2px var(--raised); }
+.tdots i.bad { background: rgb(var(--ember)); }
+/* narrow: an indented tree, one node per row (topology.js switches below treeBelow) */
+.topo.tree { height: auto; row-gap: var(--sp-8); column-gap: 0; }
+.topo.tree .tnode { align-self: stretch; margin-left: calc(var(--d) * 36px * var(--s));   /* leaves a visible stub between the trunk and each child */ }
+.topo.tree .ttx { flex: 1; flex-direction: row; align-items: baseline; justify-content: space-between; gap: var(--sp-8); }
+.topo.tree .tmet { flex: none; max-width: 55%; }
+.topo.tree .tdots { position: static; margin-left: var(--sp-4); }
+
+/* figures with a trace behind */
+.kpi { position: relative; overflow: hidden; width: 100%; min-height: calc(88px * var(--s)); border-radius: var(--panel-radius); text-align: left; display: flex; flex-direction: column;
+  padding: var(--sp-14) var(--sp-16); background: var(--glass); border: 1px solid var(--hairline); }
+.khead { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--sp-8); color: var(--text-2); font-size: var(--fs-sub); }
+.khead svg { width: var(--icon-xs); height: var(--icon-xs); color: rgb(var(--t)); }
+.kval { position: relative; z-index: 1; font: 600 var(--fs-figure-m)/1.1 var(--font-display); margin-top: var(--sp-4); }
+.kval small { font: 500 var(--fs-sub) var(--font); color: var(--text-2); margin-left: var(--sp-6); }
+.klab { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kdet { flex: 1; min-width: 0; text-align: right; font-size: var(--fs-meta); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kspark { flex: 1; min-height: calc(22px * var(--s)); margin: var(--sp-2) calc(-15px * var(--s)) calc(-13px * var(--s)); }
+
+/* needs a look + backups */
+.attn { display: flex; flex-direction: column; height: 100%; gap: var(--sp-10); min-height: 0; }
+.atop { display: flex; align-items: center; justify-content: space-between; }
+.atop .atitle { font: 600 var(--fs-name)/1.2 var(--font-display); }   /* scoped: the agenda has its own .atitle */
+.acount { min-width: calc(26px * var(--s)); height: calc(26px * var(--s)); padding: 0 8px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; background: rgba(var(--t), var(--a-20)); color: rgb(var(--t)); font-weight: 600; }
+.acount:empty { display: none; }
+.alist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-6); scrollbar-width: none; }
+.aitem { display: flex; gap: var(--sp-10); align-items: center; padding: var(--sp-10) var(--sp-10); border-radius: var(--r-14); background: rgba(var(--t), var(--a-08)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-16)); text-align: left; flex: none; }
+.aic { width: calc(32px * var(--s)); height: calc(32px * var(--s)); border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); }
+.aic svg { width: var(--icon-sm); height: var(--icon-sm); }
+.atx { display: flex; flex-direction: column; min-width: 0; }
+.awhat { font-size: var(--fs-row); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.awho { display: flex; align-items: center; gap: 4px; font-size: var(--fs-row-detail); color: var(--text-2); white-space: nowrap; overflow: hidden; min-width: 0; }
+.awho svg { width: var(--icon-inline); height: var(--icon-inline); }
+.aok { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-10); color: rgb(var(--sage)); font-weight: 600; }
+.aok small { color: var(--text-3); font-weight: 500; font-size: var(--fs-small); }
+.aok svg { width: var(--icon-empty); height: var(--icon-empty); }
+.abk { border-top: 1px solid var(--hairline); padding-top: var(--sp-10); display: flex; flex-direction: column; gap: var(--sp-4); }
+.abks { display: flex; flex-direction: column; }
+.bk { display: flex; align-items: center; gap: var(--sp-10); padding: var(--sp-6) 0; }
+.bkst { margin-left: auto; color: rgb(var(--t)); }
+.bkst svg { width: var(--icon-sm); height: var(--icon-sm); }
+
+/* NAS drive bays */
+.bays { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+/* 4 across needs ~125 px a bay ("Drive 1" + "129°" on one line); below that, 2 across. Measured on the bays themselves, so it holds
+   whatever cell or phone they sit in (a 430 px phone left 4 bays of ~85 px and the name wrapped under the temperature) */
+.bays-wrap { container: bays / inline-size; }
+@container bays (max-width: 540px) { .bays { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.bname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bay { position: relative; overflow: hidden; border-radius: var(--r-14); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); min-height: calc(96px * var(--s));
+  padding: var(--sp-12) var(--sp-12); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto 1fr; align-items: center; column-gap: var(--sp-8); --t: var(--sage); }
+.bled { width: calc(8px * var(--s)); height: calc(8px * var(--s)); border-radius: 50%; background: rgb(var(--t)); box-shadow: 0 0 8px rgb(var(--t)); }
+.bname { font-weight: 600; z-index: 1; }
+.btemp { font: 600 var(--fs-figure)/1 var(--font-display); z-index: 1; color: rgb(var(--t)); }   /* colour-coded like the bay's LED */
+.bst { grid-column: 1 / -1; font-size: var(--fs-small); color: var(--text-2); z-index: 1; margin-top: 2px; }
+.bay .spark { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; opacity: .75; }
+.cell.bays-cell { padding: var(--sp-10); }
+/* device list */
+.devs { display: flex; flex-direction: column; gap: var(--sp-8); }
+.dvhead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--gap); }
+.dvlist { display: grid; grid-template-columns: repeat(var(--dcols, 2), minmax(0, 1fr)); gap: var(--gap); }
+.dv { display: grid; grid-template-columns: auto minmax(0, 1fr) calc(70px * var(--s)) auto; align-items: center; gap: var(--sp-10); padding: var(--sp-10) var(--sp-12) var(--sp-10) var(--sp-10);
+  border-radius: var(--r-14); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); --t: var(--sage); }
+.dv.warn { background: rgba(var(--t), var(--a-12)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-30)); }
+.dvsp { position: relative; height: calc(30px * var(--s)); }
+.dvsp .spark { position: absolute; inset: 0; }
+.dvval { font: 600 var(--fs-name)/1 var(--font-display); text-align: right; min-width: calc(38px * var(--s)); }
+.dv.warn .dvsub { color: rgb(var(--t)); }
+/* plain text (no icons): a block box, so it can end in an ellipsis; .awho is flex for its icon variants */
+.dvsub { display: block; text-overflow: ellipsis; }
+.kpair { position: relative; }
+.kpair .spark { position: absolute; inset: 0; }
+.kpv { display: inline-flex; align-items: baseline; margin-right: var(--sp-12); }
+.kpv i { font-style: normal; font-size: .6em; color: rgb(var(--t)); margin-right: 2px; }
+

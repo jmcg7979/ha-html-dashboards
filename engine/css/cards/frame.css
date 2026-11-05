@@ -1,0 +1,7 @@
+/* ---------- frame view (Music) ---------- */
+.fview { display: flex; flex-direction: column; align-items: stretch; height: 100vh; height: 100dvh; padding: var(--page-pad) var(--page-pad) var(--page-pad) 0; gap: var(--sp-10); max-width: none; }
+.fbar { display: flex; gap: var(--sp-6); }
+.fbar .chip { flex: none; padding: 0 var(--sp-16); }
+.fbox { flex: 1; border-radius: var(--panel-radius); overflow: hidden; background: var(--raised); box-shadow: inset 0 0 0 1px var(--edge); }
+.fbox iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--ink); }
+

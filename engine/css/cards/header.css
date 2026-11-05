@@ -1,0 +1,7 @@
+/* ---------- header: greeting, people, clock ---------- */
+.header { display: flex; align-items: center; gap: var(--sp-22); padding: var(--sp-4) var(--sp-4) var(--sp-2); }
+.date { font-size: var(--fs-name); color: var(--text-2); white-space: nowrap; }
+.header .mode.on { box-shadow: 0 0 0 1px rgba(var(--t), var(--a-35)) inset; }
+.who { display: flex; align-items: center; gap: var(--sp-10); padding-left: var(--sp-22); border-left: 1px solid var(--hairline); }
+.clock { font: 600 var(--fs-clock)/1 var(--font-display); letter-spacing: -0.03em; font-variation-settings: "opsz" 96; padding-left: var(--sp-22); border-left: 1px solid var(--hairline); }
+

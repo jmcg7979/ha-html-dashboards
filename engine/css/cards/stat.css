@@ -1,0 +1,9 @@
+/* ---------- status tiles ---------- */
+.stat { width: 100%; height: var(--stat-h); display: flex; align-items: center; gap: var(--sp-12); padding: 0 var(--sp-14); border-radius: var(--r-18); background: var(--veil); border: 1px solid var(--edge); text-align: left; transition: background .25s, border-color .25s; }
+.stat .tx { display: flex; flex-direction: column; min-width: 0; }
+.slabel { font-size: var(--fs-small); color: var(--text-2); }
+.svalue { font-size: var(--fs-name); font-weight: var(--fw-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat.on { background: linear-gradient(135deg, rgba(var(--t), var(--a-16)), rgba(var(--t), var(--a-04))); border-color: rgba(var(--t), var(--a-16)); }
+.stat.on .svalue { color: rgb(var(--t)); }
+.stat.alert { background: linear-gradient(135deg, rgba(var(--ember), var(--a-20)), rgba(var(--ember), var(--a-08))); border-color: rgba(var(--ember), var(--a-35)); }
+

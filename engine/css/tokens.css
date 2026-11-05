@@ -1,0 +1,211 @@
+/* Design tokens: every size, colour and font comes from here.
+   Theme "Hearth": a kitchen wall panel whose backdrop follows the real sky (see core/ambient.js),
+   warm lamp-light for lights, cool mist for air and water, quiet everywhere else.
+   --s scales the whole UI; a profile (data-profile on <html>) overrides any token for a display type. */
+@font-face { font-family: "Bricolage"; src: url("../assets/fonts/bricolage.woff2") format("woff2-variations"); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "Figtree"; src: url("../assets/fonts/figtree.woff2") format("woff2-variations"); font-weight: 300 900; font-display: swap; }
+
+:root {
+  --s: 1;
+
+  /* base palette */
+  --ink: #0d1017;            /* page */
+  --raised: #1a1e27;         /* pop-ups: a step lighter than the page, same hue */
+  --veil: rgba(255, 255, 255, 0.08);    /* tiles (raised 2026-10-22: .045 vanished on dim screens) */
+  --veil-2: rgba(255, 255, 255, 0.11);  /* buttons, chips */
+  --hairline: rgba(255, 255, 255, 0.10);
+  --edge: rgba(255, 255, 255, 0.085);   /* 1 px inner outline on every tile so idle tiles keep their shape */
+  --popup-edge: rgba(255, 255, 255, 0.16);
+  /* the main page's material, shared by pop-ups (2026-11-03): page -> glass panel -> darker wells inside it */
+  --glass: linear-gradient(160deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .03));
+  --pit: rgba(0, 0, 0, .2);   /* wells inside a panel or pop-up: meters, charts, read-outs */
+  /* one section heading everywhere (page headings, pop-up sections, chart titles), one range-chip size, one chart-axis size */
+  --section-font: 600 var(--fs-title)/1.2 var(--font-display);
+  --range-h: calc(34px * var(--s));
+  --fs-axis: calc(12px * var(--s));
+  --chart-min: calc(190px * var(--s));   /* smallest plot in a pop-up, so a short chart is still readable on a phone */
+  --text: #eee9e1;           /* warm white */
+  --text-2: #adb3c0;         /* quiet text */
+  --text-3: #7a8091;
+
+  /* meaning colours (r,g,b so components apply their own alpha) */
+  --lamp: 242, 179, 94;      /* lights on */
+  --mist: 127, 178, 229;     /* air, water, fans, climate */
+  --sage: 140, 203, 159;     /* safe, home, ok */
+  --ember: 236, 122, 99;     /* needs attention */
+  --plum: 176, 140, 230;     /* media, sleep */
+  --stone: 150, 156, 170;    /* neutral */
+
+  /* tint alpha scale: rgba(var(--t), var(--a-NN)). Rough roles: 04-12 quiet fills, 16-26 active fills, 30-35 glows, 45-50 tinted edges, 80-90 solid. */
+  --a-04: 0.04;
+  --a-08: 0.08;
+  --a-12: 0.12;
+  --a-16: 0.16;
+  --a-20: 0.2;
+  --a-26: 0.26;
+  --a-30: 0.3;
+  --a-35: 0.35;
+  --a-45: 0.45;
+  --a-50: 0.5;
+  --a-80: 0.8;
+  --a-90: 0.9;
+  --tint-bg: var(--a-16);
+  --tint-icon: var(--a-16);
+  --tint-pill: var(--a-16);
+  --tint-fill: var(--a-30);
+
+  /* sky backdrop (core/ambient.js updates these from sun.sun + weather) */
+  --sky-a: 52, 64, 110;      /* upper glow */
+  --sky-b: 120, 84, 60;      /* horizon glow */
+  --sky-strength: 0.6;
+
+  /* type: Bricolage for the voice (greeting, clock, numbers, titles), Figtree for everything you read */
+  --font: "Figtree", system-ui, sans-serif;
+  --font-display: "Bricolage", "Figtree", sans-serif;
+  --fs-clock: calc(64px * var(--s));
+  --fs-hero: calc(44px * var(--s));
+  --fs-big: calc(30px * var(--s));
+  --fs-title: calc(19px * var(--s));
+  --fs-name: calc(15.5px * var(--s));
+  --fs-sub: calc(13px * var(--s));
+  --fs-pill: calc(13px * var(--s));
+  --fs-small: calc(11.5px * var(--s));
+  --fs-micro: calc(10.5px * var(--s));   /* forecast %, month bars, overflow counts */
+  --fw-strong: 600;
+  --fw-normal: 400;
+
+  /* layout */
+  --rail-w: calc(84px * var(--s));
+  --page-pad: calc(18px * var(--s));
+  --view-gap: calc(16px * var(--s));
+  --view-max: none;   /* pages use the full width; --s already scales type and spacing up on big screens */
+  --view-cols: 3;
+  --section-cols: 12;
+  --panel-pad: 0px;
+  --panel-radius: var(--r-22);
+  --gap: calc(8px * var(--s));
+  --panel-bg: transparent;
+  --well: var(--veil);
+  --well-2: var(--veil-2);
+  --divider: var(--hairline);
+  --overlay: rgba(10, 12, 18, 0.6);
+  --bg: var(--ink);
+
+  /* components */
+  --tile-h: calc(58px * var(--s));
+  --tile-radius: var(--r-16);
+  --icon-circle: calc(40px * var(--s));
+  --icon: calc(21px * var(--s));
+  --icon-sm: calc(19px * var(--s));
+  --chip-h: calc(38px * var(--s));
+  --chip-radius: var(--r-pill);
+  --pill-h: calc(26px * var(--s));
+  --rbtn: calc(38px * var(--s));
+  --heading-h: calc(36px * var(--s));
+  --summary-h: calc(120px * var(--s));
+  --stat-h: calc(60px * var(--s));
+  --stat-h-lg: calc(80px * var(--s));   /* the status row along the top */
+  --photo: calc(44px * var(--s));
+  --ring-w: calc(2.5px * var(--s));
+  --iconbar-h: calc(52px * var(--s));
+  --popup-w: calc(760px * var(--s));
+  --popup-wide: calc(980px * var(--s));
+  --popup-radius: calc(26px * var(--s));
+  --popup-blur: 18px;        /* frosts the dashboard behind an open pop-up; 0px turns it off (Portal holds 60 fps at 20px) */
+  --popup-dim: 0.58;         /* how much the dashboard darkens behind a pop-up */
+
+  /* ---- design scales (2026-11-03): every size and overlay in css/cards comes from here; no literal px / rgba in card CSS ---- */
+  /* type: body steps (--fs-micro … --fs-name above) + titles + figures (readings) + named heroes */
+  /* text roles (2026-11-03): every page uses the same three for its content, so Systems reads like Home */
+  --fs-item: var(--fs-name);     /* the name of a thing / a row's label and value: tile names, facts, list rows, meter labels */
+  --fs-detail: var(--fs-sub);    /* the line under or beside it: tile state, host sub, device sub */
+  --fs-meta: var(--fs-small);    /* captions: 24 h range, times, tags */
+  /* rows inside a panel (facts, device / attention rows, meter labels, capacity labels): the item size, one step denser on a
+     screen-filling page (.view.fill: Systems on the panel / desktop), whose content must fit the screen height */
+  --fs-row: var(--fs-item);
+  --fs-row-detail: var(--fs-detail);
+  --row-pad: var(--sp-10);
+  --icon-row: var(--icon-sm);
+  --fs-body: calc(14px * var(--s));        /* secondary lines that are a step above --fs-sub */
+  --fs-figure: calc(22px * var(--s));      /* a reading: meters, gauges, strips, list values */
+  --fs-figure-m: calc(26px * var(--s));    /* a reading that leads its card (KPI, timer row, keypad) */
+  --fs-popup-title: calc(24px * var(--s));
+  --fs-display-s: calc(38px * var(--s));   /* greeting, big time pickers */
+  --fs-hero-l: calc(52px * var(--s));      /* weather now on Home */
+  --fs-hero-xl: calc(72px * var(--s));     /* weather page now */
+  --fs-takeover: calc(84px * var(--s));    /* full-screen alert */
+  /* icon circles (.ic) and the icons inside them */
+  --ic-xs: calc(32px * var(--s));
+  --ic-s: calc(36px * var(--s));
+  --ic-l: calc(44px * var(--s));           /* panel headers (host, health, printer) */
+  --ic-xl: calc(52px * var(--s));          /* pop-up header */
+  --ic-hero: calc(76px * var(--s));        /* alarm shield */
+  --icon-xs: calc(16px * var(--s));
+  --icon-lg: calc(26px * var(--s));
+  --icon-rail: calc(24px * var(--s));     /* rail buttons: ten views + HA fit 800 px */
+  --icon-hero: calc(38px * var(--s));
+  --icon-inline: calc(13px * var(--s));   /* inside a line of small text */
+  --icon-btn: calc(28px * var(--s));      /* big round control buttons (alarm modes, media, D-pad) */
+  --icon-empty: calc(48px * var(--s));    /* empty / all-clear states */
+  --icon-art: calc(64px * var(--s));      /* artwork placeholder */
+  /* overlays on the dark page (white) beyond --veil / --veil-2 / --hairline / --edge */
+  --veil-faint: rgba(255, 255, 255, 0.04);   /* hover wash, faint top light */
+  --edge-strong: rgba(255, 255, 255, 0.16);  /* emphasised outline, tracks on media */
+  --grid-line: rgba(255, 255, 255, 0.08);    /* chart grid */
+  /* progress bars (host capacity, printer job, health): one template in base.css */
+  --bar-h: calc(8px * var(--s));
+  --bar-track: var(--veil);
+
+  /* ---- scales (2026-10-25). Use these instead of literal calc(Npx * var(--s)). Names are the size at --s: 1. ---- */
+  /* spacing: padding, margin, gap, offsets */
+  --sp-2: calc(2px * var(--s));
+  --sp-4: calc(4px * var(--s));
+  --sp-6: calc(6px * var(--s));
+  --sp-8: calc(8px * var(--s));
+  --sp-10: calc(10px * var(--s));
+  --sp-12: calc(12px * var(--s));
+  --sp-14: calc(14px * var(--s));
+  --sp-16: calc(16px * var(--s));
+  --sp-18: calc(18px * var(--s));
+  --sp-20: calc(20px * var(--s));
+  --sp-22: calc(22px * var(--s));
+  --sp-24: calc(24px * var(--s));
+  --sp-28: calc(28px * var(--s));
+  --sp-32: calc(32px * var(--s));
+  /* corner radius; --r-pill for anything whose radius is half its height (chips, badges, pills) */
+  --r-8: calc(8px * var(--s));
+  --r-10: calc(10px * var(--s));
+  --r-12: calc(12px * var(--s));
+  --r-14: calc(14px * var(--s));
+  --r-16: calc(16px * var(--s));
+  --r-18: calc(18px * var(--s));
+  --r-20: calc(20px * var(--s));
+  --r-22: calc(22px * var(--s));
+  --r-pill: 999px;
+  /* colour channels for rgba(var(--x), alpha) */
+  --ink-rgb: 13, 16, 23;     /* = --ink */
+  --text-rgb: 238, 233, 225; /* = --text */
+  --media-rgb: 5, 7, 11;     /* behind camera video */
+  --deep-rgb: 11, 14, 20;    /* behind maps / radar */
+  --glass-rgb: 34, 39, 52;   /* drawer glass */
+  --scrim-rgb: 6, 8, 12;     /* dims the page behind pop-ups and drawers */
+}
+
+/* ---- profiles: one block per display type ---- */
+/* --s here is the starting value; core/scale.js replaces it on non-phone screens to follow the screen size */
+:root[data-profile="portal"] { --s: 1; }                         /* 1280x800 wall panel */
+:root[data-profile="tablet"] { --s: 1.12; }
+:root[data-profile="phone"] {
+  --s: 0.92;
+  --view-cols: 1;
+  --rail-w: 0px;
+  --page-pad: 12px;
+  --view-gap: 14px;
+  --fs-clock: 40px;
+  --tabbar-h: 62px;          /* bottom tab bar (core/phone.js), plus the safe area below it */
+}
+/* safe areas: the browser's own insets; inside HA's Webpage dashboard core/phone.js measures HA's and sets these inline */
+:root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* dense text roles on screen-filling pages (see --fs-row) */
+.view.fill { --fs-row: var(--fs-sub); --fs-row-detail: var(--fs-small); --row-pad: var(--sp-8); --icon-row: var(--icon-xs); }

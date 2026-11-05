@@ -1,0 +1,9 @@
+/* ---------- people (pop-ups / other dashboards) ---------- */
+.people { min-height: var(--summary-h); border-radius: var(--tile-radius); background: var(--veil); padding: var(--sp-14); display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: var(--sp-16); }
+.person { display: flex; gap: var(--sp-12); min-width: 0; align-items: center; }
+.person .photo { width: calc(72px * var(--s)); height: calc(72px * var(--s)); flex: none; border-radius: 50%; border: var(--ring-w) solid rgba(255, 255, 255, .25); padding: 2px; }
+.person[data-where="home"] .photo { border-color: rgb(var(--sage)); }
+.person .photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.person .pcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.person .row { display: flex; gap: 6px; }
+

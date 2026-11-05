@@ -1,0 +1,15 @@
+/* ---------- pop-up pages (tabs in the header) ---------- */
+.ptabs { display: flex; gap: var(--sp-4); padding: var(--sp-4); border-radius: var(--r-16); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); margin-right: var(--sp-6); }
+.ptab { height: calc(40px * var(--s)); padding: 0 var(--sp-14); border-radius: var(--r-12); display: flex; align-items: center; gap: var(--sp-8); font-size: var(--fs-sub); font-weight: var(--fw-strong); color: var(--text-2); transition: background .15s, color .15s; }
+.ptab svg { width: var(--icon-sm); height: var(--icon-sm); }
+.ptab.on { background: rgba(var(--t), var(--a-26)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+.popup.paged { min-height: min(calc(100vh - 2 * var(--page-pad)), calc(640px * var(--s))); min-height: min(calc(100dvh - 2 * var(--page-pad)), calc(640px * var(--s))); }
+
+/* phone: the tabs get their own full-width row under the title, so the title never truncates and every tab is a big target */
+:root[data-profile="phone"] .popup.paged .phead { flex-wrap: wrap; row-gap: var(--sp-12); }
+:root[data-profile="phone"] .popup.paged .ptabs { order: 3; flex: 1 0 100%; margin: 0; }
+:root[data-profile="phone"] .popup.paged .ptab { flex: 1; justify-content: center; padding: 0 var(--sp-6); }
+/* up to 3 tabs: labels shown; 4 or more: icons, with the open tab's label (as the view tabs do) */
+:root[data-profile="phone"] .popup.paged .ptabs .ptab span { display: inline; }
+:root[data-profile="phone"] .popup.paged .ptabs:has(.ptab:nth-child(4)) .ptab:not(.on) span { display: none; }
+:root[data-profile="phone"] .popup.paged .ptabs:has(.ptab:nth-child(4)) .ptab:not(.on) { flex: 0 0 calc(52px * var(--s)); }

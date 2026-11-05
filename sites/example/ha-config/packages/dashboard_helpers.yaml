@@ -1,0 +1,90 @@
+# Helpers the example site's cards expect: door and window counts, timers, the one-tap disarm. Rename the entities to match home.js.
+# secrets.yaml: alarm_disarm_code: "<an Alarmo code made just for this>"
+#   Anyone who can run the dashboard as a household member can disarm. Leave `disarm` out of home.js to always ask for the code.
+# Reload: Developer Tools > YAML > All YAML configuration (timer, input_* and script need theirs; automations too).
+
+timer:
+  voice_timer_1: { name: Timer 1, restore: true }
+  voice_timer_2: { name: Timer 2, restore: true }
+  voice_timer_3: { name: Timer 3, restore: true }
+  voice_timer_4: { name: Timer 4, restore: true }
+
+input_text:
+  voice_timer_1_label: { name: Timer 1 label, max: 60 }
+  voice_timer_2_label: { name: Timer 2 label, max: 60 }
+  voice_timer_3_label: { name: Timer 3 label, max: 60 }
+  voice_timer_4_label: { name: Timer 4 label, max: 60 }
+  voice_timer_last_ended: { name: Last timer, max: 255 }   # JSON: { "l": label, "t": ISO time }
+
+input_boolean:
+  voice_timer_ringing: { name: Timer ringing, icon: mdi:bell-ring }
+
+script:
+  # the Timers pop-up's preset buttons call this with seconds and an optional label
+  voice_timer_start:
+    alias: Timer - Start
+    mode: parallel
+    fields:
+      seconds: { name: Seconds, required: true, selector: { number: { min: 1, max: 86399 } } }
+      label: { name: Label, selector: { text: {} } }
+    sequence:
+      - variables:
+          slot: >-
+            {{ expand('timer.voice_timer_1', 'timer.voice_timer_2', 'timer.voice_timer_3', 'timer.voice_timer_4')
+               | selectattr('state', 'eq', 'idle') | map(attribute='object_id') | list | first | default('') }}
+      - condition: template
+        value_template: "{{ slot != '' }}"
+      - action: input_text.set_value
+        target: { entity_id: "input_text.{{ slot }}_label" }
+        data: { value: "{{ label | default('') }}" }
+      - action: timer.start
+        target: { entity_id: "timer.{{ slot }}" }
+        data: { duration: "{{ seconds | int }}" }
+
+  # the Alarm card's Off button, for a signed-in household member; any other login gets a keypad
+  alarm_disarm:
+    alias: Alarm - Disarm
+    mode: single
+    sequence:
+      - action: alarm_control_panel.alarm_disarm
+        target: { entity_id: alarm_control_panel.alarmo }
+        data: { code: !secret alarm_disarm_code }
+
+automation:
+  - id: dashboard_timer_finished
+    alias: Timer - Finished
+    mode: parallel
+    triggers:
+      - trigger: event
+        event_type: timer.finished
+        event_data: { entity_id: timer.voice_timer_1 }
+      - trigger: event
+        event_type: timer.finished
+        event_data: { entity_id: timer.voice_timer_2 }
+      - trigger: event
+        event_type: timer.finished
+        event_data: { entity_id: timer.voice_timer_3 }
+      - trigger: event
+        event_type: timer.finished
+        event_data: { entity_id: timer.voice_timer_4 }
+    actions:
+      - variables:
+          slot: "{{ trigger.event.data.entity_id.split('.')[1] }}"
+      - action: input_text.set_value
+        target: { entity_id: input_text.voice_timer_last_ended }
+        data: { value: "{{ {'l': states('input_text.' ~ slot ~ '_label') or 'Timer', 't': now().isoformat(timespec='seconds')} | to_json }}" }
+      - action: input_boolean.turn_on
+        target: { entity_id: input_boolean.voice_timer_ringing }
+
+template:
+  - sensor:
+      # list your door and window sensors; the cards show the count
+      - name: Open doors
+        unique_id: open_doors
+        state: >-
+          {{ expand('binary_sensor.front_door_sensor', 'binary_sensor.back_door_sensor') | selectattr('state', 'eq', 'on') | list | count }}
+      - name: Open windows
+        unique_id: open_windows
+        state: >-
+          {{ expand('binary_sensor.living_room_left_window', 'binary_sensor.living_room_right_window', 'binary_sensor.kitchen_window', 'binary_sensor.bedroom_window')
+             | selectattr('state', 'eq', 'on') | list | count }}

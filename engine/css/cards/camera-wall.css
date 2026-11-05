@@ -1,0 +1,5 @@
+/* ---------- camera wall: tiles placed by cards/camera-wall.js (--x --y --w --h), each at its stream's own shape ---------- */
+.cwall { position: relative; column-gap: var(--gap); }
+.cwall .camera { position: absolute; left: var(--x, 0); top: var(--y, 0); width: var(--w, 0); height: var(--h, 0); aspect-ratio: auto; }
+.cwall .camera.full { position: fixed; left: 0; top: 0; width: 100%; height: 100%; }
+

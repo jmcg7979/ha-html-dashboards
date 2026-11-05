@@ -1,0 +1,42 @@
+/* ---------- pop-up parts ---------- */
+.label { font: var(--section-font); color: var(--text); padding: var(--sp-12) var(--sp-4) var(--sp-2); }   /* section heading: the same size everywhere (--section-font) */
+.label.note { font: 400 var(--fs-small)/1.35 var(--font); color: var(--text-3); padding-top: var(--sp-4); }   /* a footnote, not a heading */
+.select .tile { cursor: pointer; }
+.select .chev, .expander .chev { margin-right: var(--sp-14); color: var(--text-3); transition: transform .15s; }
+.select.open .chev, .expander.open .chev { transform: rotate(180deg); }
+.select .opts { display: flex; flex-wrap: wrap; gap: var(--sp-6); padding: var(--gap) 0 0; max-height: calc(220px * var(--s)); overflow-y: auto; overscroll-behavior: contain; }
+.segments { display: flex; gap: var(--sp-6); }
+.segments .seg { height: calc(var(--chip-h) + 6px * var(--s)); border-radius: var(--r-14); }
+/* the label is its own box so a narrow segment ends in an ellipsis instead of clipping mid-letter (a flex button can't show one) */
+.seglbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.swatches { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.sw { width: calc(40px * var(--s)); height: calc(40px * var(--s)); border-radius: 50%; border: 2px solid var(--edge-strong); }
+.openings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
+.orow { display: flex; align-items: center; gap: var(--sp-10); height: calc(54px * var(--s)); padding: 0 var(--sp-12) 0 var(--sp-8); border-radius: var(--tile-radius); background: var(--veil); }
+.orow .ic { width: var(--ic-s); height: var(--ic-s); }
+.orow .name { flex: 1; min-width: 0; font-size: var(--fs-item); }
+.orow.on { background: linear-gradient(90deg, rgba(var(--lamp), var(--a-16)), var(--veil)); }
+.graph { display: flex; flex-direction: column; gap: var(--sp-12); }
+.logbook { display: flex; flex-direction: column; }
+/* strip (cards/strip.js, history pop-up): figures side by side in one well, hairlines between, label + detail over the value */
+.strip { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); row-gap: var(--sp-10); padding: var(--sp-10) 0; border-radius: var(--tile-radius);
+  background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); }
+.sti { display: flex; flex-direction: column; gap: 1px; padding: 0 var(--sp-14); border-left: 1px solid var(--hairline); min-width: 0; }
+.strip[style*="--n:3"] .sti:nth-child(3n + 1), .strip[style*="--n: 3"] .sti:nth-child(3n + 1), .strip[style*="--n:2"] .sti:nth-child(2n + 1), .strip[style*="--n: 2"] .sti:nth-child(2n + 1), .sti:first-child { border-left: 0; }
+.stl { display: flex; align-items: baseline; gap: 6px; font-size: var(--fs-small); color: var(--text-2); min-width: 0; white-space: nowrap; }
+.stl span { flex: none; }
+.stl em { font-style: normal; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; }
+.stl i { flex: none; align-self: center; width: 12px; height: 3px; border-radius: 2px; background: rgb(var(--t)); }
+.sti b { font: 600 var(--fs-figure)/1.2 var(--font-display); color: var(--text); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sti b small { font: 400 var(--fs-small) var(--font); color: var(--text-3); margin-left: 6px; letter-spacing: 0; }
+/* logbook: one list in one well, rows split by hairlines (not a box per event) */
+.logbook:has(.lrow) { border-radius: var(--tile-radius); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; }
+.lrow { display: flex; justify-content: space-between; align-items: baseline; gap: var(--gap); padding: var(--sp-10) var(--sp-14); }
+.lrow + .lrow { border-top: 1px solid var(--hairline); }
+.lrow .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lrow .name { font-size: var(--fs-item); }
+.map { border-radius: var(--tile-radius); overflow: hidden; background: #141824; }
+.map .leaflet-tile-pane { filter: brightness(.92); }   /* CARTO Voyager in its own colours, eased slightly for the dark UI */
+.map .leaflet-control-attribution { background: rgba(var(--ink-rgb), .55); color: rgba(255, 255, 255, .6); font-size: var(--fs-micro); padding: 0 var(--sp-6); border-radius: var(--r-8) 0 0 0; }
+.map .leaflet-control-attribution a { color: inherit; }
+

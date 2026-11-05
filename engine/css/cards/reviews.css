@@ -1,0 +1,25 @@
+/* ---------- compact Events column (reviews compact): one quiet panel, slim rows ---------- */
+.reviews.compact { gap: var(--sp-4); }
+.reviews.compact .rvhead { display: flex; align-items: center; justify-content: space-between; flex: none; padding: 0 0 var(--sp-6) var(--sp-4); }
+.reviews.compact .rvhead b { font: 600 var(--fs-title)/1.2 var(--font-display); }
+.reviews.compact .rvhead .rbtn { width: calc(34px * var(--s)); height: calc(34px * var(--s)); background: transparent; }
+.reviews.compact .rvlist { gap: var(--sp-2); margin-right: calc(-8px * var(--s)); padding-right: var(--sp-8); scrollbar-width: none; }
+.reviews.compact .rvlist::-webkit-scrollbar { display: none; }
+.reviews.compact .rvday { margin: var(--sp-10) 0 var(--sp-4) var(--sp-4); font-size: var(--fs-micro); }
+.reviews.compact .rvday:first-child { margin-top: 0; }
+.rvi.slim { background: transparent; box-shadow: none; padding: var(--sp-6) var(--sp-4); border-radius: var(--r-12); gap: var(--sp-10); align-items: center; transition: background .15s; }
+.rvi.slim:active { background: var(--veil); }
+.rvi.slim .rvth { width: calc(78px * var(--s)); border-radius: var(--r-8); box-shadow: none; }
+.rvi.slim .rvtx { gap: 0; }
+.rvi.slim .rvtx b { font-size: var(--fs-sub); font-weight: 600; }
+.rvi.slim .rvtx span { font-size: var(--fs-small); color: var(--text-3); line-height: 1.3; }
+.rvi.slim.new .rvtx b { color: var(--text); }
+.rvi.slim:not(.new) .rvtx b { color: var(--text-2); font-weight: 500; }
+.rvi.slim.new::after { right: var(--sp-6); }
+
+/* camera tiles on views: no mute button (sound is for full screen); the wall also hides recordings until full screen.
+   Alert pop-ups (.camalert, outside .view) keep their mute button. */
+.view .camera:not(.full) .mute, .cwall .camera:not(.full) .hist { display: none; }
+.cwall .camera.full .hist { display: flex; background: rgba(var(--glass-rgb), .85); box-shadow: inset 0 0 0 1px var(--popup-edge), 0 2px 10px rgba(0, 0, 0, .45); right: var(--sp-20); top: var(--sp-16); width: calc(52px * var(--s)); height: calc(52px * var(--s)); }
+.cwall .camera.full .hist svg { width: var(--icon); height: var(--icon); }
+

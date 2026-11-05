@@ -1,0 +1,120 @@
+/* ---------- Printer view: print job, AMS spools. The printer panel itself is a host (systems.css). ---------- */
+
+/* print job */
+.pjob { display: flex; flex-direction: column; gap: var(--sp-12); height: 100%; min-height: 0; --t: var(--sage); }
+.pjob .hh .ic { width: var(--ic-l); height: var(--ic-l); background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); box-shadow: 0 0 22px rgba(var(--t), var(--a-20)); }
+.pjob .hname, .pjob .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* camera: its own shape, never cropped (the standard camera tile fills the box) */
+.pj-pic { position: relative; flex: none; aspect-ratio: 1 / var(--ar, .643); border-radius: var(--tile-radius); overflow: hidden; background: rgb(var(--media-rgb)); }
+.pj-pic[hidden] { display: none; }
+.pj-pic > .camera { position: absolute; inset: 0; aspect-ratio: auto; border-radius: inherit; box-shadow: none; }
+.pj-pic > .camera.full { position: fixed; border-radius: 0; }
+/* Record: a red dot that glows while the job is marked */
+.pj-recdot { width: calc(10px * var(--s)); height: calc(10px * var(--s)); border-radius: 50%; background: rgb(var(--ember)); opacity: .75; flex: none; }
+.pj-rec.on .pj-recdot { opacity: 1; box-shadow: 0 0 8px rgb(var(--ember)); animation: pulse 1.6s ease-in-out infinite; }
+.pj-count { min-width: calc(20px * var(--s)); height: calc(20px * var(--s)); padding: 0 var(--sp-6); border-radius: var(--r-pill); background: rgb(var(--lamp)); color: rgb(var(--ink-rgb)); font-size: var(--fs-micro); font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-left: var(--sp-2); }
+.pj-count[hidden] { display: none; }
+/* model: the rest of the panel (all of it without a camera); a fixed shape where nothing grows (phones) */
+.pj-mbox { position: relative; aspect-ratio: 4 / 3; border-radius: var(--tile-radius); overflow: hidden; background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); }
+.pjob.hascam .pj-mbox { aspect-ratio: 16 / 9; }
+.cell.grow .pj-mbox { aspect-ratio: auto; flex: 1; min-height: calc(110px * var(--s)); }
+.pj-mbox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: var(--sp-14); filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .55)); }
+.pj-mbox [hidden] { display: none; }
+.pj-none { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); color: var(--text-3); font-size: var(--fs-sub); }
+.pj-none svg { width: var(--icon-empty); height: var(--icon-empty); opacity: .6; }
+.pj-tag { position: absolute; top: var(--sp-8); left: var(--sp-10); display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-small); font-weight: 600; color: var(--text-3); }
+.pj-tag svg { width: var(--icon-xs); height: var(--icon-xs); }
+
+/* progress: big figure, bar, layer count */
+.pj-prog { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-12); }
+.pj-pct { font: 600 var(--fs-big)/1 var(--font-display); min-width: calc(64px * var(--s)); }
+.pj-pct small { font-size: .5em; font-weight: 500; color: var(--text-2); margin-left: 1px; }
+.pj-layer { font-size: var(--fs-sub); color: var(--text-2); white-space: nowrap; }
+
+/* three figures */
+.pj-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
+.pj-st { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-10) var(--sp-12); border-radius: var(--tile-radius); background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); min-width: 0; }
+.pj-k { display: flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-small); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pj-k svg { width: var(--icon-xs); height: var(--icon-xs); flex: none; }
+.pj-v { display: flex; align-items: center; gap: 3px; font: 600 var(--fs-title)/1.15 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pj-dot { width: calc(10px * var(--s)); height: calc(10px * var(--s)); border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); flex: none; margin-right: 2px; }
+.pjob.active .pj-left, .pjob.active .pj-end { color: rgb(var(--t)); }
+.pj-ctl .sb[hidden] { display: none; }
+@container cell (max-width: 300px) { .pj-stats { grid-template-columns: 1fr 1fr; } .pj-st:last-child { grid-column: 1 / -1; } .pj-layer { display: none; } }
+
+/* AMS */
+.ams { display: flex; flex-direction: column; gap: var(--sp-12); height: 100%; min-height: 0; --t: var(--sage); }
+.ams .hh .ic { width: var(--ic-l); height: var(--ic-l); background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); box-shadow: 0 0 22px rgba(var(--t), var(--a-20)); }
+.ams-slots { flex: 1; min-height: 0; display: grid; align-content: center; grid-auto-rows: minmax(0, calc(240px * var(--s))); grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+.ams-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-4); padding: var(--sp-14) var(--sp-6) var(--sp-12); border-radius: var(--tile-radius);
+  background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); min-width: 0; text-align: center; --t: var(--lamp); transition: box-shadow .3s, background .3s; }
+.ams-slot.active { background: rgba(var(--t), var(--a-12)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-50)), 0 0 24px rgba(var(--t), var(--a-20)); }
+/* spool: the filament colour wound round a dark hub; the ring outside it = filament left (Bambu spools only) */
+.ams-ring { position: relative; width: 78%; max-width: calc(96px * var(--s)); aspect-ratio: 1; border-radius: 50%; padding: var(--sp-4); margin-bottom: var(--sp-6); --p: 0; }
+.ams-ring.known { background: conic-gradient(rgb(var(--sage)) calc(var(--p) * 1%), var(--grid-line) 0); }
+.ams-spool { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; --fill: transparent;
+  background: repeating-radial-gradient(circle, rgba(0, 0, 0, 0) 0 calc(2px * var(--s)), rgba(0, 0, 0, .14) calc(2px * var(--s)) calc(3px * var(--s))), radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--fill);
+  box-shadow: inset 0 0 0 calc(3px * var(--s)) var(--edge-strong), inset 0 0 16px rgba(0, 0, 0, .5), 0 4px 14px rgba(0, 0, 0, .35); }
+.ams-hub { position: absolute; inset: 31%; border-radius: 50%; background: radial-gradient(circle, rgb(var(--ink-rgb)) 0 45%, #2a2f3b 46% 100%); box-shadow: 0 0 0 calc(2px * var(--s)) var(--edge-strong), inset 0 1px 3px rgba(0, 0, 0, .6); }
+.ams-slot.active .ams-spool, .ams-ext.active .ams-spool { box-shadow: inset 0 0 0 calc(3px * var(--s)) var(--edge-strong), inset 0 0 16px rgba(0, 0, 0, .5), 0 0 0 calc(2px * var(--s)) rgb(var(--lamp)), 0 0 22px rgba(var(--lamp), var(--a-50)); }
+.empty .ams-spool { background: none; box-shadow: inset 0 0 0 calc(2px * var(--s)) var(--veil-2); outline: calc(1.5px * var(--s)) dashed var(--edge-strong); outline-offset: calc(-9px * var(--s)); }
+.empty .ams-hub { opacity: .45; }
+.ams-id { font-size: var(--fs-micro); font-weight: 700; letter-spacing: .08em; color: var(--text-3); }
+.ams-type { font: 600 var(--fs-title)/1.1 var(--font-display); }
+.ams-slot.empty .ams-type { color: var(--text-3); font-weight: 500; }
+.ams-name, .ams-left { font-size: var(--fs-small); color: var(--text-2); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.3em; }
+.ams-left { color: var(--text-3); }
+.ams-slot.active .ams-left { color: rgb(var(--lamp)); font-weight: 600; }
+/* external spool: one slim row */
+.ams-ext { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-8) var(--sp-12); border-radius: var(--tile-radius); background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); }
+.ams-ext .ams-ring { width: calc(38px * var(--s)); padding: 0; margin: 0; flex: none; }
+.ams-ext .ams-spool { box-shadow: inset 0 0 0 calc(2px * var(--s)) var(--edge-strong), 0 2px 8px rgba(0, 0, 0, .35); }
+.ams-ext.empty .ams-spool { outline-offset: calc(-5px * var(--s)); }
+.ams-etx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ams-elab { font-size: var(--fs-sub); font-weight: 600; }
+.ams-ename { font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ams-etag { font-size: var(--fs-small); font-weight: 600; color: rgb(var(--lamp)); }
+.ams .hfacts .fact:first-child { border-top: 0; }
+@container cell (max-width: 340px) { .ams-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Prints pop-up (cards/prints.js): player beside the list; stacked when narrow ---------- */
+.prints { --t: var(--mist); display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(calc(300px * var(--s)), 1fr); gap: var(--sp-16); align-items: start; }
+@container popup (max-width: 820px) { .prints { grid-template-columns: minmax(0, 1fr); } }
+.prints .prpl { display: flex; flex-direction: column; gap: var(--sp-10); min-width: 0; }
+.prints .prvid { position: relative; width: 100%; aspect-ratio: var(--ratio, 16/9); background: #000; border-radius: var(--r-14); overflow: hidden; }
+.prints .prvid video { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+.prints .prvid .fpmsg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: var(--text-2); background: rgba(0, 0, 0, .75); }
+.prints .prvid .fpmsg[hidden] { display: none; }
+.prints .prnone { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); color: var(--text-3); font-size: var(--fs-sub); background: rgb(var(--media-rgb)); }
+.prints .prnone[hidden] { display: none; }
+.prints .prnone svg { width: var(--icon-hero); height: var(--icon-hero); opacity: .6; }
+.prints .fpinfo { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
+.prints .fptx { flex: 1; min-width: calc(160px * var(--s)); display: flex; flex-direction: column; }
+.prints .fptx b { font-family: var(--font-display); font-size: var(--fs-name); font-weight: 600; }
+.prints .fptx b:empty + .sub:empty { display: none; }
+.prints .fpbtns { display: flex; gap: var(--sp-6); flex-wrap: wrap; }
+.prints .fpbtns .sb { text-decoration: none; color: inherit; }
+.prints .fpbtns .prok { --t: var(--sage); }
+.prints .fpbtns .prsave { --t: var(--sage); background: rgba(var(--sage), var(--a-20)); color: rgb(var(--sage)); }
+.prints .prseg { display: flex; gap: 2px; padding: 2px; border-radius: var(--r-pill); background: rgba(0, 0, 0, .25); }
+.prints .prseg .sb { background: none; }
+.prints .prseg .sb.on { background: var(--edge-strong); color: var(--text); box-shadow: none; }
+.prints .prls { display: flex; flex-direction: column; gap: var(--sp-8); min-width: 0; max-height: calc(100dvh - 2 * var(--page-pad) - 150px * var(--s)); }
+.prints .prtabs { display: flex; gap: var(--sp-6); align-items: center; }
+.prints .prtabs .chip { flex: none; padding: 0 var(--sp-14); }
+.prints .prtabs .prref { margin-left: auto; }
+.prints .prnote { font-size: var(--fs-small); color: rgb(var(--lamp)); background: rgba(var(--lamp), var(--a-12)); border-radius: var(--r-12); padding: var(--sp-8) var(--sp-10); }
+.prints .prlist { flex: 1; min-height: 0; overflow-y: auto; }
+.prints .pri { width: 100%; }
+.prints .pri.sel { box-shadow: inset 0 0 0 2px rgba(var(--mist), var(--a-80)); background: rgba(var(--mist), var(--a-12)); }
+.prints .prth { position: relative; display: flex; align-items: center; justify-content: center; color: var(--text-3); }
+.prints .prth svg { width: var(--icon-lg); height: var(--icon-lg); opacity: .7; }
+.prints .prth i { position: absolute; right: 4px; bottom: 3px; font-style: normal; font-size: var(--fs-micro); font-weight: 700; color: var(--text); background: rgba(0, 0, 0, .55); padding: 0 4px; border-radius: 4px; }
+.prints .prth img { width: 100%; height: 100%; object-fit: cover; }
+.prints .pri .rvtx { flex: 1; }
+.prints .prmeta { flex: none; padding-right: var(--sp-6); }
+.prints .prtag { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-small); font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.prints .prtag svg { width: var(--icon-xs); height: var(--icon-xs); }
+.prints .prtag.soon { color: rgb(var(--lamp)); }
+.prints .prtag.ok { color: rgb(var(--sage)); }
+.prints .prtag.live { color: rgb(var(--ember)); }

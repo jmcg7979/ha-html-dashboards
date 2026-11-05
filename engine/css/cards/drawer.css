@@ -1,0 +1,27 @@
+/* ---------- drawer: pull-out glass panel on the right edge (cards/drawer.js) ---------- */
+.cell.floating { display: contents; }
+.drawer { --dtab: calc(40px * var(--s)); position: fixed; inset: 0; z-index: 14; pointer-events: none; }   /* fixed: takes no grid row (no stray gap) */
+.drawer .dscrim { position: fixed; inset: 0; z-index: 14; background: rgba(var(--scrim-rgb), .35); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.drawer.open .dscrim { opacity: 1; pointer-events: auto; }
+.drawer .dpanel { pointer-events: auto; position: fixed; z-index: 15; top: var(--page-pad); bottom: var(--page-pad); right: var(--page-pad); width: min(var(--dw), calc(100vw - 2 * var(--page-pad) - var(--dtab)));
+  display: flex; flex-direction: column; padding: var(--sp-16); border-radius: var(--popup-radius);
+  background: linear-gradient(180deg, rgba(var(--glass-rgb), .86), rgba(22, 26, 35, .9)); -webkit-backdrop-filter: blur(var(--popup-blur)) saturate(1.2); backdrop-filter: blur(var(--popup-blur)) saturate(1.2);
+  border: 1px solid var(--popup-edge); box-shadow: 0 0 0 1px rgba(0, 0, 0, .5), -20px 0 60px rgba(0, 0, 0, .5), inset 0 1px 0 var(--veil);
+  transform: translateX(calc(100% + var(--page-pad))); transition: transform .32s cubic-bezier(.2, .8, .2, 1), box-shadow .3s; }
+.drawer:not(.open) .dpanel { box-shadow: none; }
+.drawer.open .dpanel { transform: none; }
+.drawer.dragging .dpanel, .drawer.dragging .dscrim { transition: none; }
+.drawer .dtab { position: absolute; left: calc(-1 * var(--dtab) - 1px); top: 50%; transform: translateY(-50%); width: var(--dtab); padding: var(--sp-14) 0;
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); border-radius: var(--r-16) 0 0 var(--r-16);
+  background: rgba(var(--glass-rgb), .92); border: 1px solid var(--popup-edge); border-right: 0; color: var(--text-2); box-shadow: -6px 0 20px rgba(0, 0, 0, .35); touch-action: none; transition: color .2s, background .2s; }
+.drawer .dtab .dlbl { writing-mode: vertical-rl; transform: rotate(180deg); font-size: var(--fs-small); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.drawer .dtab svg { width: var(--icon-sm); height: var(--icon-sm); }
+.drawer .dtab .dbadge { min-width: calc(22px * var(--s)); height: calc(22px * var(--s)); padding: 0 5px; border-radius: var(--r-pill); background: rgb(var(--t)); color: var(--ink); font-size: var(--fs-small); font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.drawer.open .dtab { color: rgb(var(--t)); }
+.drawer .dtab.live { color: #fff; background: rgba(var(--ember), var(--a-90)); animation: cam-alert 1.4s ease-in-out infinite; }
+.drawer .dtab.live .dbadge { background: #fff; }
+.drawer .dhead { display: flex; align-items: center; gap: var(--sp-10); margin-bottom: var(--sp-12); touch-action: none; }
+.drawer .dtitle { flex: 1; font: 600 var(--fs-title)/1.2 var(--font-display); }
+.drawer .dbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.drawer .dbody > .sgrid { flex: 1; min-height: 0; }
+

@@ -1,0 +1,3 @@
+{ "name": "dash-mock", "private": true, "type": "module",
+  "description": "Fake HA (websocket, REST, camera MSE) serving ../.. for local testing. node server.mjs, then node shots.mjs [popup,ids]",
+  "dependencies": { "playwright": "^1.56.0", "ws": "^8.18.0" } }

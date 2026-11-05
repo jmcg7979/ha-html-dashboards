@@ -1,0 +1,16 @@
+/* ---------- tiles (lights, fans, blinds, mode...) ---------- */
+.tile { position: relative; height: var(--tile-h); border-radius: var(--tile-radius); background: var(--veil); display: flex; align-items: center; overflow: hidden; touch-action: pan-y; }
+.tile .fill { position: absolute; inset: 0 auto 0 0; width: 0; pointer-events: none; transition: width .25s cubic-bezier(.2, .8, .2, 1);
+  background: linear-gradient(90deg, rgba(var(--t), var(--a-12)), rgba(var(--t), var(--tint-fill))); box-shadow: 8px 0 24px -6px rgba(var(--t), var(--a-50)); }
+.tile.drag .fill { transition: none; }
+.tile:not(.slider) .fill { display: none; }
+.tile > .ic { margin: 0 var(--sp-10) 0 var(--sp-12); z-index: 1; }
+.tile.slider > .ic.on { background: rgba(var(--t), var(--a-30)); color: #fff8ec; box-shadow: 0 0 18px rgba(var(--t), var(--a-45)); }
+.tile .tx { flex: 1; min-width: 0; z-index: 1; pointer-events: none; }
+.tile .subs { display: flex; gap: var(--sp-6); margin-right: var(--sp-12); z-index: 1; }
+.tile.vert { flex-direction: column; justify-content: center; gap: var(--sp-6); text-align: center; height: calc(var(--tile-h) * 1.35); }
+.tile.vert > .ic { margin: 0; }
+.tile.vert .tx { flex: none; width: 100%; padding: 0 var(--sp-6); }
+.tile.vert .name { font-size: var(--fs-sub); }
+button.tile { width: 100%; text-align: left; }
+

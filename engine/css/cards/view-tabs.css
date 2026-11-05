@@ -1,0 +1,5 @@
+/* ---------- views with tabs (Systems) ---------- */
+.pview { display: flex; flex-direction: column; }
+.vtabs { display: flex; gap: var(--sp-4); padding: var(--sp-4); margin: var(--page-pad) var(--page-pad) 0 0; align-self: flex-start; border-radius: var(--r-16); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); }
+.vpage { padding-top: var(--sp-10); }
+

@@ -1,0 +1,9 @@
+/* ---------- button groups ---------- */
+.buttons { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: var(--gap); height: 100%; }
+.bbtn { min-height: var(--iconbar-h); border-radius: var(--tile-radius); background: var(--veil); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-6); transition: background .2s; }
+.bbtn .ic { background: none; }
+.bbtn.on { background: linear-gradient(160deg, rgba(var(--t), var(--a-20)), rgba(var(--t), var(--a-04))); }
+.bbtn.on .ic { background: rgba(var(--t), var(--a-20)); box-shadow: 0 0 16px rgba(var(--t), var(--a-35)); }
+.blabel { font-size: var(--fs-small); font-weight: var(--fw-strong); color: var(--text-2); }
+.bbtn.on .blabel { color: var(--text); }
+

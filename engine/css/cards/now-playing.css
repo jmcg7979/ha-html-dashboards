@@ -1,0 +1,16 @@
+/* ---------- now playing ---------- */
+.mlist { display: flex; flex-direction: column; gap: var(--gap); }
+.mrow { position: relative; overflow: hidden; height: calc(68px * var(--s)); border-radius: var(--tile-radius); background: var(--veil); display: flex; align-items: center; gap: var(--sp-12); padding: 0 var(--sp-12) 0 var(--sp-10); cursor: pointer; }
+.mbg { position: absolute; inset: -30px; background-size: cover; background-position: center; filter: blur(26px) saturate(1.4) brightness(.55); opacity: .9; pointer-events: none; }
+.mrow > *:not(.mbg) { position: relative; }
+.mrow .art { width: calc(54px * var(--s)); height: calc(54px * var(--s)); border-radius: var(--r-10); overflow: hidden; background: var(--veil-2); display: flex; align-items: center; justify-content: center; flex: none; box-shadow: 0 6px 16px rgba(0, 0, 0, .4); }
+.mrow .art img { width: 100%; height: 100%; object-fit: cover; }
+.mrow .tx { flex: 1; min-width: 0; }
+.mrow .mname { font-size: var(--fs-small); color: var(--text-2); }
+.mrow .mtrack, .mrow .martist { font-size: var(--fs-sub); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mrow .mtrack { color: var(--text); font-weight: var(--fw-strong); }
+.mrow .martist { color: var(--text-2); }
+.mrow .subs { display: flex; gap: var(--sp-6); }
+.mrow .sb { padding: 0; background: var(--hairline); color: var(--text); }
+.mrow .sb.play { background: rgba(var(--t), var(--a-90)); color: var(--ink); }
+

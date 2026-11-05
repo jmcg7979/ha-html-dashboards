@@ -1,0 +1,4 @@
+/* ---------- headings ---------- */
+.heading { display: flex; align-items: center; gap: var(--gap); min-height: var(--heading-h); padding: 0 2px 0 4px; }
+.heading .htitle { flex: 1; font: 600 var(--fs-title)/1.2 var(--font-display); letter-spacing: -0.01em; }
+

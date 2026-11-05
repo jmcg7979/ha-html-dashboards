@@ -1,0 +1,74 @@
+# Per-container network traffic for the Docker host, straight from the Glances API. Used by the Systems Overview map and the Docker page.
+# Neither the Portainer nor the Glances integration exposes it, and Glances' veth sensors get new names when a container is recreated.
+#
+# sensor.glances_container_network: state = containers with their own traffic; attribute `containers` = { <name>: { in, out } }, Mbit/s.
+# A container that is stopped, or uses host networking, is left out. A new container needs nothing here.
+# binary_sensor.glances_container_stats_stale: Glances' Docker stats can stall until it is restarted; this turns on when the total
+# received bytes have not moved for 5 minutes while Frigate runs. Set `stats_stale` in home.js to show it. Without Frigate, point the
+# template at another container that always has traffic, or delete the binary sensor.
+#
+# secrets.yaml: glances_containers_url: "http://<docker host>:61208/api/4/containers"   (the Glances web server, `glances -w`)
+# Reload: Developer Tools > YAML > Template entities and REST commands.
+
+rest_command:
+  glances_containers:
+    url: !secret glances_containers_url
+    method: get
+    timeout: 8
+
+template:
+  - triggers:
+      - trigger: time_pattern
+        seconds: /10
+      - trigger: homeassistant
+        event: start
+    actions:
+      - action: rest_command.glances_containers
+        response_variable: glances
+        continue_on_error: true
+      # set after the call: a trigger template's own `variables:` block is evaluated before its actions run
+      - variables:
+          # the container list, or [] when the poll failed (timeout / Glances restarting)
+          ctrs: >-
+            {{ glances.content if glances is defined and glances is mapping and glances.status == 200
+               and glances.content is iterable and glances.content is not string and glances.content is not mapping else [] }}
+          ok: "{{ glances is defined and glances is mapping and glances.status == 200 }}"
+    sensor:
+      - name: Glances container network
+        unique_id: glances_container_network
+        icon: mdi:swap-vertical
+        availability: "{{ ok }}"
+        state: "{{ ctrs | selectattr('name', 'defined') | list | count }}"
+        attributes:
+          containers: >-
+            {%- set ns = namespace(d={}) -%}
+            {%- for c in ctrs if c.name is defined -%}
+              {%- set n = c.network if c.network is mapping else {} -%}
+              {%- if c.network_rx is number -%}
+                {%- set ns.d = dict(ns.d, **{c.name: {'in': (c.network_rx * 8 / 1000000) | round(2), 'out': ((c.network_tx or 0) * 8 / 1000000) | round(2)}}) -%}
+              {%- elif n.rx is number and n.time_since_update -%}
+                {%- set ns.d = dict(ns.d, **{c.name: {'in': (n.rx * 8 / n.time_since_update / 1000000) | round(2), 'out': ((n.tx or 0) * 8 / n.time_since_update / 1000000) | round(2)}}) -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.d }}
+      - name: Glances containers rx total
+        unique_id: glances_containers_rx_total
+        unit_of_measurement: B
+        icon: mdi:counter
+        availability: "{{ ok }}"
+        state: >-
+          {%- set ns = namespace(t=0) -%}
+          {%- for c in ctrs -%}
+            {%- if c.network is mapping and c.network.cumulative_rx is number -%}{%- set ns.t = ns.t + c.network.cumulative_rx -%}{%- endif -%}
+          {%- endfor -%}{{ ns.t }}
+
+  - binary_sensor:
+      - name: Glances container stats stale
+        unique_id: glances_container_stats_stale
+        device_class: problem
+        icon: mdi:timer-sand-paused
+        # now() re-renders this every minute, so it turns on without waiting for another state change
+        state: >-
+          {% set t = states.sensor.glances_containers_rx_total %}
+          {{ is_state('binary_sensor.frigate_container_status', 'on') and t is not none
+             and t.state not in ['unknown', 'unavailable'] and (now() - t.last_changed).total_seconds() > 300 }}

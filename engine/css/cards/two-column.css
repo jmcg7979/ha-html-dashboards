@@ -1,0 +1,15 @@
+/* ================= 2-column state (step 3): screens between the phone shell (< 600 px, see app.js) and the Portal.
+   Below 960 px a 3-column view gets 2 columns; sections that spanned 3 take the full row. The Portal (1280) and a
+   1024 px Nest Hub keep 3. Views with their own column template (Cameras) keep it. Lives here, after the Systems rules,
+   so it wins over them at the same specificity. ================= */
+@media (max-width: 959px) {
+  :root:not([data-profile="phone"]) { --view-cols: 2; }
+  :root:not([data-profile="phone"]) .section[data-span="3"] { grid-column: 1 / -1; }
+  /* full-height pages (Systems) were sized for one row of 3 columns: scroll normally here, cards take their own height */
+  :root:not([data-profile="phone"]) .pview:has(> .vpage.fill:not([hidden])) { height: auto; }
+  :root:not([data-profile="phone"]) .vpage.fill { grid-template-rows: none; }
+  :root:not([data-profile="phone"]) .view.fill:not(.vpage) { height: auto; grid-template-rows: none; }
+  :root:not([data-profile="phone"]) .sgrid.grows { grid-template-rows: none !important; }
+  :root:not([data-profile="phone"]) .cell.grow { contain: none; }
+}
+

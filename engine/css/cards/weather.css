@@ -1,0 +1,22 @@
+/* ---------- weather ---------- */
+.weather { display: flex; flex-direction: column; gap: var(--sp-10); }
+.wnow { display: flex; align-items: center; gap: var(--sp-8); margin-top: calc(-4px * var(--s)); }
+.wicon img { width: calc(76px * var(--s)); height: calc(76px * var(--s)); display: block; margin: calc(-8px * var(--s)) calc(-4px * var(--s)); }
+.wtemp { font: 600 var(--fs-hero-l)/1 var(--font-display); letter-spacing: -0.03em; font-variation-settings: "opsz" 96; }
+.wdesc { min-width: 0; padding-left: var(--sp-6); }
+.wfacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
+.wfacts > div { display: flex; flex-direction: column; }
+.wfacts b { font-size: var(--fs-name); font-weight: var(--fw-strong); }
+.wcurve { width: 100%; height: calc(98px * var(--s)); overflow: visible; }
+.wline { fill: none; stroke: rgb(var(--lamp)); stroke-width: 2; stroke-linecap: round; }
+.wdot { fill: var(--ink); stroke: rgb(var(--lamp)); stroke-width: 1.6; }
+.wt { fill: var(--text); font: 600 10px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
+.wh { fill: var(--text-3); font: 500 9.5px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
+.wrain { fill: rgb(var(--mist)); font: 600 9.5px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
+.wdays { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-4); }
+.wday { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: var(--sp-6) 0; border-radius: var(--r-12); background: var(--veil); }
+.wday img { width: calc(36px * var(--s)); height: calc(36px * var(--s)); }
+.wday b { font-size: var(--fs-sub); }
+.wday .sub { font-size: var(--fs-small); }
+.wpp { font-size: var(--fs-micro); color: rgb(var(--mist)); font-weight: 600; }
+

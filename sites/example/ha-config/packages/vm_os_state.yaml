@@ -1,0 +1,39 @@
+# What a VM's operating system is doing, worked out in HA. Optional: set it as a VM's `os` in home.js; the VM's restart and start buttons use it.
+# Signals: Proxmox VM status (built-in integration), the VM's start time, and the LNXlink agent inside the VM (MQTT last will, off within
+# seconds when the OS stops). Rename ubuntu for your VM.
+#   running         VM running, agent online
+#   stopping        agent went offline, VM not started again since, for up to 3 min
+#   starting        VM started after the agent went offline, for up to 5 min
+#   not_responding  agent offline longer than that while Proxmox says the VM runs
+#   stopped         Proxmox: not running
+# Reload: Developer Tools > YAML > Template entities.
+template:
+  - triggers:
+      - trigger: state
+        entity_id: [sensor.proxmox_ubuntu_status, sensor.proxmox_ubuntu_uptime, binary_sensor.ubuntu_agent_online]
+      - trigger: time_pattern
+        minutes: "/1"
+      - trigger: homeassistant
+        event: start
+    sensor:
+      - name: Proxmox Ubuntu OS State
+        unique_id: proxmox_ubuntu_os_state
+        default_entity_id: sensor.proxmox_ubuntu_os_state
+        icon: mdi:ubuntu
+        state: >
+          {%- set vm = states('sensor.proxmox_ubuntu_status') %}
+          {%- set ag = states.binary_sensor.ubuntu_agent_online %}
+          {%- if vm in ['unknown', 'unavailable'] or ag is none or ag.state in ['unknown', 'unavailable'] %}unknown
+          {%- elif vm != 'running' %}stopped
+          {%- elif ag.state == 'on' %}running
+          {%- else %}
+            {%- set off = ag.last_changed %}
+            {%- set started = as_datetime(states('sensor.proxmox_ubuntu_uptime'), none) %}
+            {%- if started is not none and started > off - timedelta(seconds=30) %}
+              {{- 'starting' if now() - started < timedelta(minutes=5) else 'not_responding' }}
+            {%- else %}
+              {{- 'stopping' if now() - off < timedelta(minutes=3) else 'not_responding' }}
+            {%- endif %}
+          {%- endif %}
+        attributes:
+          since: "{{ states.binary_sensor.ubuntu_agent_online.last_changed.isoformat() if states.binary_sensor.ubuntu_agent_online else none }}"

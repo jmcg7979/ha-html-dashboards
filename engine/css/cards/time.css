@@ -1,0 +1,15 @@
+/* ---------- time picker tile ---------- */
+.timecard .tclock { min-width: calc(86px * var(--s)); text-align: center; font: 600 var(--fs-title)/1 var(--font-display); }
+.timecard .subs { align-items: center; }
+
+.timecard .sb.xs { margin-left: var(--sp-4); }
+.timecard .tx { min-width: 0; }
+.timecard .tx .name, .timecard .tx .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a row with extra buttons (run now, skip) in a narrow cell (phone, a third of the panel): the controls get their own line,
+   the clock under the name and the extra buttons pushed right, so the name and its status line stay readable */
+@container cell (max-width: 460px) {
+  .timecard.has-x { height: auto; flex-wrap: wrap; row-gap: var(--sp-8); padding: var(--sp-10) 0; }
+  .timecard.has-x > .subs { flex: none; width: calc(100% - 2 * var(--sp-12)); margin-left: var(--sp-12); }
+  .timecard.has-x .sb.x0 { margin-left: auto; }
+  .timecard.has-x .tclock { min-width: calc(96px * var(--s)); }
+}

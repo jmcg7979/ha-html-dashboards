@@ -1,0 +1,198 @@
+/* Page shell, layout grid and shared components. Values come from tokens.css only. */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: var(--ink); }
+html, body { margin: 0; min-height: 100%; color: var(--text); font: var(--fs-sub)/1.35 var(--font); -webkit-font-smoothing: antialiased; -webkit-user-select: none; user-select: none; font-feature-settings: "tnum" 1; }
+/* icons only (24x24 viewBox, zero specificity): a bare `svg` rule also shrank Leaflet's map overlay to 21 px and hid the marker */
+:where(svg[viewBox="0 0 24 24"]) { width: var(--icon); height: var(--icon); fill: currentColor; display: block; flex: none; }
+button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; touch-action: manipulation; }
+button:focus-visible { outline: 2px solid rgba(var(--mist), var(--a-80)); outline-offset: 2px; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---- optional sky: two soft glows that follow the sun and the weather, only when a dashboard sets
+   ambient (core/ambient.js adds html.sky). body must stay transparent, or it paints over this layer. ---- */
+html.sky body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; transition: background 4s;
+  background:
+    radial-gradient(120% 70% at 78% -10%, rgba(var(--sky-a), var(--sky-strength)) 0%, transparent 60%),
+    radial-gradient(90% 60% at 0% 110%, rgba(var(--sky-b), calc(var(--sky-strength) * .55)) 0%, transparent 65%),
+    var(--ink); }
+
+/* ---- shell: rail + content ---- */
+.shell { display: flex; min-height: 100vh; min-height: 100dvh; }
+#rail { width: var(--rail-w); flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-6); padding: var(--page-pad) 0; position: sticky; top: 0; height: 100vh; height: 100dvh; }
+#rail a { width: calc(64px * var(--s)); padding: min(var(--sp-10), 1vh) 0;   /* 1vh: ten views + HA still fit an 800 px screen */
+   border-radius: var(--r-18); display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); color: var(--text-3); text-decoration: none; font-size: var(--fs-small); font-weight: var(--fw-strong); }
+#rail a svg { width: var(--icon-rail); height: var(--icon-rail); }
+#rail a.on { color: var(--text); background: var(--veil-2); }
+#rail .spacer { flex: 1; }
+#app { flex: 1; min-width: 0; }
+:root[data-profile="phone"] #rail { display: none; }
+
+/* ---- layout: view > section > card grid ---- */
+.view { display: grid; grid-template-columns: var(--view-template, repeat(var(--view-cols), minmax(0, 1fr))); gap: var(--view-gap); padding: var(--page-pad) var(--page-pad) calc(var(--page-pad) / 2) 0; max-width: var(--view-max); align-items: start; }
+:root[data-profile="phone"] .view { padding: var(--page-pad) var(--page-pad) calc(var(--page-pad) + 6px); grid-template-columns: minmax(0, 1fr); }
+.section { grid-column: span var(--span, 1); min-width: 0; }
+.section.panel { background: var(--panel-bg); border-radius: var(--panel-radius); padding: var(--panel-pad); }
+.section.glass { background: var(--glass); border: 1px solid var(--hairline); border-radius: var(--panel-radius); padding: var(--sp-14); }
+.sgrid { display: grid; grid-template-columns: repeat(var(--cols, var(--section-cols)), minmax(0, 1fr)); gap: var(--gap); align-items: stretch; }
+/* grow: a section holding a growing card stretches to its row's height (the tallest column), the card takes what's left */
+.section:has(> .sgrid.grows) { align-self: stretch; display: flex; flex-direction: column; }
+.sgrid.grows { flex: 1; min-height: 0; }
+.cell.grow { min-height: 0; display: flex; flex-direction: column; contain: size; }   /* adds no height of its own: the other columns set it */
+.cell.grow > * { flex: 1; min-height: 0; }
+:root[data-profile="phone"] .sgrid.grows { grid-template-rows: none !important; }
+.cell { grid-column: span var(--span, var(--cols, 12)); min-width: 0; }
+/* ---- containers: cards size themselves by the space they get (@container cell / pbody / popup), not by the device.
+   Not on anything holding a full-screen element: a container is the frame for position: fixed inside it, so a camera
+   going full screen would stay inside its tile. ---- */
+.cell:not(:has(.camera, .cwall, .drawer)) { container: cell / inline-size; }
+.pbody:not(:has(.camera, .cwall)) { container: pbody / inline-size; }
+.popup:not(:has(.camera, .cwall)) { container: popup / inline-size; }
+:root[data-profile="phone"] .section { grid-column: 1 / -1; }
+
+/* ---- shared building blocks ---- */
+.ic { width: var(--icon-circle); height: var(--icon-circle); border-radius: 50%; background: var(--veil-2); color: var(--text-2); display: flex; align-items: center; justify-content: center; flex: none; position: relative; transition: background .2s, color .2s; }
+.ic.on { background: rgba(var(--t), var(--tint-icon)); color: rgb(var(--t)); }
+.ic.ring::before { content: ""; position: absolute; inset: calc(-1 * var(--ring-w) - 1px); border-radius: 50%; pointer-events: none;
+  background: conic-gradient(var(--ring-c, rgb(var(--sage))) var(--ring-p, 0%), var(--hairline) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-w)), #000 calc(100% - var(--ring-w) + 0.5px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-w)), #000 calc(100% - var(--ring-w) + 0.5px)); }
+.name { font-size: var(--fs-item); font-weight: var(--fw-strong); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sub { font-size: var(--fs-detail); line-height: 1.4; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill { height: var(--pill-h); padding: 0 var(--sp-12); border-radius: var(--r-pill); display: inline-flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-pill); font-weight: var(--fw-strong); background: var(--veil-2); color: var(--text-2); white-space: nowrap; }
+.pill svg { width: var(--icon-xs); height: var(--icon-xs); }
+.pill.on { background: rgba(var(--t), var(--tint-pill)); color: rgb(var(--t)); }
+.pill .dot { width: calc(6px * var(--s)); height: calc(6px * var(--s)); border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.rbtn { width: var(--rbtn); height: var(--rbtn); border-radius: 50%; background: var(--veil-2); display: flex; align-items: center; justify-content: center; flex: none; color: var(--text-2); }
+.rbtn svg, .chip svg, .sb svg { width: var(--icon-sm); height: var(--icon-sm); }
+.chip { flex: 1; min-width: 0; height: var(--chip-h); border-radius: var(--chip-radius); background: var(--veil-2); display: flex; align-items: center; justify-content: center; gap: var(--sp-6); font-size: var(--fs-sub); font-weight: var(--fw-strong); white-space: nowrap; overflow: hidden; color: var(--text-2); transition: background .15s, color .15s; }
+.chip.on { background: rgba(var(--t), var(--a-26)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-50)); }
+.chip.dim, .sb.dim { opacity: .35; }
+.sb { height: var(--chip-h); min-width: var(--chip-h); padding: 0 var(--sp-10); border-radius: var(--r-pill); background: var(--veil-2); display: flex; align-items: center; justify-content: center; gap: var(--sp-4); font-size: var(--fs-sub); font-weight: var(--fw-strong); white-space: nowrap; color: var(--text-2); }
+.sb.on { background: rgba(var(--t), var(--a-26)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+.confirm { background: rgba(var(--ember), var(--a-26)) !important; color: rgb(var(--ember)) !important; }
+.confirm::after { content: "Tap again"; font-size: var(--fs-small); margin-left: 4px; }
+.rbtn.confirm::after, .sb.confirm::after { content: none; }
+.pending { opacity: .8; }
+
+/* ---- timing readout ---- */
+#perf { position: fixed; right: 10px; bottom: 8px; display: flex; gap: 8px; align-items: center; font-size: var(--fs-small); color: var(--text-2); background: rgba(0, 0, 0, .55); padding: 4px 10px; border-radius: 12px; z-index: 5; }
+#perf i { width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--ember)); }
+#perf i.ok { background: rgb(var(--sage)); }
+#login { position: fixed; inset: 0; background: var(--ink); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 50; font-family: var(--font-display); }
+#login button { height: 48px; padding: 0 26px; border-radius: 24px; background: rgba(var(--mist), var(--a-20)); color: rgb(var(--mist)); font-weight: 600; font-size: 15px; font-family: var(--font); }   /* fixed: phone chrome, real px by design */
+
+/* ---- progress bar template (2026-11-03): every capacity / progress bar is a track with an <i> fill, coloured by --t.
+   Host capacity (.ctrack), printer job (.pj-bar), health (.htrack); a new bar uses one of these classes or adds itself here. ---- */
+.ctrack, .pj-bar, .htrack { height: var(--bar-h); border-radius: var(--r-pill); background: var(--bar-track); overflow: hidden; }
+.ctrack i, .pj-bar i, .htrack i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, rgba(var(--t), var(--a-50)), rgb(var(--t)));
+  box-shadow: 0 0 10px rgba(var(--t), var(--a-45)); transition: width .4s; }
+
+/* ---- pop-ups ---- */
+html.modal-open, html.modal-open body { overflow: hidden; }
+.pwrap { position: fixed; inset: 0; z-index: 30; background: rgba(var(--scrim-rgb), var(--popup-dim)); -webkit-backdrop-filter: blur(var(--popup-blur)) saturate(1.2); backdrop-filter: blur(var(--popup-blur)) saturate(1.2); display: flex; align-items: center; justify-content: center; padding: var(--page-pad); animation: fade .16s ease-out; }
+/* surface: the same glass panel as the main page (page colour + --glass), the tone colour glowing from the header, a 1 px edge
+   plus a dark outer line so it lifts off the dimmed page. Boxes inside it are darker wells (--pit), as inside the page's panels. */
+.popup { width: min(var(--popup-w), 100%); max-height: calc(100vh - 2 * var(--page-pad)); max-height: calc(100dvh - 2 * var(--page-pad));
+  background: radial-gradient(70% 45% at 6% -12%, rgba(var(--t), var(--a-12)), transparent 70%), var(--glass), var(--ink);
+  border: 1px solid var(--popup-edge); border-radius: var(--popup-radius); display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 28px 80px rgba(0, 0, 0, .65), inset 0 1px 0 var(--veil); animation: rise .2s cubic-bezier(.2, .8, .2, 1); }
+.popup.wide { width: min(var(--popup-wide), 100%); }
+.phead { display: flex; align-items: center; gap: var(--sp-14); padding: var(--sp-22) var(--sp-22) var(--sp-16); }
+.phead .ic { width: var(--ic-xl); height: var(--ic-xl); box-shadow: 0 0 28px rgba(var(--t), var(--a-35)); }
+.phead .name { font: 600 var(--fs-popup-title)/1.2 var(--font-display); letter-spacing: -0.01em; }
+.phead .tx { flex: 1; min-width: 0; }
+.pbody { overflow-y: auto; padding: 0 var(--sp-22) var(--sp-22); overscroll-behavior: contain; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { transform: translateY(14px) scale(.985); opacity: 0; } }
+
+/* ---- rail clock: time and short date where the greeting used to be ---- */
+#rail .rclock { text-align: center; padding: var(--sp-4) 0 var(--sp-10); margin-bottom: var(--sp-4); border-bottom: 1px solid var(--hairline); width: calc(64px * var(--s)); }
+#rail .rclock b { display: block; font: 600 var(--fs-figure)/1.05 var(--font-display); letter-spacing: -0.02em; color: var(--text); }
+#rail .rclock small { display: block; font-size: var(--fs-small); color: var(--text-2); margin-top: 3px; }
+
+/* ---- pop-up parts ---- */
+.phead .ic svg { width: var(--icon-lg); height: var(--icon-lg); }
+.phead .sub { font-size: var(--fs-body); }
+.pbody > .sgrid { gap: var(--sp-10); }
+.pbody .tile { height: calc(64px * var(--s)); }
+/* Engine rule (2026-11-03): inside a pop-up, anything that only shows information is a well (--pit), like the meters inside a
+   Systems panel; anything you tap (buttons, toggles, sliders, tappable tiles) stays raised (--veil). Highlighted states keep their tint.
+   Read-only tiles get .ro from cards/tile.js (state mode with no tap). New read-only cards: add their class here. */
+.pbody :is(.chart, .thermo, .tile.ro:not(.on), .orow:not(.on), .wroom:not(.on), .imagecard, .alarmcard:not(.alerting)) { background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); }
+.pbody .thermo.on { background: radial-gradient(70% 50% at 50% 30%, rgba(var(--t), var(--a-16)), transparent 70%), var(--pit); }
+.pbody .alarmcard:not(.alerting) { background: radial-gradient(80% 50% at 20% 0%, rgba(var(--t), var(--a-20)), transparent 70%), var(--pit); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-26)); }
+.pbody .orow.on { background: linear-gradient(90deg, rgba(var(--lamp), var(--a-16)), var(--pit)); }
+/* a chart in a pop-up is never shorter than --chart-min (its own height still applies above that) */
+.pbody .chart:not(.fit) .cplot { min-height: var(--chart-min); }
+.popup.max { width: min(calc(1180px * var(--s)), 100%); }
+/* camera pop-up: never wider than 'wide' or the screen, and no wider than core/popup.js fitCam() measures will fit the screen height */
+.popup.cam { width: min(var(--popup-wide), 100%, var(--cam-fit, 100%)); }
+
+
+/* ---- phone: bottom tab bar, More sheet, bottom-sheet pop-ups (core/phone.js) ---- */
+#tabbar { display: none; }
+:root[data-profile="phone"] body { padding-top: var(--safe-top); }
+:root[data-profile="phone"] #app { padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom)); }
+:root[data-profile="phone"] #tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; height: calc(var(--tabbar-h) + var(--safe-bottom)); padding: 0 4px var(--safe-bottom);
+  background: rgba(16, 19, 27, .88); -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); border-top: 1px solid var(--hairline); }
+#tabbar a, #tabbar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--text-3); text-decoration: none; font-size: 11.5px; font-weight: var(--fw-strong); }   /* fixed: phone chrome, real px by design */
+#tabbar i { display: flex; align-items: center; justify-content: center; width: 54px; height: 30px; border-radius: 15px; transition: background .15s, color .15s; }
+#tabbar svg { width: 23px; height: 23px; }
+#tabbar .on { color: var(--text); }
+#tabbar .on i { background: rgba(var(--mist), var(--a-20)); color: rgb(var(--mist)); }
+/* tabbed views (Systems): the tabs scroll sideways instead of wrapping */
+:root[data-profile="phone"] .vtabs { margin: var(--page-pad) var(--page-pad) 0; max-width: calc(100% - 2 * var(--page-pad)); overflow-x: auto; scrollbar-width: none; align-self: stretch; }
+:root[data-profile="phone"] .vtabs::-webkit-scrollbar { display: none; }
+/* frame views (Music) fill the space between the status bar and the tab bar */
+:root[data-profile="phone"] .fview { height: calc(100vh - var(--tabbar-h) - var(--safe-bottom) - var(--safe-top)); height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - var(--safe-top)); padding: 8px; }
+
+/* pop-ups: a card centred on the screen, clear of the status bar and the tab bar; drag it down to close */
+:root[data-profile="phone"] .pwrap { align-items: center; padding: calc(var(--safe-top) + 12px) 10px calc(var(--safe-bottom) + 12px); }
+:root[data-profile="phone"] .popup { width: 100%; border-radius: var(--popup-radius); max-height: 100%; }
+:root[data-profile="phone"] .phead { padding: 16px 14px 12px; gap: 12px; }
+:root[data-profile="phone"] .phead .ic { width: 42px; height: 42px; }
+:root[data-profile="phone"] .phead .ic svg { width: 22px; height: 22px; }
+:root[data-profile="phone"] .phead .name { font-size: 20px; }   /* fixed: phone chrome, real px by design */
+:root[data-profile="phone"] .pbody { padding: 0 14px 16px; }
+:root[data-profile="phone"] .popup.wide, :root[data-profile="phone"] .popup.max, :root[data-profile="phone"] .popup.cam { width: 100%; }
+/* a card that takes 40%+ of a pop-up row on a big screen takes the whole row in a narrow pop-up */
+@container pbody (max-width: 560px) { .pbody .cell.part { grid-column: 1 / -1; } }
+:root[data-profile="phone"] .pbody:has(.camera, .cwall) .cell.part { grid-column: 1 / -1; }   /* not a container (see above) */
+/* "grow" cells take their height from the other columns on a big screen; in one column they size to their content */
+:root[data-profile="phone"] .cell.grow { contain: none; }
+/* a camera in full screen covers the tab bar too (core/phone.js also takes over HA's page around us) */
+html.camfull #tabbar { display: none !important; }
+
+/* More sheet */
+.grab { display: none; }
+:root[data-profile="phone"] .msheet { align-items: flex-end; padding: 0; }
+:root[data-profile="phone"] .msheet .popup { border-radius: var(--popup-radius) var(--popup-radius) 0 0; padding: 0 16px calc(14px + var(--safe-bottom)); }
+:root[data-profile="phone"] .msheet .grab { display: block; width: 38px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .24); margin: 8px auto 0; flex: none; }
+.msgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 18px 0 14px; }
+.mbtn { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 6px 14px; border-radius: 18px; background: var(--veil); box-shadow: inset 0 0 0 1px var(--edge); color: var(--text); text-decoration: none; font-weight: var(--fw-strong); font-size: 13px; }   /* fixed: phone chrome, real px by design */
+.mbtn svg { width: 28px; height: 28px; color: rgb(var(--mist)); }
+.mbtn.on { background: rgba(var(--mist), var(--a-16)); box-shadow: inset 0 0 0 1px rgba(var(--mist), var(--a-45)); }
+.mlinks { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--hairline); padding-top: 8px; }
+.mlinks:not(:has(.mlink)) { display: none; }
+.mlink { display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 12px; border-radius: 14px; color: var(--text-2); text-decoration: none; font-weight: var(--fw-strong); font-size: 14.5px; text-align: left; }   /* fixed: phone chrome, real px by design */
+.mlink:active, .mbtn:active { background: var(--veil-2); }
+/* tabbed views keep their tab labels on a phone (pop-up tabs are icons only) */
+:root[data-profile="phone"] .vtabs .ptab span { display: inline; }
+:root[data-profile="phone"] .vtabs .ptab { flex: 1 0 auto; justify-content: center; }
+/* five or more tabs don't fit with labels: icons only, except the open one */
+:root[data-profile="phone"] .vtabs:has(.ptab:nth-child(5)) .ptab:not(.on) span { display: none; }
+:root[data-profile="phone"] .vtabs:has(.ptab:nth-child(5)) .ptab:not(.on) { flex: 1 1 0; padding: 0; }
+
+/* Drill-in rail (app.js): a view with several pages swaps the rail for its own menu (Back, title, pages); the tab row
+   above the page is phone-only (no rail there). */
+:root:not([data-profile="phone"]) .pview > .vtabs { display: none; }
+#rail .rmain, #rail .rsub { display: flex; flex-direction: column; align-items: center; gap: min(var(--sp-6), .5vh); flex: 1; min-height: 0; }
+#rail .rsub { display: none; }
+#rail.drill .rmain { display: none; }
+#rail.drill .rsub.open { display: flex; }
+#rail .rback { width: calc(64px * var(--s)); padding: var(--sp-10) 0; border-radius: var(--r-18); display: flex; flex-direction: column; align-items: center; gap: var(--sp-4);
+  color: var(--text-2); font-size: var(--fs-small); font-weight: var(--fw-strong); background: var(--veil); box-shadow: inset 0 0 0 1px var(--hairline); }
+#rail .rback svg { width: var(--icon-rail); height: var(--icon-rail); }
+#rail .rtitle { width: calc(64px * var(--s)); text-align: center; padding: var(--sp-8) 0 var(--sp-2); margin-top: var(--sp-4); border-top: 1px solid var(--hairline);
+  font-size: var(--fs-micro); font-weight: var(--fw-strong); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }

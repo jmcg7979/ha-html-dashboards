@@ -1,0 +1,31 @@
+/* ---------- people, style 'portrait' (status row): cut-out portrait inside the tile, greyed and sunk while away ---------- */
+.people.portrait { min-height: 0; height: var(--stat-h-lg); padding: 0; gap: 0; border-radius: var(--r-20); position: relative; overflow: hidden;
+  --people-sink: calc(10px * var(--s)); --fig-w: calc(70px * var(--s)); --fig-img: calc(76px * var(--s)); }
+.people.portrait .pp { position: relative; min-width: 0; height: 100%; cursor: pointer; }
+.people.portrait .pfig { position: absolute; left: var(--sp-10); bottom: 0; width: var(--fig-w); height: 100%; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.people.portrait .pfig img { position: absolute; left: 50%; bottom: calc(-4px * var(--s)); width: var(--fig-img); height: var(--fig-img); transform: translateX(-50%); transition: transform .6s cubic-bezier(.2, .8, .2, 1), filter .6s; }
+.people.portrait .pfig img.round { width: calc(54px * var(--s)); height: calc(54px * var(--s)); bottom: var(--sp-14); border-radius: 50%; object-fit: cover; }
+.people.portrait .pglow { position: absolute; left: 0; bottom: 0; width: calc(96px * var(--s)); height: 80%; opacity: 0; transition: opacity .6s;
+  background: radial-gradient(ellipse 55% 85% at 45% 100%, rgba(var(--sage), var(--a-35)), rgba(var(--sage), 0) 72%); pointer-events: none; }
+.people.portrait [data-where="home"] .pglow { opacity: 1; }
+.people.portrait :is([data-where="away"], [data-where="zone"], [data-where="unknown"]) .pfig img { transform: translate(-50%, var(--people-sink)); filter: grayscale(1) brightness(.72); }
+.people.portrait .ptxt { position: absolute; left: calc(var(--fig-w) + 18px * var(--s)); right: var(--sp-10); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.people.portrait .name { font: 600 var(--fs-figure)/1.15 var(--font-display); }
+.people.portrait :is([data-where="away"], [data-where="zone"]) .name { color: var(--text-2); }
+.people.portrait .pst { display: flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-body); line-height: 1.25; color: var(--text-2); min-width: 0; }
+.people.portrait .pst .ptext { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.people.portrait .pst .pic { display: flex; flex: none; }
+.people.portrait .pst svg { width: var(--icon-xs); height: var(--icon-xs); flex: none; display: block; }
+.people.portrait [data-where="home"] .pst { color: rgb(var(--sage)); }
+.people.portrait [data-where="zone"] .pst { color: rgb(var(--lamp)); }
+.people.portrait.round { --fig-w: calc(58px * var(--s)); }
+.people.portrait.round .pglow { display: none; }
+.people.portrait.round .pfig { left: var(--sp-14); top: 50%; bottom: auto; height: var(--fig-w); transform: translateY(-50%); -webkit-mask-image: none; mask-image: none; box-sizing: border-box;
+  border-radius: 50%; border: var(--ring-w) solid rgba(255, 255, 255, .25); padding: 2px; transition: border-color .4s; }
+.people.portrait.round [data-where="home"] .pfig { border-color: rgb(var(--sage)); }
+.people.portrait.round [data-where="zone"] .pfig { border-color: rgb(var(--lamp)); }
+.people.portrait.round .pfig img.round { position: static; display: block; width: 100%; height: 100%; transform: none; border-radius: 50%; object-fit: cover; }
+.people.portrait.round :is([data-where="away"], [data-where="zone"], [data-where="unknown"]) .pfig img { transform: none; filter: grayscale(.7) brightness(.85); }
+.people.portrait.round .ptxt { left: calc(14px * var(--s) + var(--fig-w) + 14px * var(--s)); }
+

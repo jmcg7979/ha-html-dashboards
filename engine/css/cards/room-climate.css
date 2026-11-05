@@ -1,0 +1,13 @@
+/* ---------- room climate with sparkline ---------- */
+.rclim { position: relative; width: 100%; height: calc(104px * var(--s)); border-radius: var(--tile-radius); background: var(--veil); overflow: hidden; padding: var(--sp-12) var(--sp-14); display: flex; flex-direction: column; text-align: left; --t: var(--stone); }
+.rspark { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 48%; opacity: .75; }
+.rsl { fill: none; stroke: rgb(var(--mist)); stroke-width: 1.6; vector-effect: non-scaling-stroke; opacity: .8; }
+.rsa { fill: rgba(var(--mist), var(--a-12)); }
+.rclim.on .rsl { stroke: rgb(var(--t)); } .rclim.on .rsa { fill: rgba(var(--t), var(--a-12)); }
+.rtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; position: relative; }
+.ract { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-small); color: var(--text-2); }
+.ract svg { width: 14px; height: 14px; }
+.rclim.on .ract { color: rgb(var(--t)); }
+.rtemp { font: 600 var(--fs-big)/1.1 var(--font-display); letter-spacing: -0.02em; position: relative; margin-top: auto; }
+.rfoot { display: flex; justify-content: space-between; position: relative; }
+

@@ -1,0 +1,16 @@
+/* ---------- timer alarm: takes the whole screen until stopped ---------- */
+.alarm { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: radial-gradient(circle at 50% 45%, rgb(196, 70, 50), rgb(120, 22, 12) 60%, rgb(36, 8, 5)); animation: alarm-bg 1s ease-in-out infinite; }
+.alarm-in { display: flex; flex-direction: column; align-items: center; gap: var(--sp-14); text-align: center; }
+.alarm-ic { width: calc(140px * var(--s)); height: calc(140px * var(--s)); border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--edge-strong); box-shadow: 0 0 0 0 rgba(255, 255, 255, .5); animation: alarm-ring 1s ease-out infinite; }
+.alarm-ic svg { width: var(--ic-hero); height: var(--ic-hero); color: #fff; animation: alarm-shake .5s ease-in-out infinite; }
+.alarm-t { font: 700 var(--fs-takeover)/1 var(--font-display); letter-spacing: -0.03em; color: #fff; }
+.alarm-l { font: 600 var(--fs-big)/1.2 var(--font); color: rgba(255, 255, 255, .85); min-height: 1.2em; }
+.alarm-stop { margin-top: var(--sp-18); height: calc(104px * var(--s)); padding: 0 calc(64px * var(--s)); border-radius: var(--r-pill); background: #fff; color: rgb(170, 30, 20);
+  display: flex; align-items: center; gap: var(--sp-14); font: 700 var(--fs-display-s)/1 var(--font-display); box-shadow: 0 16px 50px rgba(0, 0, 0, .45); }
+.alarm-stop svg { width: var(--ic-l); height: var(--ic-l); }
+.alarm-h { color: rgba(255, 255, 255, .7); font-size: var(--fs-name); }
+@keyframes alarm-bg { 50% { filter: brightness(1.25); } }
+@keyframes alarm-ring { to { box-shadow: 0 0 0 calc(40px * var(--s)) rgba(255, 255, 255, 0); } }
+@keyframes alarm-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+

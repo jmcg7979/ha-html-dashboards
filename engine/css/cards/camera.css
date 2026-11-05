@@ -1,0 +1,38 @@
+/* ---------- camera ---------- */
+.camera { position: relative; aspect-ratio: var(--ratio); border-radius: var(--r-20); overflow: hidden; background: rgb(var(--media-rgb)); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+.camera video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.camera.contain video { object-fit: contain; }
+.camera .cposter { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; transition: opacity .2s; }
+.camera:not(.held) .cposter, .camera.live .cposter { opacity: 0; }
+/* spinner until the stream's first frame; fades in after a beat so a fast start never flashes it */
+.camera .cspin { position: absolute; left: 50%; top: 50%; width: calc(34px * var(--s)); height: calc(34px * var(--s)); margin: calc(-17px * var(--s)) 0 0 calc(-17px * var(--s)); border-radius: 50%;
+  border: calc(3px * var(--s)) solid var(--edge-strong); border-top-color: rgba(255, 255, 255, .85); pointer-events: none; opacity: 0;
+  animation: cspin .8s linear infinite, cspin-in .2s ease-out .25s forwards; }
+.camera.held .cspin { background: rgba(var(--media-rgb), .35); box-shadow: 0 0 0 calc(10px * var(--s)) rgba(var(--media-rgb), .35); }
+.camera.live .cspin { display: none; }
+.camera.mainlive .cspin { display: none; }   /* full screen: the main stream is playing, whatever the substream is doing */
+.camera.full .cspin { width: calc(48px * var(--s)); height: calc(48px * var(--s)); margin: calc(-24px * var(--s)) 0 0 calc(-24px * var(--s)); }
+@keyframes cspin { to { transform: rotate(360deg); } }
+@keyframes cspin-in { to { opacity: 1; } }
+.camera.contain .cposter { object-fit: contain; }
+.camera.fill video, .camera.fill .cposter { object-fit: fill; }
+/* full screen: the main stream in a second video over the substream, shown once it plays; spinner over the enlarged substream until then */
+.camera .vmain { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.camera.mainlive .vmain { opacity: 1; }
+.camera.mainlive .cposter { opacity: 0; }
+.camera.full.upg .cspin { display: block; }
+.camera .clabel { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--sp-28) var(--sp-14) var(--sp-12); font-size: var(--fs-sub); font-weight: var(--fw-strong); background: linear-gradient(transparent, rgba(var(--media-rgb), .7)); pointer-events: none; }
+.camera .mute { position: absolute; right: var(--sp-10); bottom: var(--sp-8); width: var(--rbtn); height: var(--rbtn); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2;
+  background: rgba(var(--ember), var(--a-90)); color: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .45); }   /* red so it is easy to find */
+.camera .mute.on { background: rgba(var(--mist), var(--a-90)); color: var(--ink); }
+.camera.alerting { box-shadow: 0 0 0 3px rgb(var(--ember)), 0 10px 30px rgba(0, 0, 0, .35); animation: cam-alert 1.4s ease-in-out infinite; }
+.camera.alerting .clabel { color: #fff; font-weight: 700; }
+@keyframes cam-alert { 50% { box-shadow: 0 0 0 5px rgba(var(--ember), var(--a-45)), 0 10px 30px rgba(0, 0, 0, .35); } }
+.camera.full { position: fixed; inset: 0; z-index: 20; border-radius: 0; aspect-ratio: auto; }
+.camera.full video, .camera.full .cposter { object-fit: contain; }
+.camera.mainlive .vsub, .camera.mainlive .cposter { visibility: hidden; }   /* main stream showing: nothing of the substream underneath */
+/* fill cameras (anamorphic 704x576 substream shown 16:9): keep that shape in full screen while the main stream connects */
+.camera.full.fill .vsub, .camera.full.fill .cposter { position: absolute; inset: 0; margin: auto; width: min(100%, calc(100dvh * var(--ratio))); height: auto; aspect-ratio: var(--ratio); object-fit: fill; }
+.camera.full .clabel { padding: calc(40px * var(--s)) var(--sp-24) var(--sp-20); font-size: var(--fs-name); }
+.camera.full .mute { right: var(--sp-20); bottom: var(--sp-16); width: calc(52px * var(--s)); height: calc(52px * var(--s)); }
+

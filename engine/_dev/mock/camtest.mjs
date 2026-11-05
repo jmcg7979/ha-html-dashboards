@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+const b=await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
+const p=await b.newPage({viewport:{width:1280,height:800}}); const errs=[], reqs=[];
+p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{if(['error','warning'].includes(m.type()))errs.push(m.text().slice(0,200))});
+p.on('request',r=>{const u=r.url(); if(u.includes('camera_proxy')||u.includes('/mse/')) reqs.push(u.replace(/^.*\/api\//,''));});
+await p.goto('http://localhost:8125/local/dash/index.html?d=main'); await p.evaluate(()=>localStorage.setItem('hassTokens',JSON.stringify({hassUrl:location.origin,refresh_token:'R',access_token:'A',expires:Date.now()+1e6,clientId:location.origin+'/'})));
+await p.reload(); await p.waitForTimeout(3000);
+const st=()=>p.evaluate(()=>[...document.querySelectorAll('.view-home .camera')].map(c=>c.className));
+console.log('home', await st(), 'reqs', reqs.length); const n0=reqs.length;
+await p.click('#rail a[data-v="cameras"]'); await p.waitForTimeout(3000);
+console.log('on cameras view, reqs since', reqs.slice(n0));
+const n1=reqs.length;
+await p.click('#rail a[data-v="home"]'); await p.waitForTimeout(150);
+console.log('back home +150ms', await st(), 'new reqs', reqs.slice(n1));
+console.log('ERR', errs); await b.close();

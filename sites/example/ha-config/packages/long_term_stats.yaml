@@ -1,0 +1,9 @@
+# History beyond 10 days needs long-term statistics. HA keeps them only for sensors with a state_class, and every sensor with a
+# history drill-in needs one (engine/docs/design-system.md, "History drill-in"). Add the ones your integrations leave out.
+# Find them: Developer Tools > Statistics, or the recorder/list_statistic_ids websocket command.
+# Applies after reloading Location & Customizations; statistics start from then.
+
+homeassistant:
+  customize:
+    sensor.nas_volume_used:
+      state_class: measurement

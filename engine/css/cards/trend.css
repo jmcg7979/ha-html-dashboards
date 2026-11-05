@@ -1,0 +1,39 @@
+/* ---------- trend: the #trend history pop-up (cards/trend.js) + the drill-in cue on Systems readings ---------- */
+.trend { display: flex; flex-direction: column; gap: var(--sp-12); }
+.tr-bar { display: flex; align-items: center; gap: var(--sp-12); flex-wrap: wrap; }
+.tr-zoom { display: flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-small); color: var(--text-3); }
+.tr-zoom .crange { padding-inline: var(--sp-10); }
+.tr-src { margin-left: auto; font-size: var(--fs-small); color: var(--text-3); }
+.tr-stats:empty { display: none; }
+.tr-plot { position: relative; height: min(calc(420px * var(--s)), 52vh); height: min(calc(420px * var(--s)), 52dvh); min-height: 220px; touch-action: pan-y; border-radius: var(--tile-radius);
+  background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); padding: var(--sp-10) var(--sp-8) 0 0; transition: opacity .2s; }
+.tr-plot.loading { opacity: .45; }
+.tr-plot .csvg { position: absolute; inset: var(--sp-10) var(--sp-8) 0 0; width: calc(100% - var(--sp-8)); height: calc(100% - var(--sp-10)); }
+.cgrid.v.major { stroke: var(--edge-strong); stroke-dasharray: 3 3; }
+.cx.major { fill: var(--text-2); font-weight: 600; }
+.cunit { text-anchor: end; }
+.tr-band { opacity: .16; }
+.tr-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.tr-th { stroke-width: 1.25; stroke-dasharray: 6 5; opacity: .75; }
+.tr-thl { fill: var(--text-2); font: 600 var(--fs-micro) var(--font); text-anchor: middle; dominant-baseline: central; }
+.tr-thb { fill: rgba(13, 16, 23, .9); stroke-width: 1; }
+.tr-none { fill: var(--veil-faint); }
+.tr-dot { stroke: var(--popup-bg, #0d1017); stroke-width: 2; }
+.trend .ctip strong { color: var(--text); font-weight: 600; margin-right: 4px; }
+.trend .ctip em { font-style: normal; color: var(--text-3); margin-left: 6px; }
+.tr-note { font-size: var(--fs-small); color: var(--text-3); min-height: 1.3em; }   /* kept, so the pop-up doesn't change height when a note appears */
+:root[data-profile="phone"] .tr-plot { height: 300px; }
+/* events list under the chart: the logbook template, three columns */
+.tr-ev { display: flex; flex-direction: column; gap: var(--sp-8); }
+.tr-evs { border-radius: var(--tile-radius); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; }
+.tr-evr { display: grid; grid-template-columns: 1fr 1fr minmax(0, .6fr); gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); font-size: var(--fs-detail); }
+.tr-evr + .tr-evr { border-top: 1px solid var(--hairline); }
+.tr-evr > :last-child { text-align: right; }
+.tr-evr.head { color: var(--text-3); font-size: var(--fs-meta); }
+
+/* drill-in cue: anything that opens the history pop-up */
+.drill { cursor: pointer; }
+.drill:active { filter: brightness(1.15); }
+.mtr-hi .chev, .fact .chev { color: var(--text-3); margin-left: 3px; }
+.fact.drill .flab { text-decoration: underline dotted rgba(255, 255, 255, .25); text-underline-offset: 3px; }
+@media (hover: hover) { .meter.drill:hover, .bay.drill:hover, .dv.drill:hover, .cap.drill:hover, .fact.drill:hover { background-color: var(--veil-faint); } }

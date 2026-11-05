@@ -1,0 +1,29 @@
+/* ---------- thermostat dial ---------- */
+.thermo { border-radius: var(--tile-radius); background: var(--veil); box-shadow: inset 0 0 0 1px var(--edge); padding: var(--sp-10) var(--sp-16) var(--sp-16); display: flex; flex-direction: column; gap: var(--sp-12); transition: background .3s; }
+.thermo.on { background: radial-gradient(70% 50% at 50% 30%, rgba(var(--t), var(--a-16)), transparent 70%), var(--veil); }
+.tdial { position: relative; width: min(100%, calc(270px * var(--s))); margin: 0 auto; aspect-ratio: 1; }
+.tsvg { width: 100%; height: 100%; display: block; }
+.ttrack { fill: none; stroke: var(--veil); stroke-width: 14; stroke-linecap: round; }
+.tband { fill: none; stroke-width: 14; stroke-linecap: round; }
+.ttick { stroke: var(--edge-strong); stroke-width: 1.5; }
+.tcurm { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
+.tknob { fill: #f4efe7; stroke: rgb(var(--t)); stroke-width: 4; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .5)); cursor: grab; }
+.tknob.on { stroke-width: 6; }
+.tlim { fill: var(--text-3); font: 500 11px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
+.tmid { position: absolute; inset: 22% 18%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); pointer-events: none; text-align: center; }
+.tact { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-sub); font-weight: var(--fw-strong); color: rgb(var(--t)); }
+.tact svg { width: 16px; height: 16px; }
+.tbig { font: 600 var(--fs-hero)/1 var(--font-display); letter-spacing: -0.03em; display: flex; align-items: baseline; gap: 4px; }
+.tbig i { font-style: normal; color: var(--text-3); font-size: .6em; }
+.tnow { font-size: var(--fs-sub); }
+.tsets { display: flex; gap: var(--gap); }
+.tset { flex: 1; display: flex; align-items: center; justify-content: space-between; border-radius: var(--r-14); background: rgba(var(--t), var(--a-12)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-26)); padding: var(--sp-6); }
+.tset .rbtn { background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); }
+.tsl { display: flex; flex-direction: column; align-items: center; }
+.tsl .sub { font-size: var(--fs-small); }
+.tval { font: 600 var(--fs-figure-m)/1 var(--font-display); color: rgb(var(--t)); }
+.toff { text-align: center; width: 100%; padding: var(--sp-10) 0; }
+.tfan { display: flex; align-items: center; gap: var(--sp-10); }
+.tfan > .sub { width: calc(34px * var(--s)); }
+.tfan .segments { flex: 1; }
+

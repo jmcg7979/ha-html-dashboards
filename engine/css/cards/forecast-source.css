@@ -1,0 +1,6 @@
+/* forecast read straight from weather.gov because HA's entity is unavailable (core/forecast.js) */
+.wxvia { font-size: var(--fs-small); color: rgb(var(--lamp)); padding: var(--sp-6) var(--sp-4) 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wxvia:empty { display: none; }
+.wxhours { position: relative; }
+.wxhours .wxvia { position: absolute; top: var(--sp-4); right: var(--sp-10); padding: 0; }
+

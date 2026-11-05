@@ -1,0 +1,16 @@
+/* ---------- confirm (second tap) must be obvious on round buttons too ---------- */
+.sb.confirm, .rbtn.confirm { box-shadow: 0 0 0 2px rgb(var(--ember)); animation: pulse .9s ease-in-out infinite; }
+.tile.confirm::after { margin: 0 var(--sp-14) 0 auto; font-weight: var(--fw-strong); font-size: var(--fs-sub); z-index: 1; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px rgba(var(--ember), var(--a-35)); } }
+
+
+/* ---------- confirm dialog (core/ask.js): power off / restart ---------- */
+.askwrap { z-index: 40; }
+.popup.ask { width: min(calc(440px * var(--s)), 100%); }
+.ask .phead { align-items: flex-start; }
+.ask .phead .ic { background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); }
+.ask .phead .sub { margin-top: var(--sp-6); color: var(--text-2); line-height: 1.4; white-space: normal; overflow: visible; }
+.askbtns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-10); padding: 0 var(--sp-22) var(--sp-22); }
+.askbtns .sb { justify-content: center; height: calc(48px * var(--s)); gap: var(--sp-8); font-weight: 600; }
+.askbtns .askok { background: rgba(var(--t), var(--a-20)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+:root[data-profile="phone"] .askbtns { padding: 0 14px 14px; }

@@ -1,0 +1,8 @@
+/* ---- phone: scrolling model (the page scrolls; no scroll boxes inside it) ---- */
+/* events: the list is part of the page (a scroll box of its own swallowed the page's scrolling) */
+:root[data-profile="phone"] .reviews .rvlist { overflow: visible; overscroll-behavior: auto; }
+/* select lists (preset, effect, palette): same - open in full and scroll with the pop-up, no scroll box inside a scroll box */
+:root[data-profile="phone"] .select .opts { max-height: none; overflow: visible; overscroll-behavior: auto; }
+/* maps (radar, person) stay below pop-ups and sheets: Leaflet's panes have z-indexes up to 1000 */
+.leaflet-container { z-index: 0; isolation: isolate; }
+

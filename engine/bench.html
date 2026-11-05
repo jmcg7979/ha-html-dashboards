@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blur benchmark</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1017; color: #eee9e1; font: 15px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  .blob { position: absolute; width: 520px; height: 520px; border-radius: 50%; filter: none; }
+  .b1 { background: radial-gradient(circle, #f2b35e, transparent 70%); left: 10%; top: 10%; }
+  .b2 { background: radial-gradient(circle, #7fb2e5, transparent 70%); right: 5%; bottom: 0; }
+  .moving .b1 { animation: drift 4s linear infinite alternate; } .moving .b2 { animation: drift2 5s linear infinite alternate; }
+  @keyframes drift { to { transform: translate(380px, 160px); } } @keyframes drift2 { to { transform: translate(-420px, -200px); } }
+  .video { position: absolute; left: 100px; top: 120px; width: 380px; height: 214px; border-radius: 20px; background: repeating-linear-gradient(90deg, #333 0 20px, #555 20px 40px); }
+  .moving .video { animation: pan 1s linear infinite; } @keyframes pan { to { background-position: 40px 0; } }
+  .grid { position: absolute; left: 100px; right: 18px; top: 18px; bottom: 18px; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 120px; gap: 14px; pointer-events: none; }
+  .card { border-radius: 18px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+  .glass .card { backdrop-filter: blur(var(--b)); -webkit-backdrop-filter: blur(var(--b)); background: rgba(255,255,255,.08); }
+  .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(6,8,12,.45); }
+  .overlay div { width: 760px; height: 520px; border-radius: 26px; background: rgba(23,28,38,.7); border: 1px solid rgba(255,255,255,.08); }
+  .pop .overlay { display: flex; } .popblur .overlay { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  #out { position: fixed; left: 18px; bottom: 18px; background: rgba(0,0,0,.75); padding: 14px 18px; border-radius: 14px; z-index: 5; min-width: 520px; }
+  #out table { border-collapse: collapse; } #out td { padding: 2px 12px 2px 0; }
+  #go { font: inherit; padding: 10px 18px; border-radius: 20px; border: 0; background: #7fb2e5; color: #0d1017; font-weight: 700; }
+</style></head>
+<body>
+<div id="stage"><div class="blob b1"></div><div class="blob b2"></div><div class="video"></div>
+  <div class="grid"></div><div class="overlay"><div></div></div></div>
+<div id="out"><b>Blur benchmark</b><div id="ua"></div><p>Takes about 50 seconds. Don't touch the screen while it runs.</p><button id="go">Start</button><table id="res"></table></div>
+<script type="module">
+import { token, origin } from './core/auth.js';
+const stage = document.getElementById('stage'), grid = stage.querySelector('.grid'), res = document.getElementById('res');
+grid.innerHTML = Array.from({ length: 16 }, () => '<div class="card"></div>').join('');
+document.getElementById('ua').textContent = navigator.userAgent.match(/Chrome\/[\d.]+/)?.[0] + ' · ' + innerWidth + '×' + innerHeight + ' · dpr ' + devicePixelRatio;
+// Each test: what the screen looks like, for 6 s, while something behind the cards moves (like a live camera or a changing sky).
+const TESTS = [
+  ['Flat cards, still background', '', ''],
+  ['Flat cards, moving background', 'moving', ''],
+  ['Blur 12px cards, still background', 'glass', '12px'],
+  ['Blur 12px cards, moving background', 'glass moving', '12px'],
+  ['Blur 24px cards, moving background', 'glass moving', '24px'],
+  ['Pop-up, no blur, moving background', 'moving pop', ''],
+  ['Pop-up, blur 20px, moving background', 'moving pop popblur', ''],
+];
+function measure(ms) {
+  return new Promise((done) => {
+    const f = []; let last = 0, start = 0;
+    const step = (t) => { if (!start) start = t; else f.push(t - last); last = t; if (t - start < ms) requestAnimationFrame(step); else done(f); };
+    requestAnimationFrame(step);
+  });
+}
+const stats = (f) => { const s = [...f].sort((a, b) => a - b); const avg = f.reduce((a, b) => a + b, 0) / f.length; return { fps: Math.round(1000 / avg), p95: s[Math.floor(s.length * .95)].toFixed(1), slow: Math.round(100 * f.filter((x) => x > 25).length / f.length) }; };
+document.getElementById('go').onclick = async () => {
+  document.getElementById('go').hidden = true;
+  res.innerHTML = '<tr><td><b>Test</b></td><td><b>fps</b></td><td><b>95th pct ms</b></td><td><b>slow frames</b></td></tr>';
+  const lines = [];
+  for (const [name, cls, b] of TESTS) {
+    stage.className = cls; stage.style.setProperty('--b', b || '0px');
+    await measure(1000);                    // settle
+    const r = stats(await measure(6000));
+    res.insertAdjacentHTML('beforeend', `<tr><td>${name}</td><td>${r.fps}</td><td>${r.p95}</td><td>${r.slow}%</td></tr>`);
+    lines.push(`${name}: ${r.fps} fps, p95 ${r.p95} ms, slow ${r.slow}%`);
+  }
+  stage.className = '';
+  // send the results to Home Assistant as a notification so they can be read back without a screenshot
+  try {
+    const tk = await token();
+    await fetch(origin + '/api/services/persistent_notification/create', { method: 'POST', headers: { Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notification_id: 'dash_blur_bench', title: 'Blur benchmark', message: document.getElementById('ua').textContent + '\n' + lines.join('\n') }) });
+    res.insertAdjacentHTML('afterend', '<p>Results sent to Home Assistant notifications.</p>');
+  } catch (e) { res.insertAdjacentHTML('afterend', '<p>Couldn’t send results to Home Assistant; take a photo of this table.</p>'); }
+};
+</script>
+</body></html>

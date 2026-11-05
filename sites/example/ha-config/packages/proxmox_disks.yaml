@@ -1,0 +1,49 @@
+# Proxmox host SSD health, wear and power-on hours, read hourly from the host's own API. The built-in Proxmox VE integration has no disk health.
+# Create a read-only API token (role PVEAuditor) on the host. secrets.yaml:
+#   proxmox_api_auth:  "PVEAPIToken=<user>@pve!<token name>=<secret>"
+#   proxmox_disks_url: "https://<host>:8006/api2/json/nodes/<node>/disks/list"
+#   proxmox_smart_url: "https://<host>:8006/api2/json/nodes/<node>/disks/smart?disk=<device, e.g. /dev/sda>"
+# Assumes one disk (data[0]). Proxmox's "wearout" is life remaining; the sensor shows the share used. SMART comes as attributes (SATA)
+# or text (NVMe); both are read. verify_ssl is off for the host's self-signed certificate: LAN only.
+# Reload: Developer Tools > YAML > RESTful.
+
+rest:
+  - resource: !secret proxmox_disks_url
+    headers:
+      Authorization: !secret proxmox_api_auth
+    verify_ssl: false
+    scan_interval: 3600
+    binary_sensor:
+      - name: Proxmox Disk Health
+        unique_id: proxmox_disk_health
+        device_class: problem
+        icon: mdi:harddisk
+        availability: "{{ value_json is defined and (value_json.data | default([]) | count) > 0 }}"
+        value_template: "{{ value_json.data[0].health | default('') not in ['PASSED', 'OK'] }}"
+    sensor:
+      - name: Proxmox Disk Wearout
+        unique_id: proxmox_disk_wearout
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:harddisk
+        availability: "{{ value_json is defined and value_json.data[0].wearout | default('N/A') is number }}"
+        value_template: "{{ 100 - value_json.data[0].wearout }}"
+
+  - resource: !secret proxmox_smart_url
+    headers:
+      Authorization: !secret proxmox_api_auth
+    verify_ssl: false
+    scan_interval: 3600
+    sensor:
+      - name: Proxmox Disk Power On Hours
+        unique_id: proxmox_disk_power_on_hours
+        unit_of_measurement: h
+        device_class: duration
+        state_class: total_increasing
+        icon: mdi:timer-outline
+        availability: "{{ value_json is defined and value_json.data is defined }}"
+        value_template: >-
+          {% set d = value_json.data %}
+          {% set a = (d.attributes | default([]) or []) | selectattr('name', 'eq', 'Power_On_Hours') | list %}
+          {% if a %}{{ a[0].raw | regex_findall('\d+') | first | int }}
+          {% else %}{{ (d.text | default('') | regex_findall('Power On Hours:\s+([\d,]+)') | first | default('') | replace(',', '')) | int(none) }}{% endif %}

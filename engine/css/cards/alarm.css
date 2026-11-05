@@ -1,0 +1,37 @@
+/* ---------- alarm card (pop-up left side): hero, readiness checklist, big modes, PIN keypad ---------- */
+.alarmcard { height: 100%; min-height: calc(470px * var(--s)); border-radius: var(--tile-radius); padding: var(--sp-18); display: flex; flex-direction: column; gap: var(--sp-14);
+  background: radial-gradient(80% 50% at 20% 0%, rgba(var(--t), var(--a-20)), transparent 70%), var(--veil); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-26)); transition: background .3s; }
+:root[data-profile="phone"] .alarmcard { height: auto; min-height: 0; }
+.alarmcard.alerting { animation: alarm-bg 1s ease-in-out infinite; background: radial-gradient(90% 60% at 30% 0%, rgba(var(--ember), var(--a-45)), transparent 75%), var(--veil); }
+.ahero { display: flex; align-items: center; gap: var(--sp-16); }
+.ashield { width: var(--ic-hero) !important; height: var(--ic-hero) !important; background: rgba(var(--t), var(--a-20)) !important; color: rgb(var(--t)) !important; box-shadow: 0 0 30px rgba(var(--t), var(--a-35)); }
+.ashield svg { width: var(--icon-hero); height: var(--icon-hero); }
+.astate { font: 600 var(--fs-big)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.aready { font-size: var(--fs-name); color: var(--text-2); margin-top: 3px; }
+.alarmcard.armed .aready, .alarmcard.alerting .aready { color: rgb(var(--t)); }
+.achecks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
+.achk { display: flex; align-items: center; gap: var(--sp-10); padding: var(--sp-10); border-radius: var(--r-14); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); min-width: 0; }
+.achk .ic { width: var(--ic-s); height: var(--ic-s); background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); }
+.achk .ic svg { width: var(--icon-sm); height: var(--icon-sm); }
+.achk .tx { display: flex; flex-direction: column; min-width: 0; }
+.achk .svalue { font-size: var(--fs-sub); font-weight: var(--fw-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.achk.bad { box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); background: rgba(var(--t), var(--a-12)); }
+.achk.bad .svalue { color: rgb(var(--t)); }
+.amodes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); margin-top: auto; }
+.amode { height: calc(86px * var(--s)); border-radius: var(--r-18); background: var(--veil-2); box-shadow: inset 0 0 0 1px var(--edge); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-6);
+  font: 600 var(--fs-name) var(--font); color: var(--text-2); transition: background .15s; }
+.amode svg { width: var(--icon-btn); height: var(--icon-btn); }
+.amode.on { background: rgba(var(--t), var(--a-26)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-50)); }
+.amode.dim { opacity: .35; }
+.amode.confirm::after { content: "Tap again"; margin: 0; font-size: var(--fs-small); }
+.akeypad { margin-top: auto; display: flex; flex-direction: column; gap: var(--gap); }
+.akhead { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+.adots { font-size: var(--fs-figure-m); letter-spacing: 6px; min-height: 30px; color: var(--text); }
+.akeys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
+.akey { height: calc(54px * var(--s)); border-radius: var(--r-14); background: var(--veil-2); box-shadow: inset 0 0 0 1px var(--edge); font: 600 var(--fs-figure-m) var(--font-display); display: flex; align-items: center; justify-content: center; }
+.akey:active { background: rgba(255, 255, 255, .2); }
+.akey.ok { background: rgba(var(--sage), var(--a-26)); color: rgb(var(--sage)); }
+.alarmcard.wrong .akeypad { animation: shake .4s; }
+.alarmcard.wrong .adots::after { content: "Wrong code"; font-size: var(--fs-sub); letter-spacing: 0; color: rgb(var(--ember)); }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+

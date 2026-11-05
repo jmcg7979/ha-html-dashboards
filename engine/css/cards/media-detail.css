@@ -1,0 +1,94 @@
+/* ---------- media pop-up (cards/media-detail.js) ----------
+   The pop-up gets .amb (and .amb-art once the art's colours are read: core/artcolor.js sets --amb-a/--amb-b/--t on it). */
+.popup.amb { background: radial-gradient(70% 45% at 6% -12%, rgba(var(--plum), var(--a-16)), transparent 70%), var(--raised); transition: background .4s; }
+.popup.amb.amb-art { background: radial-gradient(55% 65% at 16% 32%, rgba(var(--amb-a), .95), transparent 72%), radial-gradient(50% 60% at 85% 95%, rgba(var(--amb-a), .45), transparent 70%), linear-gradient(160deg, rgb(var(--amb-a)) 0%, rgb(var(--amb-b)) 70%); }
+.popup.amb .phead .ic { background: var(--veil-2); color: var(--text); }
+.popup.amb .phead .sub { color: rgba(var(--text-rgb), .75); }
+.popup.amb .pclose { background: var(--veil-2); color: var(--text); }
+
+.mdet { display: grid; grid-template-columns: minmax(0, 1fr) calc(300px * var(--s)); gap: var(--sp-24); align-items: stretch; }
+.mmain { display: flex; gap: var(--sp-28); align-items: center; min-width: 0; }
+.mart { width: calc(320px * var(--s)); aspect-ratio: 1; border-radius: var(--r-16); overflow: hidden; flex: none; background: var(--hairline); display: flex; flex-direction: column; gap: var(--sp-10); align-items: center; justify-content: center; color: var(--text-2); box-shadow: 0 24px 56px rgba(0, 0, 0, .5); }
+.mart img { width: 100%; height: 100%; object-fit: cover; }
+.mart svg { width: var(--icon-art); height: var(--icon-art); }
+.mart span { font: 600 var(--fs-title) var(--font-display); color: var(--text); }
+.mcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-22); }
+.mmeta { display: flex; flex-direction: column; gap: var(--sp-4); }
+.mapp { font-size: var(--fs-small); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--t)); }
+.mdet .mtrack { font: 600 var(--fs-big)/1.1 var(--font-display); letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mdet .martist { font-size: var(--fs-name); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mdet .malbum { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mprog { display: flex; flex-direction: column; gap: var(--sp-6); }
+.mbar, .mvbar { height: calc(6px * var(--s)); border-radius: var(--r-pill); background: var(--edge-strong); position: relative; }
+.mbar i, .mvbar i { position: absolute; inset: 0 auto 0 0; background: var(--text); border-radius: inherit; }
+.mbar b { position: absolute; top: 50%; width: calc(14px * var(--s)); height: calc(14px * var(--s)); margin: calc(-7px * var(--s)) 0 0 calc(-7px * var(--s)); border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+.mbar:not(.seek) b { display: none; }
+.mbar.seek { cursor: pointer; }
+.mbar.seek::after, .mvbar::after { content: ""; position: absolute; inset: calc(-14px * var(--s)) 0; }
+.mtimes { display: flex; justify-content: space-between; font-size: var(--fs-small); color: rgba(var(--text-rgb), .72); }
+.mctl { display: flex; justify-content: space-between; align-items: center; }
+.mctl .rbtn { --rbtn: calc(46px * var(--s)); color: var(--text); background: transparent; }
+.mctl .rbtn svg { width: var(--icon-btn); height: var(--icon-btn); }
+.mctl [data-a="shuffle"], .mctl [data-a="repeat"] { background: var(--hairline); }
+.mctl [data-a="shuffle"] svg, .mctl [data-a="repeat"] svg { width: var(--icon); height: var(--icon); }
+.mctl .rbtn.on { color: rgb(var(--t)); background: rgba(var(--t), var(--a-20)); }
+.mctl .mplay { --rbtn: calc(80px * var(--s)); background: var(--text); color: #15121a; box-shadow: 0 12px 30px rgba(0, 0, 0, .35); }
+.mctl .mplay svg { width: var(--icon-hero); height: var(--icon-hero); }
+.mvol { display: flex; align-items: center; gap: var(--sp-10); }
+.mvol .rbtn { color: var(--text); background: var(--hairline); }
+.mvol .rbtn.on { color: rgb(var(--ember)); }
+.mvbar { flex: 1; cursor: pointer; touch-action: pan-y; }
+.mvtxt { min-width: calc(42px * var(--s)); text-align: right; font-size: var(--fs-sub); color: rgba(var(--text-rgb), .75); }
+.mfoot { display: flex; gap: var(--gap); }
+.mdet .chip { background: var(--veil-2); color: var(--text); }
+.mdet .chip.on { background: rgba(var(--t), var(--a-26)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+
+/* right column: tabs + panes on a dark glass */
+.mside { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-14); border-radius: var(--r-20); background: rgba(8, 8, 12, .3); box-shadow: inset 0 0 0 1px var(--grid-line); min-width: 0; min-height: calc(440px * var(--s)); }
+.mtabs { display: flex; gap: 4px; padding: 4px; border-radius: var(--r-22); background: var(--veil); }
+.mtab { flex: 1; height: calc(36px * var(--s)); border-radius: var(--r-pill); display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; color: rgba(var(--text-rgb), .7); }
+.mtab svg { width: var(--icon-xs); height: var(--icon-xs); }
+.mtab.on { background: var(--edge-strong); color: var(--text); }
+.mpane { display: flex; flex-direction: column; gap: var(--sp-10); flex: 1; min-height: 0; }
+.mnote { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); line-height: 1.45; padding: 0 var(--sp-4); }
+.mq { display: flex; flex-direction: column; gap: var(--sp-10); }
+.mqi { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-10); border-radius: var(--r-14); background: var(--veil); }
+.mqa { width: calc(56px * var(--s)); height: calc(56px * var(--s)); border-radius: var(--r-8); overflow: hidden; flex: none; background: var(--hairline); display: flex; align-items: center; justify-content: center; color: var(--text-2); }
+.mqa img { width: 100%; height: 100%; object-fit: cover; }
+.mqt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mqt small { font-size: var(--fs-small); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--t)); }
+.mqt b, .mqt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mqt b { font-size: var(--fs-name); font-weight: 600; }
+.mqt span { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); }
+.mqi em { font-style: normal; font-size: var(--fs-small); color: rgba(var(--text-rgb), .6); }
+.mqcount { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); padding: 0 var(--sp-4); }
+.mqopen { flex: none; margin-top: auto; }
+.mtargets { display: flex; flex-direction: column; gap: var(--sp-4); overflow-y: auto; max-height: calc(360px * var(--s)); }
+.mtarget { display: flex; align-items: center; gap: var(--sp-12); height: calc(44px * var(--s)); padding: 0 var(--sp-10); border-radius: var(--r-12); text-align: left; color: var(--text); flex: none; }
+.mtarget svg { width: var(--icon-sm); height: var(--icon-sm); color: rgba(var(--text-rgb), .7); }
+.mtarget .mtn { flex: 1; font-size: var(--fs-sub); font-weight: 600; }
+.mtarget .mts { font-size: var(--fs-small); color: rgba(var(--text-rgb), .6); }
+.mtarget:not(:disabled):active, .mtarget.on { background: var(--hairline); }
+.mtarget.on svg, .mtarget.on .mts { color: rgb(var(--t)); }
+.mtarget:disabled:not(.on) { opacity: .45; }
+.mdpad { position: relative; width: calc(200px * var(--s)); height: calc(200px * var(--s)); margin: var(--sp-4) auto 0; border-radius: 50%; background: radial-gradient(circle at 50% 40%, var(--edge-strong), var(--veil)); box-shadow: inset 0 0 0 1px var(--hairline); }
+.mdpad .dk { position: absolute; width: calc(56px * var(--s)); height: calc(56px * var(--s)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text); }
+.mdpad .dk svg { width: var(--icon-btn); height: var(--icon-btn); }
+.mdpad .dk:active { background: var(--veil-2); }
+.mdpad .up { left: calc(72px * var(--s)); top: var(--sp-6); }
+.mdpad .down { left: calc(72px * var(--s)); bottom: var(--sp-6); }
+.mdpad .left { left: var(--sp-6); top: calc(72px * var(--s)); }
+.mdpad .right { right: var(--sp-6); top: calc(72px * var(--s)); }
+.mdpad .ok { left: calc(58px * var(--s)); top: calc(58px * var(--s)); width: calc(84px * var(--s)); height: calc(84px * var(--s)); background: var(--edge-strong); font-weight: 700; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
+.mkeys { display: flex; justify-content: space-between; }
+.mkeys .rbtn { --rbtn: calc(44px * var(--s)); color: var(--text); background: var(--hairline); }
+.mapps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-6); }
+.mapps .chip { height: calc(40px * var(--s)); font-size: var(--fs-small); }
+.midle { display: none; flex-direction: column; align-items: center; gap: var(--sp-12); color: var(--text-2); padding: calc(40px * var(--s)) 0; grid-column: 1 / -1; }
+.midle svg { width: var(--icon-empty); height: var(--icon-empty); }
+.midle .chip { flex: none; padding: 0 var(--sp-18); }
+.mdet.idle > *:not(.midle) { display: none; }
+.mdet.idle .midle { display: flex; }
+
+/* phone: one column, art on top (the pop-up is a bottom sheet there) */
+

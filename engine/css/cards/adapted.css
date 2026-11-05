@@ -1,0 +1,16 @@
+/* a dashboard laid out for a big screen, opened on a phone (app.js sets data-adapted): its cells were sized as fractions
+   of a 1280 px row, so small ones flow into ~150 px tiles and anything a third of a row or wider takes the full row.
+   Pages reflowed by phoneView (core/layout.js: screen-filling pages) have their own 12-column spans, so they keep them. */
+:root[data-adapted="phone"] .view:not(.reflowed) .sgrid { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(150px * var(--s))), 1fr)); }
+:root[data-adapted="phone"] .view:not(.reflowed) .sgrid > .cell { grid-column: auto; }
+:root[data-adapted="phone"] .view:not(.reflowed) .sgrid > .cell[data-wide] { grid-column: 1 / -1; }
+/* status tiles and the people card in narrow cells (2-column state, reflowed dashboards) */
+@container cell (max-width: 160px) {
+  .stat.lg { gap: var(--sp-8); padding: 0 var(--sp-12); }
+  .stat.lg > .ic { display: none; }
+}
+@container cell (max-width: 300px) {
+  .people.portrait { --fig-w: calc(48px * var(--s)); }
+  .people.portrait .pst { display: none; }
+}
+

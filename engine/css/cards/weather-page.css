@@ -1,0 +1,26 @@
+/* ---------- weather page ---------- */
+.wxalerts:empty { display: none; }
+.wxalert { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-10) var(--sp-12); border-radius: var(--r-12); background: rgba(var(--ember), var(--a-16)); box-shadow: inset 0 0 0 1px rgba(var(--ember), var(--a-50)); margin-bottom: var(--sp-10); }
+.wxalert b { color: rgb(var(--ember)); }
+.wxalert span { font-size: var(--fs-small); color: var(--text-2); }
+.wxicon img { width: calc(104px * var(--s)); height: calc(104px * var(--s)); display: block; margin: calc(-10px * var(--s)); }
+.wxt { font: 600 var(--fs-hero-xl)/1 var(--font-display); letter-spacing: -0.04em; }
+.wxc { font: 600 var(--fs-title) var(--font); }
+.wxtext { font-size: var(--fs-sub); color: var(--text-2); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.wxdays { display: flex; flex-direction: column; gap: 2px; }
+.wxday { display: grid; grid-template-columns: calc(52px * var(--s)) calc(36px * var(--s)) calc(36px * var(--s)) calc(32px * var(--s)) minmax(0, 1fr) calc(32px * var(--s)); align-items: center; gap: 0 var(--sp-6); padding: var(--sp-6) var(--sp-6); border-radius: var(--r-10); text-align: left; font-size: var(--fs-sub); }
+.wxday.open { background: var(--veil-faint); }
+.wxdn { font-weight: 600; }
+.wxdi img { width: calc(34px * var(--s)); height: calc(34px * var(--s)); display: block; }
+.wxpp { font-size: var(--fs-small); color: rgb(var(--mist)); font-weight: 600; }
+.wxlo { color: var(--text-2); text-align: right; }
+.wxhi { font-weight: 600; }
+.wxbar { position: relative; height: 6px; border-radius: 3px; background: var(--grid-line); }
+.wxbar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, rgb(var(--mist)), rgb(var(--lamp))); }
+.wxlong { grid-column: 1 / -1; font-size: var(--fs-small); color: var(--text-2); line-height: 1.45; padding: var(--sp-6) 0 var(--sp-4); }
+.wxlong b { color: var(--text); }
+.wxhours svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.wxarea { fill: rgba(var(--lamp), var(--a-12)); }
+.wxrain { fill: rgba(var(--mist), var(--a-35)); }
+.wxt2 { fill: var(--text); font: 600 11px var(--font); text-anchor: middle; }   /* fixed: SVG text in viewBox units (scales with the drawing) */
+

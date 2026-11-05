@@ -1,0 +1,23 @@
+/* ---------- agenda ---------- */
+.agenda, .alist { display: flex; flex-direction: column; gap: var(--sp-10); }
+.acals { display: flex; gap: var(--sp-6); }
+.acals .mcal { flex: 1; }
+.adname { font: 600 var(--fs-sub)/1.3 var(--font-display); color: var(--text-2); margin-bottom: var(--sp-4); }
+.aev { display: flex; gap: var(--sp-10); align-items: baseline; padding: var(--sp-8) var(--sp-10); border-radius: var(--r-10); background: var(--veil); border-left: 3px solid rgb(var(--t)); margin-bottom: var(--sp-4); }
+.arow { display: contents; }
+.atime { font-size: var(--fs-small); color: var(--text-2); min-width: calc(54px * var(--s)); font-weight: 600; }
+.atitle { font-size: var(--fs-item); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.anone { color: var(--text-2); font-size: var(--fs-sub); padding: 6px 4px; }
+/* details: tap an event to unfold it in place */
+.agenda.details .aev { flex-direction: column; align-items: stretch; gap: 0; cursor: pointer; }
+.agenda.details .arow { display: flex; gap: var(--sp-10); align-items: baseline; min-width: 0; }
+.agenda.details .aev.open .atitle { white-space: normal; }
+.amore { margin-left: auto; flex: none; align-self: center; color: var(--text-3); display: flex; }
+.amore svg { width: 16px; height: 16px; }
+.adet { display: flex; flex-direction: column; gap: var(--sp-6); margin-top: var(--sp-8); padding-top: var(--sp-8); border-top: 1px solid var(--veil); cursor: auto; }
+.awhen { font-size: var(--fs-small); color: rgb(var(--t)); font-weight: 600; }
+.awhere { display: flex; gap: var(--sp-6); align-items: flex-start; font-size: var(--fs-small); color: var(--text-2); }
+.awhere svg { width: 14px; height: 14px; flex: none; margin-top: 2px; }
+.adesc { font-size: var(--fs-small); line-height: 1.45; color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.adesc a { color: rgb(var(--mist)); }
+

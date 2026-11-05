@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Gallery</title>
+<script>
+// DO NOT CHANGE THIS FILE: HA caches /local for 31 days. It reads version.json fresh and loads gallery-page.js?v=<version>.
+fetch('version.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return { v: String(Date.now()) }; })
+  .then(function (j) { var s = document.createElement('script'); s.type = 'module'; s.src = 'gallery-page.js?v=' + ((j.files && j.files['gallery-page.js']) || j.v || Date.now()); document.head.appendChild(s); });
+</script>
+</head>
+<body></body>
+</html>

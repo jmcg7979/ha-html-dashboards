@@ -1,0 +1,69 @@
+/* ================= narrow versions of wide cards: by the space the card gets (containers in base.css), not by the device.
+   560 px sits between today's phone (320-366) and Portal (749-965 pop-ups, 780-920 wide cells). ================= */
+@container cell (max-width: 600px) {
+  .header { flex-wrap: wrap; }
+  .date { display: none; }
+}
+/* pop-up tabs: icons only */
+@container popup (max-width: 560px) {
+  .ptab span { display: none; }
+}
+/* media pop-up: one column, art on top */
+@container cell (max-width: 720px) {
+  .mdet { grid-template-columns: minmax(0, 1fr); }
+  .mmain { flex-direction: column; align-items: stretch; gap: var(--sp-18); }
+  .mart { width: min(calc(280px * var(--s)), 78vw); align-self: center; }
+  .mdet .mtrack { font-size: var(--fs-figure-m); }
+  .mside { min-height: 0; }
+}
+/* month: the calendar chips get their own row; days show coloured bars instead of titles (tap a day for its list) */
+@container cell (max-width: 560px) {
+  .mhead { flex-wrap: wrap; row-gap: 8px; }
+  .mcals { order: 9; width: 100%; margin-left: 0; }
+  .mcal { flex: 1; }
+  .month .mgrid { grid-auto-rows: 52px; }
+  .mev { font-size: 0; height: 5px; padding: 0; border-left: 0; background: rgb(var(--t)); margin-top: 2px; }
+  .mev.all { background: rgb(var(--t)); }
+  /* windows: one room per row */
+  .wfloor { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- compact states for cards with fixed columns (2026-10-25). Thresholds sit below the space these cards get on
+   today's Portal and phones; they kick in on smaller phones, larger phone font sizes, and narrow cells in new dashboards. ---- */
+/* doors list: one per row (2 columns left names at 40-60 px) */
+@container cell (max-width: 400px) {
+  .openings { grid-template-columns: minmax(0, 1fr); }
+}
+/* tiles with buttons (blinds, vacuum): buttons move to their own row instead of running off the edge.
+   4+ buttons need ~200 px of their own, so those wrap sooner; 390 px phones (320 px cells) and the Portal keep one row. */
+@container cell (max-width: 300px) {
+  .tile:has(> .subs > .sb:nth-child(4)) { height: auto; min-height: var(--tile-h); flex-wrap: wrap; row-gap: var(--sp-8); padding: var(--sp-10) 0; }
+  .tile:has(> .subs > .sb:nth-child(4)) > .subs { order: 3; flex-basis: 100%; justify-content: flex-end; margin: 0 var(--sp-12); }
+}
+@container cell (max-width: 230px) {
+  .tile:has(> .subs) { height: auto; min-height: var(--tile-h); flex-wrap: wrap; row-gap: var(--sp-8); padding: var(--sp-10) 0; }
+  .tile > .subs { order: 3; flex-basis: 100%; justify-content: flex-end; margin: 0 var(--sp-12); }
+}
+/* weather Now: smaller hero so temperature + description fit (today it gets 243-252 px of content width) */
+@container cell (max-width: 230px) {
+  .wxhero { gap: var(--sp-10); }
+  .wxnow .wxicon img { width: calc(72px * var(--s)); height: calc(72px * var(--s)); margin: calc(-6px * var(--s)); }
+  .wxnow .wxt { font-size: var(--fs-hero-l); }
+}
+/* alarm card: smaller shield and state, readiness checks one per row (fine at 390 px phones' ~300 px; tight at 280 px) */
+@container cell (max-width: 260px) {
+  .ahero { gap: var(--sp-12); }
+  .ashield { width: calc(56px * var(--s)) !important; height: calc(56px * var(--s)) !important; }
+  .ashield svg { width: var(--icon-btn); height: var(--icon-btn); }
+  .astate { font-size: var(--fs-figure-m); }
+  .achecks { grid-template-columns: minmax(0, 1fr); }
+}
+/* Systems on narrow screens (NAS bays: systems.css, by the bays' own width); device list drops its trace (at 2 per row on the Portal it left names 12 px wide); KPI header drops the detail text */
+@container cell (max-width: 360px) {
+  .dv { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .dv .dvsp { display: none; }
+}
+@container cell (max-width: 200px) {
+  .kdet { display: none; }
+}
+

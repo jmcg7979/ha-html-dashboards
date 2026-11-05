@@ -1,0 +1,13 @@
+/* ---------- status row (stat size 'lg', people compact) ---------- */
+.stat.lg { height: var(--stat-h-lg); border-radius: var(--r-20); padding: 0 var(--sp-16); gap: var(--sp-14); }
+.stat.lg > .ic { width: var(--ic-l); height: var(--ic-l); }
+.stat.lg > .ic svg { width: var(--icon-lg); height: var(--icon-lg); }
+.stat.lg .slabel { font-size: var(--fs-sub); }
+.stat.lg .svalue { font: 600 var(--fs-figure)/1.2 var(--font-display); }
+.people.compact { min-height: 0; height: var(--stat-h-lg); padding: 0 var(--sp-14); border-radius: var(--r-20); gap: var(--sp-12); }
+.people.compact .person { cursor: pointer; gap: var(--sp-10); }
+.people.compact .photo { width: calc(54px * var(--s)); height: calc(54px * var(--s)); }
+.people.compact .pcol { gap: var(--sp-4); }
+.people.compact .chip { flex: none; height: calc(22px * var(--s)); width: calc(30px * var(--s)); border-radius: var(--r-pill); }
+.people.compact .chip svg { width: var(--icon-xs); height: var(--icon-xs); }
+

@@ -1,0 +1,239 @@
+# US only. Current outdoor conditions that stay current when one data feed stalls: the NWS API sometimes falls hours behind.
+# Sources, free and keyless: NWS latest observation for a station, the same airport's METAR via the Iowa Environmental Mesonet, Open-Meteo for zone.home.
+# Result:
+#   sensor.outdoor_temperature  the freshest observation no older than 75 min, else Open-Meteo. Attributes: condition, humidity, dew_point,
+#                               wind_speed, wind_gust_speed, wind_bearing, pressure, visibility, source, source_name, observed, filled. Units: °F, %, mph, inHg, mi.
+#   weather.home_weather        a full weather entity: those conditions + the NWS forecasts.
+# Needs the National Weather Service integration, with its entity named weather.home_nws.
+# Set your station: replace KXYZ (ICAO), XYZ (the same without the K) and XX_ASOS (XX = your state, e.g. KS_ASOS).
+# Change the cut-off: max_age_min below. The card works without this package: leave out `ha` and the browser does the same job (core/current.js).
+# Reload: Developer Tools > YAML > RESTful, then Template entities.
+
+rest:
+  - resource: https://api.weather.gov/stations/KXYZ/observations/latest
+    headers:
+      User-Agent: "(Home Assistant, weather_now package)"
+      Accept: application/geo+json
+    scan_interval: 300
+    timeout: 20
+    sensor:
+      - name: Weather Source NWS
+        unique_id: weather_source_nws
+        icon: mdi:weather-cloudy-clock
+        device_class: timestamp
+        value_template: "{{ value_json.properties.timestamp }}"
+        json_attributes_path: "$.properties"
+        json_attributes:
+          - temperature
+          - dewpoint
+          - relativeHumidity
+          - windSpeed
+          - windGust
+          - windDirection
+          - barometricPressure
+          - visibility
+          - textDescription
+          - icon
+
+  - resource: https://mesonet.agron.iastate.edu/json/current.py?station=XYZ&network=XX_ASOS
+    scan_interval: 300
+    timeout: 20
+    sensor:
+      - name: Weather Source METAR
+        unique_id: weather_source_metar
+        icon: mdi:airport
+        device_class: timestamp
+        value_template: "{{ value_json.last_ob.utc_valid }}"
+        json_attributes_path: "$.last_ob"
+        json_attributes:
+          - "airtemp[F]"
+          - "dewpointtemp[F]"
+          - "windspeed[kt]"
+          - "winddirection[deg]"
+          - "altimeter[in]"
+          - "visibility[mile]"
+          - "skycover[code]"
+          - presentwx
+          - raw
+
+  - resource_template: >-
+      https://api.open-meteo.com/v1/forecast?latitude={{ state_attr('zone.home', 'latitude') }}&longitude={{ state_attr('zone.home', 'longitude') }}&current=temperature_2m,relative_humidity_2m,dew_point_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=GMT&timeformat=unixtime
+    scan_interval: 600
+    timeout: 20
+    sensor:
+      - name: Weather Source Open-Meteo
+        unique_id: weather_source_open_meteo
+        icon: mdi:weather-partly-cloudy
+        device_class: timestamp
+        value_template: "{{ as_datetime(value_json.current.time).isoformat() }}"
+        json_attributes_path: "$.current"
+        json_attributes:
+          - temperature_2m
+          - relative_humidity_2m
+          - dew_point_2m
+          - weather_code
+          - is_day
+          - wind_speed_10m
+          - wind_direction_10m
+          - wind_gusts_10m
+          - pressure_msl
+          - visibility
+
+template:
+  - triggers:
+      - trigger: state
+        entity_id:
+          - sensor.weather_source_nws
+          - sensor.weather_source_metar
+          - sensor.weather_source_open_meteo
+      - trigger: time_pattern   # readings age out of the 75-minute window; forecasts refresh
+        minutes: "/5"
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+    actions:
+      # NWS forecasts for the combined weather entity (served from the NWS integration's cache, no extra API calls)
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.home_nws
+        data:
+          type: hourly
+        response_variable: hourly
+        continue_on_error: true
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.home_nws
+        data:
+          type: twice_daily
+        response_variable: twice
+        continue_on_error: true
+    variables:
+      max_age_min: 75
+      night: "{{ is_state('sun.sun', 'below_horizon') }}"
+      # each source normalised to one shape: time (unix s), condition (HA condition), °F, %, mph, degrees, inHg, mi
+      nws: >-
+        {% set a = states.sensor.weather_source_nws.attributes if states.sensor.weather_source_nws is not none else {} %}
+        {% set t = as_timestamp(states('sensor.weather_source_nws'), none) %}
+        {% set c = (a.temperature or {}).value %}{% set d = (a.dewpoint or {}).value %}
+        {% set ws = (a.windSpeed or {}).value %}{% set wg = (a.windGust or {}).value %}
+        {% set p = (a.barometricPressure or {}).value %}{% set v = (a.visibility or {}).value %}
+        {% set m = (a.icon or '') | regex_findall('/(?:day|night)/([a-z_]+)') %}
+        {% set code = m[0] if m else '' %}
+        {% set cond = 'lightning-rainy' if code.startswith('tsra')
+          else 'snowy-rainy' if code in ['rain_snow', 'rain_sleet', 'snow_sleet', 'sleet', 'fzra', 'rain_fzra', 'snow_fzra']
+          else 'snowy' if code.startswith('snow') or code == 'blizzard'
+          else 'rainy' if code.startswith('rain')
+          else 'fog' if code in ['fog', 'haze', 'smoke', 'dust']
+          else 'exceptional' if code in ['tornado', 'hurricane', 'tropical_storm']
+          else 'windy' if code.startswith('wind')
+          else 'cloudy' if code == 'ovc'
+          else 'partlycloudy' if code in ['sct', 'bkn']
+          else ('clear-night' if night else 'sunny') if code in ['skc', 'few', 'hot', 'cold']
+          else none %}
+        {{ {'source': 'nws', 'source_name': 'NWS observation (KXYZ)', 'time': t, 'condition': cond,
+            'temperature': (c * 9 / 5 + 32) | round(1) if c is number else none,
+            'dew_point': (d * 9 / 5 + 32) | round(1) if d is number else none,
+            'humidity': (a.relativeHumidity or {}).value | round(0) if (a.relativeHumidity or {}).value is number else none,
+            'wind_speed': (ws * 0.621371) | round(1) if ws is number else none,
+            'wind_gust_speed': (wg * 0.621371) | round(1) if wg is number else none,
+            'wind_bearing': (a.windDirection or {}).value,
+            'pressure': (p * 0.0002953) | round(2) if p is number else none,
+            'visibility': (v / 1609.34) | round(1) if v is number else none} }}
+      metar: >-
+        {% set a = states.sensor.weather_source_metar.attributes if states.sensor.weather_source_metar is not none else {} %}
+        {% set t = as_timestamp(states('sensor.weather_source_metar'), none) %}
+        {% set f = a['airtemp[F]'] %}{% set d = a['dewpointtemp[F]'] %}{% set kt = a['windspeed[kt]'] %}
+        {% set g = (a.raw or '') | regex_findall('(?:\\d{3}|VRB)\\d{2,3}G(\\d{2,3})KT') %}
+        {% set wx = (a.presentwx or []) | join(' ') %}{% set sky = (a['skycover[code]'] or []) | select('string') | list %}
+        {% set cond = ('lightning-rainy' if wx is search('RA|SH') else 'lightning') if 'TS' in wx
+          else ('snowy-rainy' if 'RA' in wx else 'snowy') if wx is search('SN|SG')
+          else 'hail' if wx is search('PL|GR|GS')
+          else 'pouring' if '+RA' in wx
+          else 'rainy' if wx is search('RA|DZ|SH')
+          else 'fog' if 'FG' in wx
+          else 'cloudy' if 'OVC' in sky or 'VV' in sky
+          else 'partlycloudy' if 'BKN' in sky or 'SCT' in sky
+          else ('clear-night' if night else 'sunny') %}
+        {% set rh = (100 * e ** (17.625 * ((d - 32) * 5 / 9) / (243.04 + (d - 32) * 5 / 9) - 17.625 * ((f - 32) * 5 / 9) / (243.04 + (f - 32) * 5 / 9))) | round(0)
+          if f is number and d is number else none %}
+        {{ {'source': 'metar', 'source_name': 'Airport METAR (IEM)', 'time': t, 'condition': cond,
+            'temperature': f if f is number else none, 'dew_point': d if d is number else none, 'humidity': rh,
+            'wind_speed': (kt * 1.15078) | round(1) if kt is number else none,
+            'wind_gust_speed': (g[0] | int * 1.15078) | round(1) if g else none,
+            'wind_bearing': a['winddirection[deg]'], 'pressure': a['altimeter[in]'], 'visibility': a['visibility[mile]']} }}
+      model: >-
+        {% set a = states.sensor.weather_source_open_meteo.attributes if states.sensor.weather_source_open_meteo is not none else {} %}
+        {% set wc = a.weather_code %}{% set day = a.is_day == 1 %}
+        {% set cond = none if wc is not number
+          else ('sunny' if day else 'clear-night') if wc <= 1
+          else 'partlycloudy' if wc == 2 else 'cloudy' if wc == 3
+          else 'fog' if wc in [45, 48]
+          else 'lightning-rainy' if wc >= 95
+          else 'snowy' if (71 <= wc <= 77) or wc in [85, 86]
+          else 'pouring' if wc in [65, 82]
+          else 'snowy-rainy' if wc in [56, 57, 66, 67]
+          else 'rainy' %}
+        {{ {'source': 'model', 'source_name': 'Open-Meteo estimate', 'time': as_timestamp(states('sensor.weather_source_open_meteo'), none), 'condition': cond,
+            'temperature': a.temperature_2m, 'dew_point': a.dew_point_2m, 'humidity': a.relative_humidity_2m,
+            'wind_speed': a.wind_speed_10m, 'wind_gust_speed': a.wind_gusts_10m, 'wind_bearing': a.wind_direction_10m,
+            'pressure': (a.pressure_msl * 0.02953) | round(2) if a.pressure_msl is number else none,
+            'visibility': (a.visibility / 1609.34) | round(1) if a.visibility is number else none} }}
+      # freshest recent observation, else the model; a field the chosen source lacks (e.g. the airport's wind sensor reports
+      # nothing) comes from the next source, and `filled` says which
+      now_: >-
+        {% set fresh = [nws, metar] | selectattr('time', 'number') | selectattr('temperature', 'number')
+           | selectattr('time', 'ge', as_timestamp(now()) - max_age_min * 60) | sort(attribute='time', reverse=true) | list %}
+        {% set p = fresh[0] if fresh else model if model.temperature is number else {} %}
+        {% set backups = (fresh[1:] + [model]) | reject('eq', p) | list %}
+        {% set ns = namespace(d={}, filled=[]) %}
+        {% for k in ['condition', 'humidity', 'dew_point', 'wind_speed', 'wind_gust_speed', 'wind_bearing', 'pressure', 'visibility']
+           if p and p[k] is none and not (k == 'wind_gust_speed' and p.wind_speed is not none) %}
+          {% set b = backups | selectattr(k, 'ne', none) | first %}
+          {% if b %}{% set ns.d = dict(ns.d, **{k: b[k]}) %}{% set ns.filled = ns.filled + [k ~ ' (' ~ b.source ~ ')'] %}{% endif %}
+        {% endfor %}
+        {{ dict(p, filled=ns.filled, **ns.d) if p else {} }}
+    sensor:
+      - name: Outdoor Temperature
+        unique_id: weather_now_outdoor_temperature
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°F"
+        availability: "{{ now_.temperature is number }}"
+        state: "{{ now_.temperature }}"
+        attributes:
+          condition: "{{ now_.condition }}"
+          humidity: "{{ now_.humidity }}"
+          dew_point: "{{ now_.dew_point }}"
+          wind_speed: "{{ now_.wind_speed }}"
+          wind_gust_speed: "{{ now_.wind_gust_speed }}"
+          wind_bearing: "{{ now_.wind_bearing }}"
+          pressure: "{{ now_.pressure }}"
+          visibility: "{{ now_.visibility }}"
+          source: "{{ now_.source }}"
+          source_name: "{{ now_.source_name }}"
+          observed: "{{ as_datetime(now_.time).isoformat() if now_.time is number else none }}"
+          filled: "{{ now_.filled or [] }}"
+    weather:
+      - name: Home Weather
+        unique_id: weather_now_home_weather
+        availability: "{{ now_.temperature is number and now_.condition is string }}"
+        condition: "{{ now_.condition }}"
+        temperature: "{{ now_.temperature }}"
+        humidity: "{{ now_.humidity }}"
+        dew_point: "{{ now_.dew_point }}"
+        wind_speed: "{{ now_.wind_speed }}"
+        wind_gust_speed: "{{ now_.wind_gust_speed }}"
+        wind_bearing: "{{ now_.wind_bearing }}"
+        pressure: "{{ now_.pressure }}"
+        visibility: "{{ now_.visibility }}"
+        temperature_unit: "°F"
+        wind_speed_unit: mph
+        pressure_unit: inHg
+        visibility_unit: mi
+        forecast_hourly: "{{ hourly['weather.home_nws'].forecast if hourly is defined and hourly else [] }}"
+        forecast_twice_daily: "{{ twice['weather.home_nws'].forecast if twice is defined and twice else [] }}"
+        attribution: "{{ now_.source_name }}"
+        attributes:
+          source: "{{ now_.source }}"
+          observed: "{{ as_datetime(now_.time).isoformat() if now_.time is number else none }}"

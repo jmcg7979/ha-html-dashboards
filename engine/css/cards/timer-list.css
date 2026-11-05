@@ -1,0 +1,11 @@
+/* ---------- timer list ---------- */
+.tlist { display: flex; flex-direction: column; gap: var(--gap); }
+.trow { position: relative; overflow: hidden; display: flex; align-items: center; gap: var(--sp-8); min-height: calc(64px * var(--s)); padding: 0 var(--sp-12) 0 var(--sp-16); border-radius: var(--tile-radius); background: var(--veil); --t: var(--lamp); }
+.trow .tbar { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, rgba(var(--t), var(--a-12)), rgba(var(--t), var(--a-26))); transition: width 1s linear; pointer-events: none; }
+.trow .tx { flex: 1; min-width: 0; position: relative; display: flex; align-items: baseline; gap: var(--sp-12); }
+.trow .tleft { font: 600 var(--fs-figure-m)/1 var(--font-display); color: rgb(var(--t)); margin-left: auto; padding-right: var(--sp-8); }
+.trow .sb { position: relative; }
+.trow.paused { --t: var(--stone); }
+.tpresets { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(90px * var(--s)), 1fr)); gap: var(--gap); padding-top: var(--sp-6); }
+.tlast { padding: var(--sp-12) 4px 0; }
+
