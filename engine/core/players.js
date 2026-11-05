@@ -2,6 +2,8 @@
 //   ma     Music Assistant's player for it (queue, shuffle, repeat, volume) — default `<entity>_ma`
 //   entity the Cast entity (what's casting, art, seek)
 //   power  the Android TV Remote entity: real TV power, native apps, volume steps and mute
+//   spotify  optional: HA's Spotify media player. Spotify picked as the device on a Google TV reports nothing through Cast or the
+//          remote, so this is the only way to see it. It counts when its `source` (Spotify's device name) is this player's name.
 // Each control goes to the first of those that is active and supports it (supported_features bits).
 //
 // What each one can be trusted for, from watching real TVs:
@@ -20,7 +22,7 @@ export const F = { PAUSE: 1, SEEK: 2, VOLUME_SET: 4, VOLUME_MUTE: 8, PREV: 16, N
 const LIVE = ['playing', 'paused', 'buffering'];
 
 export const maOf = (p) => (p.ma === undefined ? p.entity + '_ma' : p.ma);
-export const idsOf = (p) => [maOf(p), p.entity, p.power].filter(Boolean);
+export const idsOf = (p) => [maOf(p), p.spotify, p.entity, p.power].filter(Boolean);
 export const slug = (p) => p.entity.split('.')[1];
 
 // false for an account-following app (Spotify) that isn't what this TV is doing. Its native app reports the account from the background
@@ -36,6 +38,8 @@ export function sources(p) {
   const out = [], ma = maOf(p), me = ma && st(ma), ce = st(p.entity);
   const remote = p.power && p.power !== p.entity ? st(p.power) : null, off = !!remote && remote.state === 'off';
   if (me && LIVE.includes(me.state) && me.attributes.active_queue) out.push({ id: ma, e: me });
+  const sp = p.spotify && st(p.spotify);   // playing here beats a remote that says off; paused on a TV that's off is a leftover
+  if (sp && LIVE.includes(sp.state) && sp.attributes.source === p.name && (sp.state === 'playing' || !off)) out.push({ id: p.spotify, e: sp });
   if (ce && LIVE.includes(ce.state) && !off && believed(p, ce, remote)) out.push({ id: p.entity, e: ce });
   if (remote && remote.state === 'on') out.push({ id: p.power, e: remote });
   return out;
@@ -54,7 +58,7 @@ export function now(p) {
   const list = sources(p), s = list.find((x) => x.e.attributes.media_title) || list[0];
   if (!s) return null;
   const a = s.e.attributes, playing = list.some((x) => x.e.state === 'playing');
-  const raw = list.map((x) => x.e.attributes.app_name).find(Boolean) || '', info = appFor(raw);
+  const raw = s.id === p.spotify ? 'Spotify' : list.map((x) => x.e.attributes.app_name).find(Boolean) || '', info = appFor(raw);
   const app = info ? info.name : isPackage(raw) ? '' : raw, title = a.media_title || app || (s.id === p.power ? 'TV on' : '');
   const mirror = maOf(p) && st(maOf(p)), ma = mirror && a.media_title && mirror.attributes.media_title === a.media_title ? mirror.attributes : {};
   return {

@@ -18,7 +18,7 @@ Text is English. Temperatures default to °F and times to 12-hour; see "Outside 
 | Climate | any `climate` entity | your hardware | | `climate` |
 | Lights | any `light` entity | your hardware | | `lights` |
 | Cameras | Frigate + its HA integration | Docker + HACS | | `cameras` |
-| Media | Cast, Android TV Remote, Music Assistant (each optional) | built in / add-on | | `players`, `playTargets`, `tvApps` |
+| Media | Cast, Android TV Remote, Music Assistant, Spotify (each optional) | built in / add-on | | `players`, `playTargets`, `tvApps` |
 | Vacuum | any `vacuum`; rooms need `vacuum.clean_area` | your hardware | | `vacuum` |
 | Timers | helpers | YAML | `dashboard_helpers.yaml` | `timers` |
 | Weather | any `weather` entity | built in | | `weather` |
@@ -61,7 +61,7 @@ Live video, events and recordings all go through the [Frigate integration](https
 - Without Frigate, `camera` and `camera-wall` have no video source: there is no live video. Use `sites/example/dash/cards/snapshot.js`, a still every few seconds with its time on it, and remove `camera`, `camera-wall`, `reviews`, the Cameras view and those two pop-ups. `image` also works, but it reloads only when the entity updates.
 
 ## Media
-`core/players.js`. One entry in `players` can be up to three HA entities: `entity` (Cast: what's playing, art), `power` (Android TV Remote: real power, apps, volume), `ma` (Music Assistant: queue; defaults to `<entity>_ma`). Controls appear only if an entity supports them, so a plain `media_player` works with `{ entity, name }`. `group: true` marks a speaker group. Each player needs its `#media-<object id>` pop-up; the example builds them in a loop.
+`core/players.js`. One entry in `players` can be up to three HA entities: `entity` (Cast: what's playing, art), `power` (Android TV Remote: real power, apps, volume), `ma` (Music Assistant: queue; defaults to `<entity>_ma`). Controls appear only if an entity supports them, so a plain `media_player` works with `{ entity, name }`. `spotify: 'media_player.spotify'` (optional, HA's Spotify integration) shows Spotify on a Google TV, which reports nothing through Cast or the remote; the Spotify device name must match the player's `name`. `group: true` marks a speaker group. Each player needs its `#media-<object id>` pop-up; the example builds them in a loop.
 
 What's shown depends on what each app tells Cast: Spotify, YouTube, SoundCloud give title and artist; HBO Max a title; Hulu, Netflix and Prime Video nothing beyond playing or paused, and Hulu a position. `core/apps.js` gives those a logo and colour instead; add an app there (Cast `app_name`, Android TV Remote package, colour, logo).
 
