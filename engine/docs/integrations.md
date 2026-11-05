@@ -84,7 +84,7 @@ The `vacuum` tile and the buttons work with any `vacuum`. The `area-pick` card c
 - `nws.iem` (`{ station, network, name }`) adds an airport's METAR. `nws.now` is `sensor.outdoor_temperature` from `weather_now.yaml`; leave it out and the browser picks the freshest source itself.
 
 ## Maps
-`map_tiles`: `{ provider: 'carto' | 'maptiler' | 'stadia' | 'thunderforest', style, key }` for person maps; `carto_key` for the radar's base map. Without a key these show "API key required" tiles. A key sits in a browser file, so use one restricted to your site.
+`map_tiles`: `{ provider: 'carto' | 'maptiler' | 'stadia' | 'thunderforest', style, key }` for person maps; `carto_key` for the radar's base map. Without a key these show "API key required" tiles. `home.js` has no login, so keep the key out of it: create a Text helper in HA (Settings > Devices & services > Helpers, password mode) named `Map key`, paste the key in, and use `{ entity: 'input_text.map_key' }` as the key. Don't expose it to voice assistants. Signed-in users can still read it, and browsers send it to the map provider.
 
 ## Calendar
 Any `calendar` entity. `agenda` and `month` read `/api/calendars`. `calendars` gives each a `name`, `tone` and `color`. An `agenda` card can take `filter` (a regular expression) to show only some events.

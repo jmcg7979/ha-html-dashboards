@@ -23,4 +23,4 @@ cd engine/_dev/mock && npm i
 | `mock/states.mjs` | The fake states |
 | `ha-config/packages/` | Generic HA packages (`engine/docs/integrations.md`) |
 
-The history pop-up (`trend` card) has no gallery frame of its own: tap any figure or chart. Without `test.mp4` in `engine/_dev/mock` the camera tiles stay dark. Radar and person maps need a CARTO key (`carto_key` in `home.js`); weather uses US sources.
+The history pop-up (`trend` card) has no gallery frame of its own: tap any figure or chart. Without `test.mp4` in `engine/_dev/mock` the camera tiles stay dark. Radar and person maps need a CARTO key (`engine/docs/integrations.md`, Maps); weather uses US sources.

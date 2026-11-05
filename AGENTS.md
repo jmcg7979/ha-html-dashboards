@@ -62,7 +62,7 @@ engine/_dev/assemble.sh sites/<site>/dash /tmp/dash               # then copy /t
 - One home's new card goes in its site's `dash/cards/<type>.js`, styled inline with tokens and existing classes, as `sites/example/dash/cards/snapshot.js` does. A site has no stylesheet of its own. A new engine card needs its CSS listed in `boot.js` `CARDS`, and must be used somewhere, or lint fails.
 - Main views must fit the screen without scrolling. Status changes must not shift the layout.
 - Never show stale data as current: show the source and age.
-- Files under `/config/www/` are served without a login. No tokens, passwords, codes or keys in them, except browser-restricted map keys. No address or coordinates either: leave `lat` / `lon` out and `core/location.js` reads them from HA after sign-in.
+- Files under `/config/www/` are served without a login. No tokens, passwords, codes or keys in them: a map key goes in a helper, read with `{ entity: 'input_text.map_key' }` (`core/mapkey.js`). No address or coordinates either: leave `lat` / `lon` out and `core/location.js` reads them from HA after sign-in.
 - Scale a sensor with `scale`, not by converting in `value`, so the gauge, trace and history agree.
 - New MDI icon: use its name, then `cd engine/_dev && npm i && node build-icons.mjs`. A name not in `engine/icons.js` draws nothing and logs a console warning.
 - Don't animate SVG strokes; use `Element.animate()` on transforms.

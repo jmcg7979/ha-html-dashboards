@@ -64,7 +64,8 @@ export const weather = 'weather.forecast_home';
 // US National Weather Service. The cards and radar read home's location from HA after sign-in, so it stays out of this file (see README, Security). iem: { station, network, name } adds an airport's METAR as a source (core/current.js).
 export const nws = { entity: 'weather.home_nws', alerts: 'sensor.nws_alerts', now: 'sensor.outdoor_temperature' };
 // CARTO's base maps need a browser key of your own: the radar's map stays blank without one.
-export const carto_key = '';
+// Map tiles: put the key in a Text helper in HA, because this file has no login (core/mapkey.js)
+export const carto_key = { entity: 'input_text.map_key' };
 export const map_tiles = { provider: 'carto', style: 'voyager', key: carto_key };   // person maps, cards/map.js lists the providers
 
 export const calendars = [

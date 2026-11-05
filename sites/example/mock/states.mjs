@@ -43,6 +43,7 @@ export const S = {
 
   // timers
   'timer.voice_timer_1': { s: 'active', a: { finishes_at: ahead(4), duration: '0:05:00' } },
+  'input_text.map_key': { s: '' },
   'input_text.voice_timer_1_label': { s: 'Pasta' },
   'input_text.voice_timer_last_ended': { s: JSON.stringify({ l: '10 minutes', t: Date.now() - 3600e3 }) },
   ...off('input_boolean.voice_timer_ringing'),

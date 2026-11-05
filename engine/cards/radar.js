@@ -2,11 +2,12 @@
 // played as a loop on a dark map. Both come as map tiles from the Iowa Environmental Mesonet (free, no key):
 //   now:      nexrad-n0q-900913 (base reflectivity mosaic, every 5 minutes)
 //   forecast: hrrr::REFD-F<minutes>-<run>  (HRRR simulated reflectivity, 15-minute steps to 18 h, new run hourly ~1 h 50 min after its start)
-// Base map: CARTO dark (no labels under the radar, labels above it); CARTO needs an API key (`cartoKey`, from home.js).
+// Base map: CARTO dark (no labels under the radar, labels above it); CARTO needs an API key (`cartoKey`, from home.js: a string or { entity }, core/mapkey.js).
 // lat, lon: optional, default HA's home location (core/location.js)
 // { type: 'radar', lat, lon, zoom: 7, height: 452, cartoKey: '…', ranges: [[3, 15], [6, 30], [12, 60]] (hours, minutes per frame), range: 1 (default index) }
 // Leaflet (vendor/) and every frame's tiles load once the card is on screen; the loop runs only while it is visible.
 import { where } from '../core/location.js';
+import { keyOf } from '../core/mapkey.js';
 import { h, esc, icon, toggle } from '../core/dom.js';
 import { loadLeaflet } from './map.js';
 import { timeOpts } from '../core/units.js';
@@ -30,6 +31,7 @@ function latestRun() {
 const runId = (init) => new Date(init).toISOString().replace(/[-:T]/g, '').slice(0, 12);   // YYYYMMDDHHMM
 
 export default function radar(cfg) {
+  const tileKey = keyOf(cfg.cartoKey);
   const ranges = cfg.ranges || [[3, 15], [6, 30], [12, 60]];
   let ri = cfg.range != null ? cfg.range : 1;
   const el = h(`<div class="radar" style="height:calc(${cfg.height || 450}px * var(--s))">
@@ -79,12 +81,12 @@ export default function radar(cfg) {
   }
 
   function start() {
-    Promise.all([loadLeaflet(), where(cfg)]).then(([lf, at]) => {
+    Promise.all([loadLeaflet(), where(cfg), tileKey]).then(([lf, at, key]) => {
       if (!at) throw new Error('no location');
       L = lf;
       map = L.map(mapEl, { zoomControl: false, attributionControl: false, zoomSnap: 0.5 }).setView([at.lat, at.lon], cfg.zoom || 7);
       map.createPane('radar').style.zIndex = 350; map.createPane('labels').style.zIndex = 450; map.getPane('labels').style.pointerEvents = 'none';
-      const carto = (style) => `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}.png?key=${encodeURIComponent(cfg.cartoKey || '')}`;
+      const carto = (style) => `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}.png?key=${encodeURIComponent(key)}`;
       L.tileLayer(carto('dark_nolabels'), { maxZoom: 12 }).addTo(map);
       L.tileLayer(carto('dark_only_labels'), { maxZoom: 12, pane: 'labels' }).addTo(map);
       L.circleMarker([at.lat, at.lon], { radius: 6, color: '#0d1017', weight: 2, fillColor: '#f2b35e', fillOpacity: 1, interactive: false, pane: 'labels' }).addTo(map);

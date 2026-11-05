@@ -1,10 +1,11 @@
 // Map of a person/device tracker (Leaflet, bundled in /vendor, loaded only when a map is first shown).
 // Base map: chosen in home.js `map_tiles` (provider + style + key); presets below. Small attribution kept, as every provider's terms require. Not tile.openstreetmap.org: OSM's volunteer servers 403 any
 // request that fails their tile-usage policy (Referer/User-Agent checks), which some desktop browsers trip and phones don't.
-// { type: 'map', entity: 'person.x', zoom: 15, height: 320, tiles: { provider, style, key } (defaults to home.js map_tiles) }   marker = the person's photo (or an account icon), accuracy circle under it
+// { type: 'map', entity: 'person.x', zoom: 15, height: 320, tiles: { provider, style, key } (defaults to home.js map_tiles; key: a string or { entity }, core/mapkey.js) }   marker = the person's photo (or an account icon), accuracy circle under it
 import { h, esc, icon } from '../core/dom.js';
 import { st, watch } from '../core/store.js';
 import { origin } from '../core/auth.js';
+import { keyOf } from '../core/mapkey.js';
 import * as home from '../home.js';
 
 const OSM = '&copy; OpenStreetMap';
@@ -14,9 +15,10 @@ const PROVIDERS = {
   stadia: (st, k) => [`https://tiles.stadiamaps.com/tiles/${st}/{z}/{x}/{y}{r}.png?api_key=${k}`, `&copy; Stadia Maps ${OSM}`],
   thunderforest: (st, k) => [`https://tile.thunderforest.com/${st}/{z}/{x}/{y}{r}.png?apikey=${k}`, `&copy; Thunderforest ${OSM}`],
 };
-function tiles(t) {
-  t = t || home.map_tiles || { provider: 'carto', style: 'voyager' }; const f = PROVIDERS[t.provider] || PROVIDERS.carto;
-  return f(t.style || 'voyager', encodeURIComponent(t.key || ''));
+const tileSet = (cfg) => cfg.tiles || home.map_tiles || { provider: 'carto', style: 'voyager' };
+function tiles(t, key) {
+  const f = PROVIDERS[t.provider] || PROVIDERS.carto;
+  return f(t.style || 'voyager', encodeURIComponent(key));
 }
 
 let leaflet = null;
@@ -35,13 +37,14 @@ const pin = (L, a) => L.divIcon({ className: 'mpin', iconSize: [pinSize, pinSize
 export default function map(cfg) {
   const el = h(`<div class="map" style="height:calc(${cfg.height || 320}px * var(--s))"></div>`);
   let m = null, marker = null, ring = null, pic;
+  const t = tileSet(cfg), key = keyOf(t.key);
   const draw = () => {
     const e = st(cfg.entity), a = e && e.attributes; if (!a || a.latitude == null) return;
     const ll = [a.latitude, a.longitude];
-    loadLeaflet().then((L) => {
+    Promise.all([loadLeaflet(), key]).then(([L, k]) => {
       if (!m) {
         m = L.map(el, { zoomControl: false }).setView(ll, cfg.zoom || 15); m.attributionControl.setPrefix(false);
-        const [url, attribution] = tiles(cfg.tiles); L.tileLayer(url, { maxZoom: 19, attribution }).addTo(m);
+        const [url, attribution] = tiles(t, k); L.tileLayer(url, { maxZoom: 19, attribution }).addTo(m);
         ring = L.circle(ll, { radius: a.gps_accuracy || 0, color: '#7fb2e5', weight: 1, fillOpacity: 0.12, interactive: false }).addTo(m);
         marker = L.marker(ll, { icon: pin(L, a), interactive: false, keyboard: false }).addTo(m); pic = a.entity_picture;
       } else { marker.setLatLng(ll); if (pic !== a.entity_picture) { pic = a.entity_picture; marker.setIcon(pin(L, a)); } ring.setLatLng(ll).setRadius(a.gps_accuracy || 0); m.panTo(ll); }

@@ -53,7 +53,7 @@ Don't take this section's word for it: it's a map for checking, and the prompt a
 **Files in `/config/www/` have no login.** HA serves that folder at `/local/` to anyone who can reach your HA, so the dashboard's files can be read without signing in, including your `home.js`. Live data and control still need your HA login. Treat `home.js` as readable:
 - Expect it to show your entity names, and the names of people, rooms and cameras.
 - Keep your address and coordinates out of it. The weather cards and radar read home's location from HA after sign-in, so you don't need to add them.
-- Keep tokens, passwords and alarm codes out of it. A map key is the only exception, and it should be restricted to your own site in that provider's account.
+- Keep tokens, passwords, alarm codes and API keys out of it. A map key goes in an HA helper and is read after sign-in (`engine/docs/integrations.md`, Maps).
 
 **Sign-in.** The dashboard uses HA's normal login, and no token goes in a file. The login is kept in the browser's local storage, as HA's own frontend does, so treat a signed-in wall panel like any other signed-in device.
 
