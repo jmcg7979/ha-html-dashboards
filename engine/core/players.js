@@ -9,6 +9,8 @@
 //     the account, so every TV "plays" whatever a phone plays, for hours, and a Cast reconnect brings a paused track back.
 //   - Music Assistant mirrors whatever Cast reports, stale sessions included (source = the app, no active_queue). Only with an
 //     active_queue is the playback MA's own. A mirror is never a source; it can still supply art, which Cast lacks for native apps.
+//   - A remote saying on only means the Chromecast is awake: it can sit on its screensaver feeding a TV that's off, so nothing but a
+//     real session or a real app in front counts as playing.
 //   - The remote's app_id can lag (it reads Screensaver while Prime Video plays), so it only overrules an app that `follows`.
 import { st } from './store.js';
 import { mmss } from './dom.js';
@@ -21,13 +23,12 @@ export const maOf = (p) => (p.ma === undefined ? p.entity + '_ma' : p.ma);
 export const idsOf = (p) => [maOf(p), p.entity, p.power].filter(Boolean);
 export const slug = (p) => p.entity.split('.')[1];
 
-// false for an account-following app (Spotify) that isn't what this TV is doing: paused needs the app in front; playing is only
-// believed if the TV isn't known to be in another app (it can really play behind the screensaver)
+// false for an account-following app (Spotify) that isn't what this TV is doing. Its native app reports the account from the background
+// (AndroidNativeApp), so that only counts with the app in front; a real cast has the app's own Cast id.
 function believed(p, e, remote) {
   const a = appFor(e.attributes.app_name);
-  if (!remote || !a || !a.follows) return true;
-  const fg = remote.attributes.app_id || '', other = appFor(fg);
-  return fg === a.pkg || (e.state === 'playing' && !(other && !other.idle));
+  if (!remote || !a || !a.follows || e.attributes.app_id !== 'AndroidNativeApp') return true;
+  return remote.attributes.app_id === a.pkg;
 }
 
 // active entities, most capable first; a TV that is on in a native app (not casting) only has its remote
@@ -39,7 +40,8 @@ export function sources(p) {
   if (remote && remote.state === 'on') out.push({ id: p.power, e: remote });
   return out;
 }
-export const isLive = (p) => sources(p).length > 0;
+// listed under Playing: something is playing or an app is open, not just a Chromecast that's awake
+export const isLive = (p) => { const n = now(p); return !!n && !n.screen; };
 
 // first active entity supporting `bit`
 export function pick(p, bit) {
@@ -59,7 +61,9 @@ export function now(p) {
     // state 'on' = only the TV remote is active: it can't tell playing from paused
     id: s.id, state: playing ? 'playing' : s.e.state, a, title,
     // bare = the app published no title (Hulu, Netflix, Prime Video): only its logo and playing state are known
-    bare: !a.media_title, brand: info && info.color ? info : null, screen: !!(info && info.idle),
+    bare: !a.media_title, brand: info && info.color ? info : null,
+    // screen = awake on the screensaver, the home screen or nothing known: the TV behind it may be off
+    screen: !!(info && info.idle) || (!raw && s.id === p.power),
     artist: a.media_artist || a.media_series_title || '',
     album: a.media_album_name || '',
     app: app === title ? '' : app,

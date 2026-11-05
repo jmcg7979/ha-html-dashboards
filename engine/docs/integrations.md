@@ -65,7 +65,7 @@ Live video, events and recordings all go through the [Frigate integration](https
 
 What's shown depends on what each app tells Cast: Spotify, YouTube, SoundCloud give title and artist; HBO Max a title; Hulu, Netflix and Prime Video nothing beyond playing or paused, and Hulu a position. `core/apps.js` gives those a logo and colour instead; add an app there (Cast `app_name`, Android TV Remote package, colour, logo).
 
-Which entity is believed: a TV's `power` entity reading `off` overrides Cast, because Spotify on a Chromecast follows the account and reports a session while the TV is off. Music Assistant counts only with an `active_queue`; without one it is mirroring Cast. It supplies art but is not a source. An app marked `follows` in `core/apps.js` counts on a TV only when it is in front (or, playing, behind the screensaver).
+Which entity is believed: a TV's `power` entity reading `off` overrides Cast, because Spotify on a Chromecast follows the account and reports a session while the TV is off. Music Assistant counts only with an `active_queue`; without one it is mirroring Cast. It supplies art but is not a source. An app marked `follows` in `core/apps.js` counts on a TV only when it's in front or truly casting. The `power` entity reading `on` only proves the Chromecast is awake, since it can sit on its screensaver with the TV off, so a screensaver or home screen isn't listed under Playing; its pop-up still shows it.
 
 ## Vacuum
 The `vacuum` tile and the buttons work with any `vacuum`. The `area-pick` card calls `vacuum.clean_area`, so `areas` (`[[id, 'Name'], …]`) must use ids your integration accepts. `image` shows a map if you have an `image` entity for it. `fan_speed` and `fan_speed_list` are standard attributes.

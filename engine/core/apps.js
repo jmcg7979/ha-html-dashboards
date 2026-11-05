@@ -2,7 +2,7 @@
 // Hulu, Netflix and Prime Video tell Cast nothing but "playing", so the logo and colour are what the Playing card and pop-up have to show.
 //   color  'r, g, b', light enough to read on a dark tile     logo  an icon name (icons.js) or an SVG path (MDI has no such logo); neither = the name as a wordmark
 //   follows  the app reports the account's session, not this TV's: core/players.js ignores it unless the TV is really in that app
-//   idle   the TV is on but nothing is playing
+//   idle   the Chromecast is awake but nothing is playing, and the TV may be off: not listed under Playing
 // Logos: Material Design Icons; Prime Video and HBO from Simple Icons (CC0).
 import { esc, icon } from './dom.js';
 

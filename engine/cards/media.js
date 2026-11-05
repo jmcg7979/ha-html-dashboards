@@ -2,7 +2,7 @@
 // While a speaker group plays, the speakers in it are folded into the group's row (its pop-up lists them).
 // { type: 'media', title: 'Playing', buttons: [...heading buttons],
 //   players: [{ entity, name, power: 'media_player.x_remote', ma: 'media_player.x_ma' }] }   (core/players.js)
-// A TV whose remote says off is never listed, and no app can claim a TV it isn't on (core/players.js).
+// A TV is only listed with something really playing or an app open: not when it's off, and not for a Chromecast that's merely awake (core/players.js).
 // Row: art, name, title, artist; an app that publishes no title and art (Hulu, Netflix…) gets its logo, colour and playing state instead (core/apps.js). One power button (the TV's real power when it has a remote entity, else stop casting),
 // next, play/pause. Tap the row for the player's pop-up (#media-<object id>: cards/media-detail.js).
 import { h, esc, icon, setText, setHTML, toggle } from '../core/dom.js';
