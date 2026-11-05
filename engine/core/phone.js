@@ -131,7 +131,7 @@ export function hideHAChrome(frame = haHost()) {
   if (!frame || new URLSearchParams(location.search).get('chrome') === '1') return;
   const css = `.toolbar, .header, ha-top-app-bar-fixed .mdc-top-app-bar, .top-app-bar { display: none !important; }
     :host { --header-height: 0px !important; } .content, .main-content { top: 0 !important; padding-top: 0 !important; height: 100% !important; }
-    #view, hui-view-container { padding-top: 0 !important; min-height: 100vh !important; }`;
+    #view, hui-view-container { padding-top: 0 !important; min-height: 0 !important; height: 100vh !important; max-height: 100vh !important; overflow: hidden !important; }`;
   const hosts = [];
   let n = frame, panel = false;   // every element with a shadow root from our iframe up to the bar's owner: the bar is in one of them
   for (let hops = 0; n && hops < 16; hops++) {
@@ -145,7 +145,7 @@ export function hideHAChrome(frame = haHost()) {
   }
   if (!panel) return;
   hosts.forEach(({ shadowRoot: root }) => { if (root.querySelector('style[data-dash]')) return; const s = frame.ownerDocument.createElement('style'); s.dataset.dash = '1'; s.textContent = css; root.appendChild(s); });
-  frame.style.height = '100%';
+  frame.style.height = '100%'; frame.style.display = 'block';   // an inline iframe leaves a gap under it, which gives HA's page a scrollbar of its own
 }
 
 // Safe areas: inside an iframe env(safe-area-inset-*) is 0, so measure them in HA's document (the app's WebView) and
