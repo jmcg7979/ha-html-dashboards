@@ -13,6 +13,9 @@
 // has .adjusting: Left / Right send `dash:adjust` (detail -1 / 1), OK or Back sends `dash:adjust-end`. A short press is OK.
 // Held = the key down for half a second, a repeated key down, or `tv:hold` from the launcher (its WebView drops repeats).
 // A card can mark anything else with [data-focus]; [data-nofocus] opts out. data-focus-first marks the start item.
+// [data-enter="selector"] on a list: arrowing into it from outside lands on that item. [data-backto="selector"]: Back from inside
+// it goes to the nearest match (the switch that picked the panel), however far the list is scrolled. [data-menu] (not hidden): a card's menu
+// takes the remote like a pop-up; Back sends it `dash:close`.
 const FOCUSABLE = 'button:not([disabled]), a[href], [data-focus], .tile:not(.ro), .camera, .aev.tap';
 const SKIP = '.camera button, .tile .ic';   // a camera is one stop (OK = full screen), not its small overlay buttons; a tile is one stop (OK = what its icon does)
 const DIR = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
@@ -54,7 +57,7 @@ export function initRemote() {
 
 // the open take-over, pop-up (or drawer) is the whole world while it is open; a take-over wins over a pop-up under it
 // the rail is part of the page (Left from the first column reaches it)
-const OVER = '.alarm:not([hidden]) .alarm-in, .camalert:not([hidden]) .popup';
+const OVER = '.alarm:not([hidden]) .alarm-in, .camalert:not([hidden]) .popup, [data-menu]:not([hidden])';   // [data-menu]: a card's own menu (Now playing's song menu)
 function scope() { return document.querySelector(OVER) || document.querySelector('.pwrap:not([hidden]) .popup, .drawer.open') || document.querySelector('.shell'); }
 const onPage = () => !document.querySelector(OVER + ', .pwrap:not([hidden]) .popup, .drawer.open');
 function visible(el) {
@@ -62,6 +65,20 @@ function visible(el) {
   const r = el.getBoundingClientRect(); if (!r.width || !r.height) return false;
   if ((r.right <= 0 || r.left >= innerWidth) && !el.closest('.hrow')) return false;   // off the screen sideways (a closed drawer); a sideways row scrolls to it
   const cs = getComputedStyle(el); return cs.visibility !== 'hidden' && cs.display !== 'none';
+}
+// An item in a scrolling list (a queue, an event list) that is scrolled out of the list's view only counts from inside that
+// list (arrowing down it scrolls); from outside, it would be an invisible stop at the same height as the buttons beside it.
+const scrollers = new Map();   // per key press (move clears it): getComputedStyle up the tree for every candidate is slow on a TV
+function scroller(el) {
+  if (scrollers.has(el)) return scrollers.get(el);
+  let found = null;
+  for (let p = el.parentElement; p && !p.matches('.shell, body') && !found; p = p.parentElement) { const o = getComputedStyle(p).overflowY; if (o === 'auto' || o === 'scroll') found = p; }
+  scrollers.set(el, found); return found;
+}
+function shownFrom(el, cur) {
+  const sc = scroller(el); if (!sc || sc.contains(cur)) return true;
+  const s = sc.getBoundingClientRect(), q = el.getBoundingClientRect();
+  return q.bottom > s.top + 2 && q.top < s.bottom - 2;
 }
 function candidates() {
   return [...scope().querySelectorAll(FOCUSABLE)].filter((el) => !el.matches(SKIP) && visible(el));
@@ -84,6 +101,14 @@ function focus(el) {
     else if (er.right > rr.right) row.scrollBy({ left: er.right - rr.right + peek, behavior: 'smooth' });
   }
   if (el.closest('#rail')) return;   // the rail doesn't scroll
+  // a list that scrolls inside its card (a queue): keep the item in it, with the next one showing
+  const sc = scroller(el);
+  if (sc && onPage()) {
+    const sr = sc.getBoundingClientRect(), er = el.getBoundingClientRect(), pad = er.height * 0.6;
+    if (er.top < sr.top) sc.scrollBy({ top: er.top - sr.top - pad, behavior: 'smooth' });
+    else if (er.bottom > sr.bottom) sc.scrollBy({ top: er.bottom - sr.bottom + pad, behavior: 'smooth' });
+    return;
+  }
   if (!onPage()) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   else if (r.top < top) scrollBy({ top: r.top - top, behavior: 'smooth' });
   else if (r.bottom > bottom) scrollBy({ top: Math.min(r.top - top, r.bottom - bottom), behavior: 'smooth' });
@@ -125,6 +150,7 @@ function preview(el) {
   }, 250);
 }
 function move(d) {
+  scrollers.clear();
   const cur = document.activeElement;
   if (!valid(cur)) { if (lastWasRail && onPage() && railHome()) focus(railHome()); else first(); return; }   // e.g. the rail swapped to a view's own menu
   if (cur.closest('#rail')) {
@@ -146,8 +172,13 @@ function move(d) {
     if (n) { focus(n); preview(n); } else if (d[0] < 0 && railHome()) focus(railHome());
     return;
   }
-  const c = candidates().filter((el) => !el.closest('#rail'));
+  let c = candidates().filter((el) => !el.closest('#rail') && shownFrom(el, cur));
   const r = cur.getBoundingClientRect();
+  // Left / Right stay on the row when something on it lies that way (a control row under a list goes along the row, not up into the list)
+  if (d[0]) {
+    const row = c.filter((el) => { if (el === cur) return false; const q = el.getBoundingClientRect(); return q.bottom > r.top && q.top < r.bottom && (d[0] > 0 ? q.left >= r.right - 1 : q.right <= r.left + 1); });
+    if (row.length) c = row;
+  }
   let best = null, bd = Infinity;
   for (const el of c) {
     if (el === cur || cur.contains(el) || el.contains(cur)) continue;
@@ -161,6 +192,8 @@ function move(d) {
     if (score < bd) { bd = score; best = el; }
   }
   if (best && best.matches('.vtabs .ptab') && !cur.closest('.vtabs')) best = best.parentElement.querySelector('.ptab.on') || best;   // up into the tabs: the one shown
+  const ent = best && best.closest('[data-enter]');   // into a list from outside: its entry point (Up next: the next song), not whichever row is nearest
+  if (ent && !ent.contains(cur)) { const f = ent.querySelector(ent.dataset.enter); if (f && visible(f)) best = f; }
   if (best) focus(best);
   else if (d[0] < 0 && onPage() && railHome()) focus(railHome());   // nothing further left: the rail
   else if (d[1]) (onPage() ? window : scope()).scrollBy({ top: d[1] * innerHeight * 0.6, behavior: 'smooth' });   // nothing above / below to select: scroll (charts at a page's foot)
@@ -221,6 +254,7 @@ function key(e) {
 function closeOverlay(takeovers = true) {   // Home leaves a take-over up (it is what the home screen should show), Back answers it
   const al = takeovers && document.querySelector('.alarm:not([hidden])'); if (al) { al.click(); return true; }   // the timer alarm: Stop
   const ca = takeovers && document.querySelector('.camalert:not([hidden]) .pclose'); if (ca) { ca.click(); return true; }   // a camera alert: dismiss
+  const mn = document.querySelector('[data-menu]:not([hidden])'); if (mn) { mn.dispatchEvent(new CustomEvent('dash:close')); return true; }   // a card's menu: the card closes it
   const cf = document.querySelector('.camera.full'); if (cf) { cf.click(); return true; }   // full-screen camera: its own tap toggles it back
   const dr = document.querySelector('.drawer.open');
   if (dr) { dr.dispatchEvent(new CustomEvent('dash:close')); dr.classList.remove('open'); return true; }
@@ -230,6 +264,9 @@ function closeOverlay(takeovers = true) {   // Home leaves a take-over up (it is
 function back() {
   const adj = adjusting(); if (adj) { adj.dispatchEvent(new CustomEvent('dash:adjust-end')); return; }   // the launcher's Back while adjusting
   if (closeOverlay()) return;
+  const bt = document.activeElement && document.activeElement.closest('[data-backto]');   // in a list that names where Back goes (its tabs): there
+  let to = null; for (let p = bt && bt.parentElement; p && !to; p = p.parentElement) to = p.querySelector(bt.dataset.backto);   // the nearest match up the tree
+  if (to && visible(to)) { focus(to); return; }
   const v = [...document.querySelectorAll('#app > [data-back]')].find((x) => !x.hidden);   // a view with back: 'home' (app.js)
   if (v) { dispatchEvent(new CustomEvent('dash:view', { detail: v.dataset.back })); return; }
   const cur = document.activeElement, view = [...document.querySelectorAll('#app > .pview, #app > .view')].find((x) => !x.hidden);

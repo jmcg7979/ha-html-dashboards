@@ -29,3 +29,13 @@ export const store = (pkg) => open(`market://details?id=${encodeURIComponent(pkg
 export const inOverlay = new URLSearchParams(location.search).get('overlay') === '1';
 export function watch(list) { if (B && B.watch) B.watch(JSON.stringify(list)); }
 export function overlay(state) { if (B && B.overlay) B.overlay(state); else console.info('tv: overlay', state); }
+
+// Over a cast screen (Music Assistant's Cast receiver, which takes the TV's screen when MA plays to it): while a view id is
+// set, the launcher brings this screen up on that view whenever the cast screen comes to the front; '' leaves cast screens be.
+// The launcher answers with `tv:view` (detail = the view), passed on as dash:view.
+export function cover(view) { if (B && B.cover) B.cover(view || ''); }
+if (B) addEventListener('tv:view', (e) => { if (e.detail) dispatchEvent(new CustomEvent('dash:view', { detail: e.detail })); });
+
+// Keep the TV's screen on (no screensaver) while true; the launcher sets it on its window, so it only holds while this screen
+// is in front. Google TV's screensaver counts only remote presses, not music playing (core: cards/nowplaying.js sets it).
+export function keepAwake(on) { if (B && B.keepAwake) B.keepAwake(!!on); }

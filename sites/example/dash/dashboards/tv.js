@@ -43,7 +43,7 @@ const home = { id: 'home', title: 'Home', icon: 'home-variant', sections: [
   { span: 3, panel: false, cards: [status] },
   { span: 3, panel: false, cards: [{ type: 'apps', span: 12, apps: APPS, cols: 6, row: true, first: true, more: '#apps' }] },
   { span: 3, panel: false, cards: [{ type: 'watchnext', limit: 12 }] },
-  { span: 3, panel: false, cards: tiles },
+  { span: 3, panel: false, class: 'glance', cols: 8, rows: 'minmax(0, 1fr)', cards: tiles.map((t) => ({ ...t, span: 2 })) },   // as a site's TV strip: takes what's left
 ] };
 
 export default {

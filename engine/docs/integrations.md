@@ -65,6 +65,8 @@ Live video, events and recordings all go through the [Frigate integration](https
 
 What's shown depends on what each app tells Cast: Spotify, YouTube, SoundCloud give title and artist; HBO Max a title; Hulu, Netflix and Prime Video nothing beyond playing or paused, and Hulu a position. `core/apps.js` gives those a logo and colour instead; add an app there (Cast `app_name`, Android TV Remote package, colour, logo).
 
+**Music Assistant's own API (optional).** HA exposes an MA player's current and next song only. With MA's API the full-screen Now playing (`cards/nowplaying.js`) adds the whole queue (Up next; OK plays that song), lyrics (synced when MA has LRC lyrics) and the Autoplay / Crossfade switches. `core/ma.js` talks to MA's WebSocket (`ws://<host>:8095/ws`) with an MA token; on a TV the launcher holds it (`tv/launcher/README.md`, `ma_token`), so a screen without the launcher just shows the HA-only version. MA on another host: `export const music_assistant = { url: 'http://<host>:8095' }` in `home.js`. Make the token for a non-admin MA user. `&tvdemo=1` on the mock fills in a made-up queue and lyrics.
+
 Which entity is believed: a TV's `power` entity reading `off` overrides Cast, because Spotify on a Chromecast follows the account and reports a session while the TV is off. Music Assistant counts only with an `active_queue`; without one it is mirroring Cast. It supplies art but is not a source. An app marked `follows` in `core/apps.js` counts on a TV only when it's in front or truly casting. The `power` entity reading `on` only proves the Chromecast is awake, since it can sit on its screensaver with the TV off, so a screensaver or home screen isn't listed under Playing; its pop-up still shows it.
 
 ## Vacuum

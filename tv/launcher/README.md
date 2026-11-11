@@ -10,6 +10,7 @@ It is a reference, shared as-is like the rest of this repo. It was built and tes
 - **Continue watching:** many apps publish what you're in the middle of to Android TV's Watch Next list (Netflix, Disney+, HBO Max, Hulu, Emby in our tests; not YouTube). The `watchnext` card shows it, and OK opens that episode.
 - **Home button:** Google TV won't let another app be the real Home. **Never disable the stock launcher** (`com.google.android.apps.tv.launcherx`): the TV then falls back to an empty system Home that restarts every minute or two and launches nothing (fix: re-enable "Google TV" in Settings > Apps > System apps). Instead, `HomeGuard`, an accessibility service, opens this app whenever the stock home screen comes to the front. It sees only the stock launcher's window changes and reads nothing on screen (`res/xml/home_guard.xml`). Switch it off or uninstall the app, and the stock home screen is back.
 - **Take-overs over a playing app:** HomeGuard's overlay window keeps the dashboard loaded at `&overlay=1` (only the take-overs, see-through) while another app is in front. When the page shows a take-over, the window takes the remote: Back or OK stops the timer or dismisses the alert. As a backup, `Watcher` follows the trigger entities the page names (`tvhost.watch`) over one HA WebSocket with the same token.
+- **Music Assistant:** when MA plays to the TV, its own cast screen comes to the front. While the page asks for it (`tvhost.cover`), HomeGuard brings this app back over it on the page's Now playing; the music keeps playing. With `ma_token` set, the page gets that token (`tvhost.maToken`, only on the URL's own origin) to read MA's queue and lyrics.
 - **Offline:** when HA doesn't answer, `assets/fallback.html` shows every installed app and Settings, and the app tries HA again every 20 s.
 
 ## Build
@@ -40,7 +41,7 @@ Run these from the machine that built the APK, on the same network as the TV.
    The `settings put` line replaces the list of accessibility services that are on. If `adb shell settings get secure enabled_accessibility_services` shows others, add HomeGuard to them with `:` between.
 4. Press Home: your dashboard comes up.
 
-**Settings** (`Provision`, from adb only: the receiver needs the DUMP permission, which apps can't get): `--es url`, `--es token`, `--es id` / `--es name` (free text the page can read through `tvhost.info()`), `--ez guard false` (stock home screen back), `--ez overlay false` (no take-overs over apps), `--ez clear true` (forget everything). Extras you leave out keep their value.
+**Settings** (`Provision`, from adb only: the receiver needs the DUMP permission, which apps can't get): `--es url`, `--es token`, `--es ma_token` (a Music Assistant token, optional: the queue, lyrics and switches on Now playing; `engine/docs/integrations.md`, Media), `--es id` / `--es name` (free text the page can read through `tvhost.info()`), `--ez guard false` (stock home screen back), `--ez overlay false` (no take-overs over apps), `--ez clear true` (forget everything). Extras you leave out keep their value.
 
 **Sign-in:** make an HA user for the TVs (not an admin, local access only), sign in as that user, and create a long-lived token in its profile. The token is kept in the app's private storage. Without one, the page shows HA's login screen.
 

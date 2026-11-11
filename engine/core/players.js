@@ -30,7 +30,13 @@ export const slug = (p) => p.entity.split('.')[1];
 function believed(p, e, remote) {
   const a = appFor(e.attributes.app_name);
   if (!remote || !a || !a.follows || e.attributes.app_id !== 'AndroidNativeApp') return true;
-  return remote.attributes.app_id === a.pkg;
+  return remote.attributes.app_id === a.pkg || confirmed(p, e);
+}
+// HA's Spotify player names this TV as the account's device and plays the same track: the Cast session is this TV's own.
+// Cast then leads: it changes at once, while the Spotify integration polls the cloud and lags 5-30 s (play / pause seen late).
+function confirmed(p, e) {
+  const sp = p.spotify && st(p.spotify);
+  return !!sp && LIVE.includes(sp.state) && sp.attributes.source === p.name && !!e.attributes.media_title && sp.attributes.media_title === e.attributes.media_title;
 }
 
 // active entities, most capable first; a TV that is on in a native app (not casting) only has its remote
@@ -38,9 +44,11 @@ export function sources(p) {
   const out = [], ma = maOf(p), me = ma && st(ma), ce = st(p.entity);
   const remote = p.power && p.power !== p.entity ? st(p.power) : null, off = !!remote && remote.state === 'off';
   if (me && LIVE.includes(me.state) && me.attributes.active_queue) out.push({ id: ma, e: me });
+  const cast = !!ce && LIVE.includes(ce.state) && !off && believed(p, ce, remote);
   const sp = p.spotify && st(p.spotify);   // playing here beats a remote that says off; paused on a TV that's off is a leftover
-  if (sp && LIVE.includes(sp.state) && sp.attributes.source === p.name && (sp.state === 'playing' || !off)) out.push({ id: p.spotify, e: sp });
-  if (ce && LIVE.includes(ce.state) && !off && believed(p, ce, remote)) out.push({ id: p.entity, e: ce });
+  // left out while Cast carries the same session (confirmed): its state would lag Cast's
+  if (sp && LIVE.includes(sp.state) && sp.attributes.source === p.name && (sp.state === 'playing' || !off) && !(cast && confirmed(p, ce))) out.push({ id: p.spotify, e: sp });
+  if (cast) out.push({ id: p.entity, e: ce });
   if (remote && remote.state === 'on') out.push({ id: p.power, e: remote });
   return out;
 }

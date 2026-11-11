@@ -68,11 +68,14 @@ for (const size of o.sizes.split(',')) {
         const r = im.getBoundingClientRect(), nat = (im.naturalWidth || im.videoWidth) / (im.naturalHeight || im.videoHeight), box = r.width / r.height;
         if (getComputedStyle(im).objectFit === 'cover' && box > nat * 1.6) out.crop.push(`${name(im)} shows ${Math.round(100 * nat / box)}% of the picture's height`);
       }
+      // a sideways row (.hrow) is padded and pulled out by negative margins to give the highlight room: measure its content
+      const rect = (el) => { const r = el.getBoundingClientRect(); if (!el.matches('.hrow')) return r; const cs = getComputedStyle(el), pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+        return { left: r.left, right: r.right, top: r.top + pt, bottom: r.bottom - pb }; };
       for (const box of root.querySelectorAll('.cell *')) {
         if (box.children.length < 2 || box.closest('svg, .camera, .cwall, .leaflet-container, .hrow') || !vis(box)) continue;
         const kids = [...box.children].filter(flow);
         for (let i = 0; i < kids.length - 1; i++) {
-          const a = kids[i].getBoundingClientRect(), c = kids[i + 1].getBoundingClientRect();
+          const a = rect(kids[i]), c = rect(kids[i + 1]);
           const x = Math.min(a.right, c.right) - Math.max(a.left, c.left), y = Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top);
           if (x > 4 && y > 4) { out.clash.push(`${name(box)} ${String(kids[i].className).split(' ')[0]}/${String(kids[i + 1].className).split(' ')[0]} ${Math.round(y)}px`); break; }
         }
@@ -85,7 +88,7 @@ for (const size of o.sizes.split(',')) {
           if (!e || !flow(e) || e.closest('svg, .camera, .cwall, .leaflet-container, .hrow') || /auto|scroll/.test(getComputedStyle(e).overflowY) || getComputedStyle(e).display === 'contents' || e.children.length === 0) continue;
           // how far its in-flow children reach below it (decorations positioned absolutely may bleed on purpose)
           const er = e.getBoundingClientRect(), kids = [...e.children].filter(flow);
-          const d = kids.length ? Math.round(Math.max(...kids.map((k) => k.getBoundingClientRect().bottom)) - er.bottom) : 0;
+          const d = kids.length ? Math.round(Math.max(...kids.map((k) => rect(k).bottom)) - er.bottom) : 0;
           if (d > 10 && er.height > 0) {   /* icons bleed a few px on purpose */ out.full.push(`${name(e)} ${e.tagName.toLowerCase()}.${String(e.className).split(' ')[0]} ${d}px`); break; }
         }
         for (const el of cell.querySelectorAll('*')) {

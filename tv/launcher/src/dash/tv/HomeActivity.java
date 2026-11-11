@@ -138,11 +138,26 @@ public class HomeActivity extends Activity {
     private void emit(String name) {
         web.evaluateJavascript("window.dispatchEvent(new CustomEvent('" + name + "'))", null);
     }
+    private void emit(String name, String detail) {
+        web.evaluateJavascript("window.dispatchEvent(new CustomEvent('" + name + "', {detail: " + JSONObject.quote(detail) + "}))", null);
+    }
+
+    // ---- over a cast screen (MA's Cast receiver): the page says which of its views covers it (tvhost.cover) ----
+    static volatile String coverView = "";   // "" = leave cast screens alone
+    static volatile long castAt;             // when a cast screen last came to the front (HomeGuard)
+    /** A cast screen came to the front (or the page just asked to cover one that did): bring this screen up on that view. */
+    static void coverCast(android.content.Context c) {
+        String v = coverView;
+        if (v.isEmpty() || resumed) return;
+        c.startActivity(new Intent(c, HomeActivity.class).setAction("dash.tv.COVER").putExtra("view", v)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NO_ANIMATION));
+    }
 
     @Override
     protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
         if (Intent.ACTION_MAIN.equals(i.getAction())) emit("tv:home");   // Home pressed while home: the page goes to its start
+        else if ("dash.tv.COVER".equals(i.getAction()) && i.getStringExtra("view") != null) emit("tv:view", i.getStringExtra("view"));
     }
 
     @Override
@@ -285,11 +300,36 @@ public class HomeActivity extends Activity {
             Watcher.restart();
         }
         @JavascriptInterface public void home() { ui.post(HomeActivity.this::loadHome); }
+        /** keepAwake(on): no screensaver while this screen is in front (the page: music playing on this TV). */
+        @JavascriptInterface public void keepAwake(boolean on) {
+            ui.post(() -> { if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); });
+        }
+        /** cover(view): while set, a cast screen coming to the front brings this screen up on that view; "" stops it. */
+        @JavascriptInterface public void cover(String view) {
+            coverView = view == null ? "" : view;
+            if (!coverView.isEmpty() && System.currentTimeMillis() - castAt < 15000) ui.post(() -> coverCast(HomeActivity.this));   // it came up first
+        }
+        /** maToken(callback): the Music Assistant token (Provision ma_token) to window[callback], only on the configured HA origin. */
+        @JavascriptInterface public void maToken(String callback) {
+            final String cb = callback == null ? "" : callback.replaceAll("[^A-Za-z0-9_$]", "");
+            if (cb.isEmpty()) return;
+            ui.post(() -> {
+                String here = web.getUrl(), o = origin(), tok = cfg.getString("ma_token", "");
+                boolean ours = here != null && !o.isEmpty() && (here.equals(o) || here.startsWith(o + "/"));
+                web.evaluateJavascript("window." + cb + " && window." + cb + "(" + (ours && !tok.isEmpty() ? JSONObject.quote(tok) : "null") + ")", null);
+            });
+        }
         @JavascriptInterface public void reload() { ui.post(() -> web.reload()); }
     }
 
     // ---- page loading ----
     class Client extends WebViewClient {
+        /** A new page (a reload, a deploy, the fallback) starts clean: what the old page asked for no longer holds. */
+        @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap icon) {
+            coverView = "";
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+
         @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
             Uri u = r.getUrl();
             String s = u.getScheme() == null ? "" : u.getScheme();
