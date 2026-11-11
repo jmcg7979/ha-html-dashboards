@@ -71,7 +71,22 @@ Tones are colour channels (`--sage` OK, `--lamp` warn, `--ember` problem, `--mis
 - **A new reading:** gauge + trace (host meter) for what moves, bar for capacity; it drills in automatically in a host card, otherwise give it a `trend` spec; check its statistics.
 - **A new site:** its own `home.js` + `dashboards/`; reuse shared pages; run the checks below against it (`shot.sh live <site>`).
 
+## Screens
+Pages are shared; each dashboard is a thin shell for a kind of screen (its Home, its navigation) and picks the pages it shows (no screen is the reference). Every big-screen page must work on all of these, in CSS px:
+
+| Screen | Size | Notes |
+|---|---|---|
+| TV | 960×540 | a 1080p Google TV at density 2: little room, read from across the room (`tv` profile, remote) |
+| Panel | 1280×800 | a wall panel (the Portal today) |
+| Desktop | 1920×1080 | a browser window |
+| Vertical | 1080×1920 | a portrait wall screen (16–21") |
+
+- **Fill only when it fits** (`core/fit.js`): a page that fills the screen (`fill`, `grow`, row templates) keeps doing so while every squeezed card has room for its content; otherwise it gets `.nofill`: natural heights, and the page scrolls. Never squeeze cards on top of each other. Portrait screens never fill. A card that normally takes the height it's given (charts, meters) needs a size of its own under `.nofill`.
+- **Cards fold by their own width** (`@container cell`), never by device or profile: a narrow card on a TV needs the same layout as one on a phone.
+- On a TV the remote scrolls a page (Down with nothing below to select).
+
 ## Checks
+- **Pages across screens:** `SHOT_SCRIPT=fitcheck.mjs engine/_dev/tools/shot.sh mock <site> -- --out DIR [--d tv --q 'tv=<id>&p=tv'] [--sizes …] [--views …]`: every view and page at the four sizes above; reports overlapping cards, boxes whose content is taller than the box, content past its card and text cut without an ellipsis (scrolling is listed, not an error); screenshots per size. Run it after any change to a page or a shared card, and look at the screenshots too (it can't see a stretched chart).
 Keep verification proportionate (it costs turns and tokens, not just time):
 - **Small change** (one card, page, style or config): `engine/_dev/tools/lint-design.sh`, then a screenshot of the affected view(s) at the sizes it affects (`shot.sh mock|live <site> -- --view <v> --size 1280x800 --out x.png`; phone: add `--d mobile --size 412x915`, or only `--size 412x915` for a site without a Mobile dashboard). Read its `page …` line: `SCROLLS: Main views must fit the screen` = a Main view overflows the panel.
 - **Engine-wide change** (tokens, base.css, layout, shared cards): one regression run before and one after, and look only at what it lists:

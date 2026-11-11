@@ -69,7 +69,8 @@ function expect(x, target, t0) {
   return id;
 }
 
-const inHaApp = /Home ?Assistant\//i.test(navigator.userAgent) || !!window.externalApp || (() => { try { return !!window.top.externalApp; } catch (e) { return false; } })();
+// the TV launcher (core/tvhost.js) answers HA's externalApp auth protocol too, but it is not the HA app
+const inHaApp = !window.tvhost && (/Home ?Assistant\//i.test(navigator.userAgent) || !!window.externalApp || (() => { try { return !!window.top.externalApp; } catch (e) { return false; } })());
 export function openLink(u) {
   let doc = document, target = '_blank';
   if (inHaApp) { try { if (window.top !== window && window.top.document) { doc = window.top.document; } } catch (e) { /* other origin */ } target = '_top'; }

@@ -1,5 +1,6 @@
 /* ---------- pop-up parts ---------- */
 .label { font: var(--section-font); color: var(--text); padding: var(--sp-12) var(--sp-4) var(--sp-2); }   /* section heading: the same size everywhere (--section-font) */
+.label.caption { font: 600 var(--fs-sub)/1.2 var(--font); color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; padding: 0 0 var(--sp-10); }   /* a quiet caption over plain content (TV) */
 .label.note { font: 400 var(--fs-small)/1.35 var(--font); color: var(--text-3); padding-top: var(--sp-4); }   /* a footnote, not a heading */
 .select .tile { cursor: pointer; }
 .select .chev, .expander .chev { margin-right: var(--sp-14); color: var(--text-3); transition: transform .15s; }

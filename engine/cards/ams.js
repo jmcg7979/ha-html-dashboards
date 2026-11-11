@@ -70,7 +70,7 @@ export default function ams(cfg) {
     const [label, ic] = drying ? ['Drying', 'heat-wave'] : [['Dry', 'water-check-outline'], ['Getting humid', 'water-alert-outline'], ['Humid', 'water-alert']][lv] || ['–', 'water-outline'];
     setHTML(badge, `${icon(ic)}<span>${label}</span>`);
     const tu = (st(A.temp) || {}).attributes, unit = (tu && tu.unit_of_measurement) || '°';
-    setText(sub, [t != null ? `${Math.round(t)}${unit}` : '', rh != null ? `${Math.round(rh)}% humidity` : ''].filter(Boolean).join(' · '));
+    setText(sub, [t != null ? `${Math.round(t)}${unit}` : '', rh != null ? `${Math.round(rh)}% RH` : ''].filter(Boolean).join(' · '));
     hum.style.setProperty('--t', `var(--${['sage', 'lamp', 'ember'][lv] || 'stone'})`);
     hum.querySelector('i').style.width = (rh == null ? 0 : Math.min(100, rh)) + '%';
     setText(hum.querySelector('.cdet'), rh == null ? '–' : `${Math.round(rh)}%`);

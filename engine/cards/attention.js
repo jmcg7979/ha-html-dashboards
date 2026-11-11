@@ -23,7 +23,18 @@ export default function attention(cfg) {
         <span class="atx"><span class="awhat">${esc(i.text)}</span><span class="awho">${icon(i.n.icon)}${esc(i.n.name)}</span></span></button>`).join('')
       : `<div class="aok">${icon('check-circle-outline')}<span>All systems normal</span><small>${nodes.length} devices, VMs and containers checked</small></div>`);
     list._items = items;
+    requestAnimationFrame(fit);
   };
+  // only whole items: the ones that don't fit the list's height go, and the last line says how many (no half-cut item)
+  const fit = () => {
+    const rows = [...list.querySelectorAll('.aitem')]; list.querySelectorAll('.amore').forEach((x) => x.remove());
+    rows.forEach((r) => { r.hidden = false; });
+    if (list.scrollHeight <= list.clientHeight + 1) return;
+    const more = h('<div class="amore"></div>'); list.appendChild(more);
+    let n = 0;
+    while (list.scrollHeight > list.clientHeight + 1 && n < rows.length - 1) { rows[rows.length - 1 - n].hidden = true; n++; more.textContent = `+${n} more`; }
+  };
+  new ResizeObserver(() => requestAnimationFrame(fit)).observe(list);
   watch(nodes.flatMap(nodeIds), draw);
   list.addEventListener('click', (ev) => { const b = ev.target.closest('.aitem'); const i = b && list._items[+b.dataset.k]; if (i && i.n.page) window.dispatchEvent(new CustomEvent('dash:view', { detail: i.n.page })); });
 

@@ -1,0 +1,88 @@
+/* TV profile (?p=tv) and remote navigation (core/remote.js): no rail, one highlight that moves with the D-pad. */
+/* TV rail (core/remote.js: the highlight lives here, Up / Down shows each page). Two styles, ?nav=:
+   bubble (default): icons only; the focused one shows its name in a bubble beside it. sidebar: icon + name, always open. */
+:root[data-profile="tv"] #rail { position: fixed; left: 0; top: 0; bottom: 0; z-index: 20; height: auto; width: var(--rail-w); padding: var(--page-pad-y) var(--sp-10);
+  align-items: stretch; overflow: visible; }
+:root[data-profile="tv"] #app { margin-left: var(--rail-w); }
+:root[data-profile="tv"] #rail .rclock, :root[data-profile="tv"] #rail .rtitle { display: none; }
+:root[data-profile="tv"] #rail .rmain, :root[data-profile="tv"] #rail .rsub { align-items: stretch; gap: var(--sp-4); justify-content: center; }
+:root[data-profile="tv"] #rail .spacer { flex: 0 0 var(--sp-20); }
+:root[data-profile="tv"] #rail a, :root[data-profile="tv"] #rail .rback { position: relative; width: auto; flex-direction: row; gap: var(--sp-14); padding: var(--sp-8) var(--sp-10);
+  border-radius: var(--r-pill); font-size: var(--fs-item); white-space: nowrap; background: none; box-shadow: none; color: var(--text-3); }
+:root[data-profile="tv"] #rail a svg, :root[data-profile="tv"] #rail .rback svg { width: var(--icon-lg); height: var(--icon-lg); flex: none; }
+:root[data-profile="tv"] #rail a.on { color: rgb(var(--lamp)); }
+html.remote #rail a:focus, html.remote #rail .rback:focus { transform: none; outline: none; box-shadow: none; background: var(--veil-2); color: var(--text); }
+html.remote #rail a.on:focus { color: rgb(var(--lamp)); }
+/* bubble: the focused icon's own pill widens over the page to show its name, then shrinks back to the icon */
+:root[data-profile="tv"]:not([data-nav="sidebar"]) #rail a, :root[data-profile="tv"]:not([data-nav="sidebar"]) #rail .rback { align-self: flex-start; gap: 0; }
+:root[data-profile="tv"]:not([data-nav="sidebar"]) #rail a span, :root[data-profile="tv"]:not([data-nav="sidebar"]) #rail .rback span { max-width: 0; opacity: 0; overflow: hidden; }
+html.remote:not([data-nav="sidebar"]) #rail a:focus, html.remote:not([data-nav="sidebar"]) #rail .rback:focus { background: var(--raised); box-shadow: 0 0 0 1px var(--hairline), 0 var(--sp-6) var(--sp-20) rgba(0, 0, 0, .5); }
+:root[data-profile="tv"]:not([data-nav="sidebar"]) #rail a:focus span, :root[data-profile="tv"]:not([data-nav="sidebar"]) #rail .rback:focus span { animation: railname 1.8s ease-in-out forwards; }
+@keyframes railname {
+  0% { max-width: 0; opacity: 0; margin-left: 0; margin-right: 0; }
+  12%, 72% { max-width: calc(140px * var(--s)); opacity: 1; margin-left: var(--sp-12); margin-right: var(--sp-6); }
+  100% { max-width: 0; opacity: 0; margin-left: 0; margin-right: 0; }
+}
+/* sidebar: names always shown, a wider rail */
+:root[data-profile="tv"][data-nav="sidebar"] { --rail-w: calc(168px * var(--s)); }
+:root[data-profile="tv"][data-nav="sidebar"] #rail { background: var(--raised); box-shadow: 1px 0 0 var(--hairline); }
+:root[data-profile="tv"] body { cursor: none; overflow-x: hidden; }
+:root[data-profile="tv"] #app { overflow-x: clip; }   /* rows run to the screen edge; nothing beyond it */
+:root[data-profile="tv"] .view { padding: var(--page-pad-y) var(--page-pad) var(--page-pad-y) var(--sp-20); row-gap: var(--view-gap); }   /* the rail holds the left safe area */
+html.remote :focus { outline: none; }
+/* the highlight: a lamp-coloured ring. Only the media tiles (apps, continue watching) lift; everything else keeps its size,
+   so nothing overlaps its neighbour or gets clipped by a pop-up (and a full-screen camera stays fixed: no transform) */
+html.remote :focus-visible, html.remote [tabindex]:focus, html.remote button:focus, html.remote a:focus {
+  outline: var(--focus-w) solid rgb(var(--lamp)); outline-offset: var(--focus-gap); transition: outline-color .12s; }
+html.remote .apps .app:focus, html.remote .wn:focus { transform: scale(1.06); transition: transform .12s ease-out; z-index: 1;
+  box-shadow: 0 0 0 var(--focus-gap) var(--ink), 0 var(--sp-8) var(--sp-24) rgba(0, 0, 0, .5); }
+/* inside a pop-up the ring sits just inside the item (the pop-up's scroll box would cut an outside ring) */
+html.remote .pbody :focus { outline-offset: calc(var(--focus-w) * -1); }
+/* TV: a camera is one stop; OK = full screen, above the rail; its mute button isn't used */
+:root[data-profile="tv"] .camera .mute, :root[data-profile="tv"] .camera .hist { display: none; }
+:root[data-profile="tv"] .camera.full { z-index: 40; }
+/* TV pop-ups: the whole screen height, tighter padding */
+:root[data-profile="tv"] .pwrap { padding: var(--sp-12); }
+:root[data-profile="tv"] .popup { max-height: calc(100vh - 2 * var(--sp-12)); }
+:root[data-profile="tv"] .pbody { padding: 0 var(--sp-16) var(--sp-6); }
+:root[data-profile="tv"] .phead { padding-top: var(--sp-12); padding-bottom: var(--sp-8); }
+
+/* TV: a view's sub-pages (Systems) are tabs across the top of the page, not a menu in the rail */
+:root[data-profile="tv"] .pview > .vtabs { display: flex; margin: var(--page-pad-y) 0 0 var(--sp-20); }
+:root[data-profile="tv"] .pview > .vtabs[hidden] { display: none; }
+:root[data-profile="tv"] .pview .vpage { padding-top: var(--sp-12); }
+:root[data-profile="tv"] .vtabs .ptab { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-6) var(--sp-14); border-radius: var(--r-12); color: var(--text-2); font-size: var(--fs-item); }
+:root[data-profile="tv"] .vtabs .ptab svg { width: var(--icon-sm); height: var(--icon-sm); }
+:root[data-profile="tv"] .vtabs .ptab.on { background: var(--veil-2); color: var(--text); }
+html.remote .vtabs .ptab:focus { transform: none; outline-offset: 0; }
+/* TV: an AMS slot is a small spool beside its text (slot, material, name, amount left), not a spool over it */
+:root[data-profile="tv"] .ams-slot { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-auto-rows: auto; align-content: center; column-gap: var(--sp-10); row-gap: 0;
+  text-align: left; padding: var(--sp-8) var(--sp-10); }
+:root[data-profile="tv"] .ams-ring { grid-row: 1 / span 4; width: calc(44px * var(--s)); max-width: none; margin: 0; align-self: center; }
+:root[data-profile="tv"] .ams-type { font-size: var(--fs-name); }
+:root[data-profile="tv"] .ams-name, :root[data-profile="tv"] .ams-left { min-height: 0; }
+:root[data-profile="tv"] .ams-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }   /* two lines rather than "eSUN PL…" */
+/* TV: the print card's title and its three stat labels need the width (badge as its icon, no icons before the labels) */
+:root[data-profile="tv"] .pjob .hbadge { padding: 0; width: calc(30px * var(--s)); justify-content: center; }
+:root[data-profile="tv"] .pjob .hbadge span, :root[data-profile="tv"] .pj-k svg { display: none; }
+/* TV Home: the house strip, set apart from the TV part above it (darker band, hairline, more space before it) */
+:root[data-profile="tv"] .section.glance { margin-top: var(--sp-10); padding: var(--sp-12); border-radius: var(--panel-radius); background: var(--pit); box-shadow: inset 0 1px 0 var(--hairline), inset 0 0 0 1px var(--edge); }
+:root[data-profile="tv"] .section.glance .camera { border-radius: var(--r-12); box-shadow: none; }
+:root[data-profile="tv"] .section.glance .stat { background: none; border: 0; box-shadow: none; }
+:root[data-profile="tv"] .section.glance .stat.on { background: none; border: 0; }   /* every tile the same: state shows in the icon and value colour */
+
+/* TV: rows that scroll sideways run to the right edge of the screen (like Google TV), the rest keeps the margin */
+:root[data-profile="tv"] .hrow { margin-right: calc((var(--page-pad) + var(--sp-16)) * -1); padding-right: calc(var(--page-pad) + var(--sp-16)); }
+/* TV Home fills the screen like the other pages: the same top / bottom margin, the spare height shared between its rows */
+:root[data-profile="tv"] .view-home { height: 100vh; height: 100dvh; align-content: space-between; }
+
+/* &overlay=1: the TV launcher's see-through window over a playing app shows only the take-overs (app.js overlayOnly) */
+html.overlay, html.overlay body { background: transparent; }
+html.overlay .shell, html.overlay #perf, html.overlay #login { display: none !important; }
+/* a dimmer being adjusted with the remote (hold OK; cards/tile.js): the ring changes colour, the % shows ‹ › */
+html.remote .tile.adjusting:focus { outline-color: rgb(var(--mist)); }
+html.remote .tile.adjusting .sub { color: var(--text); font-weight: 600; }
+/* lists that clip their contents (Needs a look, camera alerts): the highlight is drawn inside the item */
+html.remote .alist :focus, html.remote .rvlist :focus, html.remote .rvc :focus { outline-offset: calc(var(--focus-w) * -1); }
+/* a machine card's problem line on a TV: up to two lines (one cut off what mattered: "Server memory 91% · Server CPU temp 1…") */
+:root[data-profile="tv"] .host .hwhy:not(.ok) { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }

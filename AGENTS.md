@@ -12,6 +12,7 @@ If the user asks for a security review, read the code and verify each point belo
 - **Files served without a login:** everything deployed is readable from `/local/`. The user's `home.js` is the sensitive one.
 - **HA packages:** `sites/example/ha-config/packages/`. They're optional. Check each one's `rest_command`, `rest` and script actions; `alarm_disarm` in `dashboard_helpers.yaml` disarms without asking for a code.
 - **Shell tools:** `engine/_dev/tools/*.sh`, `assemble.sh`, and the mock server, which listens on port 8125.
+- **TV launcher (optional):** `tv/launcher/`, an Android app for Google TV. It holds an HA token in its private storage, uses an accessibility service limited to the stock launcher's window changes (`res/xml/home_guard.xml`), can read installed apps and the Watch Next list, and takes settings only from adb (`Provision`, DUMP permission). `tv/launcher/README.md` says what each part does.
 
 ## How it fits together
 - `engine/` is the shared engine. `sites/<site>/` is one home. `sites/example/` is a complete made-up site; copy it to start your own.
@@ -75,4 +76,5 @@ engine/_dev/assemble.sh sites/<site>/dash /tmp/dash               # then copy /t
 | Code map, phone setup, URL options | `engine/_dev/README.md` |
 | Mock server, styles, gallery | `engine/README.md` |
 | A full site | `sites/example/` (start at `dash/home.js`) |
+| TV home screen: Android launcher, setup, the `tv` dashboard | `tv/launcher/README.md`, `sites/example/dash/dashboards/tv.js` |
 | HA packages | `sites/example/ha-config/packages/` |

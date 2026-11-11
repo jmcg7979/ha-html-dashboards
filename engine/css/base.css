@@ -27,6 +27,14 @@ html.sky body::before { content: ""; position: fixed; inset: 0; z-index: -1; poi
 #rail .spacer { flex: 1; }
 #app { flex: 1; min-width: 0; }
 :root[data-profile="phone"] #rail { display: none; }
+#rail { overflow-y: auto; scrollbar-width: none; }   /* a short screen scrolls the rail, not the page */
+/* fill only when it fits (core/fit.js): .nofill = natural heights, the page scrolls instead of squeezing cards together */
+.view.nofill, .vpage.nofill { height: auto !important; grid-template-rows: none !important; align-items: start !important; }
+:root .pview:has(> .vpage.nofill:not([hidden])) { height: auto !important; }
+.nofill .sgrid.grows, .nofill .sgrid.rows { grid-template-rows: none !important; }
+.nofill .cell.grow { contain: none; }
+.nofill .sgrid.rows > .cell, .nofill .cell.grow > * { min-height: auto; }
+.nofill > .section { align-self: start !important; }   /* not stretched to the tallest column (base: a section with a growing card stretches) */
 
 /* ---- layout: view > section > card grid ---- */
 .view { display: grid; grid-template-columns: var(--view-template, repeat(var(--view-cols), minmax(0, 1fr))); gap: var(--view-gap); padding: var(--page-pad) var(--page-pad) calc(var(--page-pad) / 2) 0; max-width: var(--view-max); align-items: start; }

@@ -7,3 +7,20 @@
 .stat.on .svalue { color: rgb(var(--t)); }
 .stat.alert { background: linear-gradient(135deg, rgba(var(--ember), var(--a-20)), rgba(var(--ember), var(--a-08))); border-color: rgba(var(--ember), var(--a-35)); }
 
+
+.sdetail { font-size: var(--fs-meta); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sdetail:empty { display: none; }
+/* tile: a glance tile (TV Home): icon + label on top, the value big under them, a detail line; fills its cell's height */
+.stat.tile { height: 100%; min-height: calc(110px * var(--s)); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; gap: var(--sp-8) var(--sp-10); padding: var(--sp-14); border-radius: var(--tile-radius); }
+.stat.tile .ic { width: var(--ic-xs); height: var(--ic-xs); }
+.stat.tile .tx { display: contents; }
+.stat.tile .slabel { align-self: center; font-size: var(--fs-item); }
+.stat.tile .svalue { grid-column: 1 / -1; align-self: end; font: 600 var(--fs-figure-m)/1.1 var(--font-display); }
+.stat.tile .sdetail { grid-column: 1 / -1; margin-top: calc(var(--sp-6) * -1); }
+/* strip: a compact glance tile (TV house strip): small label over the value, a detail line; no big number */
+.stat.strip { height: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto; align-content: center; column-gap: var(--sp-10); row-gap: 1px; padding: var(--sp-8) var(--sp-12); border-radius: var(--tile-radius); }
+.stat.strip .ic { grid-row: 1 / span 3; align-self: center; width: var(--ic-xs); height: var(--ic-xs); }
+.stat.strip .tx { display: contents; }
+.stat.strip .slabel { font-size: var(--fs-meta); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+.stat.strip .svalue { font: 600 var(--fs-name)/1.2 var(--font-display); }
+.stat.strip .sdetail { font-size: var(--fs-meta); }

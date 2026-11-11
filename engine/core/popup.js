@@ -19,7 +19,7 @@ const built = {};
 export function initPopups(popups, homeRef) {
   defs = { ...ENGINE_POPUPS, ...(popups || {}) }; home = homeRef;
   window.addEventListener('hashchange', route);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current && !e.defaultPrevented) close(); });   // the TV remote handles its own Back (core/remote.js)
   route();
 }
 

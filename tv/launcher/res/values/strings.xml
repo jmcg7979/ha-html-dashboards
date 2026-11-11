@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guard_name">Home screen</string>
+    <string name="guard_desc">Opens the dashboard home screen whenever the stock Google TV home screen comes up (Home button, closing an app). Reads nothing on screen.</string>
+</resources>

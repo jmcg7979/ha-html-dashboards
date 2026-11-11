@@ -1,0 +1,26 @@
+/* Status line (cards/statusbar.js): plain text on the page, no boxes. Time and date left; people, alarm, weather and
+   round buttons right, on one baseline. */
+.sbar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp-28); min-width: 0; }
+.sbclock { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.sbclock b { font: 600 var(--fs-hero-l)/0.95 var(--font-display); letter-spacing: -0.03em; color: var(--text); }
+.sbclock span { font: 500 var(--fs-name)/1.2 var(--font); color: var(--text-2); white-space: nowrap; }
+.sbright { justify-self: end; display: flex; align-items: center; gap: 0; min-width: 0; padding: var(--sp-6); border-radius: var(--r-pill);
+  background: var(--veil-faint); box-shadow: inset 0 0 0 1px var(--edge); }   /* one quiet pill: every item the same size, hairlines between */
+.sbright > .sbi + .sbi { position: relative; }
+.sbright > .sbi + .sbi::before { content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 1px; background: var(--hairline); }
+.sbi { display: flex; align-items: center; gap: var(--sp-8); white-space: nowrap; color: var(--text); font-size: var(--fs-item); padding: var(--sp-6) var(--sp-16); border-radius: var(--r-pill); text-align: left; }
+button.sbi { background: none; }
+.sbi .sbt { display: flex; flex-direction: column; line-height: 1.15; }
+.sbi .sbt b { font: 600 var(--fs-item)/1.2 var(--font); color: var(--text); }
+.sbi .sbt small { font-size: var(--fs-meta); color: var(--text-2); }
+.sbic svg { width: var(--icon); height: var(--icon); }
+.sbalarm[data-s="armed"] { color: rgb(var(--sage)); }
+.sbalarm[data-s="alert"] { color: rgb(var(--ember)); }
+.sbimg img { display: block; width: var(--ic-s); height: var(--ic-s); margin: calc(var(--sp-4) * -1) 0; }
+/* who's home: photo rings, sage while home, dimmed while away */
+.sbp { position: relative; width: var(--ic-xs); height: var(--ic-xs); border-radius: 50%; box-shadow: 0 0 0 var(--ring-w) rgb(var(--sage)); overflow: hidden; background: var(--veil); }
+.sbp img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sbp { flex: none; }
+.sbp[data-where="away"], .sbp[data-where="unknown"] { box-shadow: 0 0 0 var(--ring-w) var(--hairline); }
+.sbp[data-where="away"] img, .sbp[data-where="unknown"] img { filter: grayscale(1); opacity: .45; }
+.sbbtns { display: flex; gap: var(--sp-10); }

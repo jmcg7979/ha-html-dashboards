@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV home screen: a full-screen WebView showing the site's `tv` dashboard, plus the native bits the page can't do
+     (installed apps, launching them, HA sign-in token). It is not the system Home (Google TV doesn't allow that): HomeGuard
+     brings it up whenever the stock home screen shows. README.md. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="dash.tv">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- installed apps for the Apps row (Android 11+ package visibility) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- Continue watching: what apps publish to Android TV's Watch Next list (granted over adb: README.md) -->
+    <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <application
+        android:label="Home"
+        android:icon="@drawable/icon"
+        android:banner="@drawable/banner"
+        android:theme="@style/Home"
+        android:usesCleartextTraffic="true"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".HomeActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:resumeWhilePausing="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Brings HomeActivity up whenever the stock home screen shows (HomeGuard.java); switched on over adb. -->
+        <service
+            android:name=".HomeGuard"
+            android:label="@string/guard_name"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/home_guard" />
+        </service>
+
+        <!-- Set-up from adb only (README.md): the sender must hold DUMP, which the adb shell has and apps can't get. -->
+        <receiver
+            android:name=".Provision"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="dash.tv.PROVISION" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

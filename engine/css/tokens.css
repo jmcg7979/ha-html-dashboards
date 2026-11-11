@@ -104,6 +104,8 @@
   --heading-h: calc(36px * var(--s));
   --summary-h: calc(120px * var(--s));
   --stat-h: calc(60px * var(--s));
+  --focus-w: calc(3px * var(--s));      /* TV remote highlight ring (css/cards/remote.css) */
+  --focus-gap: calc(3px * var(--s));
   --stat-h-lg: calc(80px * var(--s));   /* the status row along the top */
   --photo: calc(44px * var(--s));
   --ring-w: calc(2.5px * var(--s));
@@ -203,6 +205,15 @@
   --view-gap: 14px;
   --fs-clock: 40px;
   --tabbar-h: 62px;          /* bottom tab bar (core/phone.js), plus the safe area below it */
+}
+/* TV (960x540 CSS px on a 1080p Google TV; tv/launcher): fixed scale, sized to read from the couch; no rail */
+:root[data-profile="tv"] {
+  --s: 0.9;
+  --rail-w: calc(68px * var(--s));       /* the rail closed: icons in the left safe area */
+  --rail-open: calc(220px * var(--s));   /* open (focused): icons + labels over the page */
+  --page-pad: calc(32px * var(--s));     /* margin like Google TV's own (current TVs don't overscan) */
+  --page-pad-y: calc(24px * var(--s));
+  --view-gap: calc(22px * var(--s));     /* between the status line, the apps and the glance row */
 }
 /* safe areas: the browser's own insets; inside HA's Webpage dashboard core/phone.js measures HA's and sets these inline */
 :root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); }

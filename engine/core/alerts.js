@@ -18,15 +18,30 @@
 // popups: [{ entity, state, open: '#doorbell', closeAfter: 120 }]   open a pop-up when an entity changes to a state (see popupRules)
 import { h, esc, icon } from './dom.js';
 import { st, watch } from './store.js';
-import { call } from './ha.js';
+import { call, resubscribeIfNeeded } from './ha.js';
 import { preload, grid } from './layout.js';
 import { close as closePopup } from './popup.js';
+import { watch as tvWatch, inOverlay } from './tvhost.js';
 
 export function initAlerts(cfg, home) {
   if (!cfg) return;
+  if (!inOverlay) tvWatch(triggers(cfg));   // on a TV: the launcher watches these while another app is in front
   if (cfg.timer) timerAlarm(cfg.timer);
   if (cfg.cameras) cameraAlerts(cfg.cameras, home);
   if (cfg.popups) popupRules(cfg.popups);
+  resubscribeIfNeeded();   // these may be the only cards watching their entities (the timer on a TV): add them to HA's subscription
+}
+
+// the entity states that start a take-over (for the TV launcher's overlay; it opens the page, which then decides)
+function triggers(cfg) {
+  const t = [];
+  if (cfg.timer) t.push({ entity: cfg.timer.ringing, state: 'on' });
+  const c = cfg.cameras;
+  if (c) {
+    c.cameras.forEach((x) => t.push({ entity: c.review(x.id), state: 'ALERT' }));
+    if (c.grid) t.push({ entity: c.grid.sensor, state: 'on' });
+  }
+  return t;
 }
 
 // ---------------- pop-ups that open themselves ----------------
@@ -78,13 +93,14 @@ function timerAlarm(c) {
     label.textContent = l;
     if (on === ringing) return;
     ringing = on; el.hidden = !on;
-    document.documentElement.classList.toggle('alarm-open', on);
+    el.querySelector('.alarm-h').textContent = document.documentElement.classList.contains('remote') ? 'Press OK or Back to stop' : 'Tap anywhere to stop';
+    document.documentElement.classList.toggle('alarm-open', on); changed();
     if (on) startSound(); else stopSound();
   });
   el.addEventListener('click', () => {
     if (!ringing) return;
     call('input_boolean.turn_off', {}, c.ringing);
-    ringing = false; el.hidden = true; document.documentElement.classList.remove('alarm-open'); stopSound();
+    ringing = false; el.hidden = true; document.documentElement.classList.remove('alarm-open'); stopSound(); changed();
   });
 }
 
@@ -122,7 +138,7 @@ function cameraAlerts(c, home) {
   function render() {
     const a = active(), key = (a.grid ? 'grid' : '') + a.ids.join(',');
     if (!key) dismissed = '';
-    if (!key || key === dismissed) { el.hidden = true; shown = ''; Object.values(views).forEach((v) => { v.hidden = true; }); return; }
+    if (!key || key === dismissed) { const was = !el.hidden; el.hidden = true; shown = ''; Object.values(views).forEach((v) => { v.hidden = true; }); if (was) changed(); return; }
     if (key !== shown) {
       const names = (a.grid ? [c.grid.title || 'Backyard'] : []).concat(a.ids.map((id) => cams[id].name));
       title.textContent = names.join(' · ');
@@ -134,7 +150,7 @@ function cameraAlerts(c, home) {
       el.querySelector('.popup').classList.toggle('single', !a.grid && a.ids.length === 1);
       el.querySelector('.popup').style.setProperty('--cam-ratio', !a.grid && a.ids.length === 1 ? ratio(cams[a.ids[0]].ratio) : 1.523);
       if (c.wake && !shown) call('switch.turn_on', {}, c.wake);
-      shown = key;
+      shown = key; el.hidden = false; changed();
     }
     el.hidden = false;
   }
@@ -160,6 +176,8 @@ function cameraAlerts(c, home) {
   });
   return tickT;
 }
+// a take-over appeared or went (the TV remote moves its highlight into it / back: core/remote.js)
+const changed = () => dispatchEvent(new CustomEvent('dash:alert'));
 const ratio = (r) => { const p = String(r || '16/9').split('/'); return (+p[0] / +p[1]) || 1.7778; };
 
 // load the camera card type before any alert can need it

@@ -1,0 +1,12 @@
+/* Continue watching (cards/watchnext.js): artwork 16:9 with the app's banner in the corner and a progress line, title and
+   episode under it; one row that scrolls sideways. */
+.wnext { display: flex; flex-direction: column; min-width: 0; }
+.wnrow { display: flex; gap: var(--sp-16); overflow: hidden; padding: var(--sp-16); margin: calc(var(--sp-16) * -1); }   /* room for the highlight */
+.wn { flex: 0 0 calc((100% - 4 * var(--sp-16)) / 4.3); min-width: 0; max-width: calc((100% - 4 * var(--sp-16)) / 4.3); display: flex; flex-direction: column; gap: var(--sp-4); text-align: left; padding: 0; background: none; border-radius: var(--tile-radius); }
+.wnart { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: var(--tile-radius); overflow: hidden; background: var(--veil); border: 1px solid var(--edge); }
+.wnart > img:first-child { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wnart .wnapp { position: absolute; left: var(--sp-8); top: var(--sp-8); width: calc(48px * var(--s)); aspect-ratio: 16 / 9; border-radius: var(--r-8); object-fit: cover; box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+.wnart i { position: absolute; left: 0; right: 0; bottom: 0; height: var(--sp-4); background: rgba(0, 0, 0, .5); }
+.wnart i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--p); background: rgb(var(--lamp)); }
+.wntitle { font: 600 var(--fs-item)/1.25 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: var(--sp-2) var(--sp-2) 0; }
+.wnsub { font-size: var(--fs-meta); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 var(--sp-2); }

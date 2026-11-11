@@ -47,7 +47,7 @@ export default function tile(cfg) {
     if (icoFn) setHTML(icEl, icon(icoFn(e)));
     pls.forEach((b, i) => { const p = pills[i], t = pillText(p, st(p.entity)); b.hidden = t == null; if (t != null) { setText(b.lastChild, t); toggle(b, 'on', !!p.tone); if (p.tone) setTone(b, p.tone); } });
     if (model && !el.classList.contains('drag')) fill.style.width = (e ? model.pct(e) : 0) + '%';
-    if (sub) setText(sub, cfg.state ? cfg.state(e) : model && e && e.state !== 'unavailable' ? model.text(e) : stateText(e, dom));
+    if (sub && !el.classList.contains('adjusting')) setText(sub, cfg.state ? cfg.state(e) : model && e && e.state !== 'unavailable' ? model.text(e) : stateText(e, dom));
     if (typeof cfg.ring === 'function') setRing(icEl, cfg.ring(e));
     else if (cfg.ring) { const v = [].concat(cfg.ring).map(num).filter((x) => x != null); setRing(icEl, v.length ? Math.min(...v) : null); }
     sbs.forEach((b, i) => {
@@ -68,7 +68,12 @@ export default function tile(cfg) {
     if (mode === 'toggle') run(cfg.tap || 'toggle', { el, ev, entity: id });
     else if ((mode === 'state' || mode === 'button') && cfg.tap) run(cfg.tap, { el, ev, entity: id });
   });
-  if (model) slider(el, fill, sub, id, model);
+  // TV remote OK (core/remote.js): what the icon does (a dimmer can't be tapped at a point)
+  el.addEventListener('dash:ok', (ev) => {
+    const a = cfg.iconTap || (mode === 'slider' || mode === 'toggle' ? 'toggle' : cfg.tap);
+    if (a) { ev.preventDefault(); run(a, { el: icEl, ev, entity: id }); }
+  });
+  if (model) slider(el, fill, sub, id, model, (e) => (cfg.state ? cfg.state(e) : model.text(e)));
   return el;
 }
 
@@ -117,7 +122,7 @@ const MODELS = {
 MODELS.input_number = MODELS.number;
 
 // Drag anywhere on the tile to set brightness (tap = set to that point). Vertical moves scroll the page.
-function slider(el, fill, sub, id, model) {
+function slider(el, fill, sub, id, model, text) {
   let d = null;
   el.addEventListener('pointerdown', (ev) => {
     if (ev.target.closest('.ic, .sb')) return;
@@ -141,5 +146,30 @@ function slider(el, fill, sub, id, model) {
   };
   el.addEventListener('pointerup', (ev) => end(ev, false));
   el.addEventListener('pointercancel', (ev) => end(ev, true));
+
+  // TV remote (core/remote.js): hold OK to adjust, Left / Right in 10% steps, OK / Back (or moving away) to finish.
+  // The fill and the % follow each press; HA gets the value once the presses pause.
+  el.dataset.hold = '';
+  let a = null;
+  const send = () => { clearTimeout(a.t); a.t = 0; model.set(id, a.pct, performance.now()); };
+  el.addEventListener('dash:hold', () => {
+    const e = st(id); if (!e || e.state === 'unavailable') return;
+    a = { pct: Math.round(model.pct(e) / 10) * 10, t: 0 };
+    el.classList.add('drag', 'adjusting'); show();
+  });
+  const show = () => { fill.style.width = a.pct + '%'; if (sub) sub.textContent = `‹  ${a.pct}%  ›`; };
+  el.addEventListener('dash:adjust', (ev) => {
+    if (!a) return;
+    a.pct = Math.max(0, Math.min(100, a.pct + ev.detail * 10)); show();
+    clearTimeout(a.t); a.t = setTimeout(send, 400);
+  });
+  const done = () => {
+    if (!a) return;
+    if (a.t) send();
+    a = null; el.classList.remove('drag', 'adjusting');
+    const e = st(id); if (sub && e) sub.textContent = text(e);
+  };
+  el.addEventListener('dash:adjust-end', done);
+  el.addEventListener('focusout', done);
 }
 const pct = (ev, r) => Math.max(0, Math.min(100, ((ev.clientX - r.left) / r.width) * 100));

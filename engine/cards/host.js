@@ -7,10 +7,10 @@
 //   bars:   [{ name, entity (percent), detail: () => '68 of 816 GB', warn, crit, tone (instead of the warn / crit colours) }],
 //   facts:  [{ label, icon, entities: [...], value: () => 'text' | { text, tone } }],
 //   controls: { power, restart, status, impact: 'what stops while it is off / restarting' } | { note: 'text' } (same row, no buttons)
-//           | { buttons: [{ icon, text, on: entity (lit while 'on'; also the entity a function action gets), action (core/actions.js run),
+//           | { buttons: [{ icon, text (or () => text: redrawn every second, e.g. a countdown), on: entity (lit while 'on'; also the entity a function action gets), action (core/actions.js run),
 //                           admin: true (only for HA admins), show: () => bool (hidden while false), watch: [ids] }] },
 //   live: true (re-draw the header every second, for a sub / badge that follows something other than entities),
-//   meterRow: true (meters side by side on big screens), compact: true (big screens drop the status line and facts:
+//   meterRow: true (meters side by side on big screens), meterStyle: 'lines' (one short row each: name, value, trace; a TV), compact: true (big screens drop the status line and facts:
 //   the badge and "Needs a look" still show problems), why: false (no status line), okText }
 //   Power off and Restart ask first in a dialog naming the machine and the impact; Power on is a tap-again.
 // In a growing cell the meters take the spare height, so the traces get taller instead of leaving a gap.
@@ -60,10 +60,10 @@ export default function host(cfg) {
   const n = cfg.node || {};
   const el = h(`<div class="host${cfg.compact ? ' compact' : ''}"><div class="hh"><span class="ic on">${icon(n.icon || 'server')}</span><span class="tx"><span class="hname">${esc(n.name || cfg.title || '')}</span><span class="sub hsub"></span></span><span class="hbadge"></span></div>
     ${cfg.why === false ? '' : '<div class="hwhy"></div>'}
-    ${cfg.meters && cfg.meters.length ? `<div class="hmeters${cfg.meterRow ? ' row' : ''}" style="--n:${cfg.meters.length}"></div>` : ''}
+    ${cfg.meters && cfg.meters.length ? `<div class="hmeters${cfg.meterRow ? ' row' : ''}${cfg.meterStyle === 'lines' ? ' lines' : ''}" style="--n:${cfg.meters.length}"></div>` : ''}
     ${cfg.bars && cfg.bars.length ? `<div class="hcap">${cfg.bars.map((b) => `<div class="cap"><span class="clab">${esc(b.name)}</span><span class="cdet"></span><span class="ctrack"><i></i></span></div>`).join('')}</div>` : ''}
     ${cfg.facts && cfg.facts.length ? `<div class="hfacts">${cfg.facts.map((f) => `<div class="fact">${f.icon ? icon(f.icon) : ''}<span class="flab">${esc(f.label)}</span><span class="fval"></span></div>`).join('')}</div>` : ''}
-    ${cfg.controls ? (cfg.controls.note ? `<div class="hctl note">${icon('lock-outline')}<span>${esc(cfg.controls.note)}</span></div>` : cfg.controls.buttons ? `<div class="hctl">${cfg.controls.buttons.map((b, i) => `<button class="sb cbtn" data-i="${i}">${icon(b.icon)}<span>${esc(b.text)}</span></button>`).join('')}</div>` : `<div class="hctl">${cfg.controls.power ? `<button class="sb cpow">${icon('power')}<span>Power</span></button>` : ''}${cfg.controls.restart ? `<button class="sb crst">${icon('restart')}<span>Restart</span></button>` : ''}</div>`) : ''}</div>`);
+    ${cfg.controls ? (cfg.controls.note ? `<div class="hctl note">${icon('lock-outline')}<span>${esc(cfg.controls.note)}</span></div>` : cfg.controls.buttons ? `<div class="hctl">${cfg.controls.buttons.map((b, i) => `<button class="sb cbtn" data-i="${i}">${icon(b.icon)}<span>${esc(typeof b.text === 'function' ? b.text() : b.text)}</span></button>`).join('')}</div>` : `<div class="hctl">${cfg.controls.power ? `<button class="sb cpow">${icon('power')}<span>Power</span></button>` : ''}${cfg.controls.restart ? `<button class="sb crst">${icon('restart')}<span>Restart</span></button>` : ''}</div>`) : ''}</div>`);
   const ms = el.querySelector('.hmeters'); (cfg.meters || []).forEach((m) => ms.appendChild(meter({ owner: n.name, ...m })));
   const badge = el.querySelector('.hbadge'), why = el.querySelector('.hwhy'), sub = el.querySelector('.hsub');
   const caps = [...el.querySelectorAll('.cap')], facts = [...el.querySelectorAll('.fact')];
@@ -108,6 +108,7 @@ export default function host(cfg) {
     const row = el.querySelector('.hctl');
     const vis = () => { let any = false; C.buttons.forEach((b, i) => { const v = (!b.admin || !!(user && user.is_admin)) && (!b.show || !!b.show()); bs[i].hidden = !v; any = any || v; }); row.hidden = !any; };
     if (C.buttons.some((b) => b.admin || b.show)) { watch(C.buttons.flatMap((b) => b.watch || []), vis); tick(vis); }
+    C.buttons.forEach((b, i) => { if (typeof b.text === 'function') tick(() => { if (!bs[i].hidden) setText(bs[i].lastChild, b.text()); }); });
     C.buttons.forEach((b, i) => { if (b.on) watch([b.on], () => { bs[i].classList.toggle('on', (st(b.on) || {}).state === 'on'); bs[i].style.setProperty('--t', `var(--${b.tone || 'sage'})`); }); });
     el.addEventListener('click', (ev) => { const x = ev.target.closest('.cbtn'); if (x) { const b = C.buttons[+x.dataset.i]; run(b.action, { el: x, ev, entity: b.on }); } });
   } else if (C && !C.note) {

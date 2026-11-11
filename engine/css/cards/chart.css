@@ -11,6 +11,7 @@
 .crange { height: var(--range-h); min-width: calc(44px * var(--s)); padding: 0 var(--sp-10); border-radius: var(--r-pill); font-size: var(--fs-small); font-weight: var(--fw-strong); color: var(--text-2); background: var(--veil-2); }
 .crange.on { background: rgba(var(--mist), var(--a-26)); color: rgb(var(--mist)); box-shadow: inset 0 0 0 1px rgba(var(--mist), var(--a-45)); }
 .cplot { position: relative; touch-action: pan-y; }
+.chart.fit .cplot > svg { position: absolute; inset: 0; }   /* a fitted chart takes its box's size; its drawing never sets it */
 .csvg { display: block; width: 100%; height: 100%; overflow: visible; }
 .cgrid { stroke: var(--grid-line); stroke-width: 1; }
 .cgrid.v { stroke-dasharray: 2 4; }

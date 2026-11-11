@@ -1,6 +1,8 @@
 // Builds views and pop-ups from config: view -> sections (panels) -> cards on a column grid.
 // A card type is a module in /cards exporting `default (cfg, ctx) => HTMLElement`.
 //   view:    { columns: 'minmax(0, 1fr) 240px' } optional: the view's own column widths instead of --view-cols equal columns
+//            { zoom: 0.7, s: 1 } optional: draw the view smaller (CSS zoom) at its own --s, e.g. a wall-panel page reused on a TV
+//            { zoom: 0.7, s: 1 } optional: draw the view smaller (CSS zoom) at its own --s, e.g. a wall-panel page reused on a TV
 //            { colGap: 'calc(28px * var(--s))' } optional: the view's own space between columns
 //   section: { span: 1, cols: 12, panel: true, rows: 'auto minmax(0, 1fr)', cards: [...] }   span = view columns, cols = grid units inside
 //            rows: the grid's own row template for a multi-column section; it then fills its column's height like grow
@@ -14,6 +16,7 @@ import { watch, st } from './store.js';
 import { resubscribeIfNeeded } from './ha.js';
 import { frameView } from './frame.js';
 import { icon } from './dom.js';
+import { fitGuard } from './fit.js';
 
 // A card type can export `panel = true`: placed straight on a page (a section with panel: false), it sits in its own glass
 // panel without each config saying class: 'glass'. Inside a panel section or a pop-up it doesn't (no panel in a panel).
@@ -35,6 +38,12 @@ export const phoneView = (view) => ({ ...view, pages: view.pages.map((pg) => ({ 
 export const preload = (cards) => Promise.all([...typesIn(cards)].map(load));
 
 export async function renderView(view, home) {
+  const el = await renderView0(view, home);
+  if (view.zoom) el.style.zoom = view.zoom;
+  if (view.s) el.style.setProperty('--s', view.s);
+  return el;
+}
+async function renderView0(view, home) {
   if (view.frame) return frameView(view);   // a page in a frame (e.g. Music)
   if (view.pages) return pagedView(view, home);
   await preload(view.sections.flatMap((s) => s.cards));   // load every card type in parallel, then build synchronously
@@ -44,6 +53,7 @@ export async function renderView(view, home) {
   if (view.colGap) el.style.columnGap = view.colGap;   // view option: space between columns (Cameras)
   if (view.fill) el.classList.add('fill');   // view option: the view takes the screen's height, its columns stretch to the bottom (Printer)
   sections(el, view.sections, home);
+  fitGuard(el);   // fill only when the content fits (core/fit.js)
   return el;
 }
 
@@ -69,7 +79,7 @@ async function pagedView(view, home) {
   const made = [], tabs = [...el.querySelectorAll('.vtabs .ptab')];
   el.showPage = async (k) => {
     let i = view.pages.findIndex((p) => p.id === k); if (i < 0) i = typeof k === 'number' ? k : 0;
-    if (!made[i]) { await preload(view.pages[i].sections.flatMap((s) => s.cards)); const pg = document.createElement('div'); pg.className = 'view vpage view-' + view.id + '-' + view.pages[i].id + (view.pages[i].fill ? ' fill' : '') + (view.pages[i].reflowed ? ' reflowed' : ''); sections(pg, view.pages[i].sections, home); el.appendChild(pg); made[i] = pg; }
+    if (!made[i]) { await preload(view.pages[i].sections.flatMap((s) => s.cards)); const pg = document.createElement('div'); pg.className = 'view vpage view-' + view.id + '-' + view.pages[i].id + (view.pages[i].fill ? ' fill' : '') + (view.pages[i].reflowed ? ' reflowed' : ''); sections(pg, view.pages[i].sections, home); el.appendChild(pg); made[i] = pg; fitGuard(pg); }
     made.forEach((m, j) => { if (m) m.hidden = j !== i; });
     tabs.forEach((t, j) => t.classList.toggle('on', j === i));
     el.current = view.pages[i].id;

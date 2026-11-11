@@ -14,6 +14,10 @@ const srv=http.createServer((q,r)=>{ if(q.url.startsWith('/local/dash/')) { let 
  else if(q.url.startsWith('/api/frigate/') && q.url.includes('/vod/')) { const f=q.url.split('?')[0].split('/').pop(); try{ const b=fs.readFileSync(new URL('hls/'+f, import.meta.url)); r.setHeader('content-type', f.endsWith('.m3u8')?'application/vnd.apple.mpegurl':'video/mp4'); r.end(b);}catch(e){r.statusCode=404;r.end();} }
  else if(q.url.startsWith('/api/frigate/') && /\/(clips|snapshot|thumbnail)\//.test(q.url)) { const n=[...q.url].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,0); r.setHeader('content-type','image/svg+xml'); r.end(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="hsl(${n%360},25%,30%)"/><circle cx="${n%320}" cy="${(n>>9)%180}" r="30" fill="hsl(${n%360},40%,60%)"/></svg>`); }
  else if(q.url.startsWith('/api/frigate/') && q.url.includes('/recording/')) { r.setHeader('content-type','video/mp4'); r.end(mp4); }
+ else if(q.url.startsWith('/__tv/banner/')) { // the TV launcher serves real app banners here (core/tvhost.js); the mock draws a stand-in
+   const pkg=decodeURIComponent(q.url.slice(13).split('?')[0]), w=pkg.split('.').filter(x=>!['com','android','tv','google','apps','livingroom','ninja','stream'].includes(x)).pop()||pkg;
+   const hue=[...pkg].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
+   r.setHeader('content-type','image/svg+xml'); r.end(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="hsl(${hue},45%,28%)"/><text x="160" y="102" font-family="sans-serif" font-size="30" font-weight="700" fill="#fff" text-anchor="middle">${w.replace(/[<&]/g,'')}</text></svg>`); }
  else if(q.url.startsWith('/auth/token')) { r.setHeader('content-type','application/json'); r.end(JSON.stringify({access_token:'AT',expires_in:1800,refresh_token:'RT'})); }
  else if(q.url.startsWith('/pic')||q.url.startsWith('/api/camera_proxy')) { r.setHeader('content-type','image/png'); r.end(png); } else { r.statusCode=404; r.end(); } });
 // Frigate playback test files (hls/, VP9 because test Chromium has no H.264), make them once with:
@@ -26,7 +30,7 @@ wss.on('connection',ws=>{ ws.send(JSON.stringify({type:'auth_required'}));
  ws.on('message',d=>{ const m=JSON.parse(d);
   if(m.type==='auth') ws.send(JSON.stringify({type:'auth_ok'}));
   else if(m.type==='auth/current_user') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{id:process.env.MOCK_USER||'u1',name:process.env.MOCK_USER?'Wall Panel':user,is_admin:!process.env.MOCK_USER}}));
-  else if(m.type==='subscribe_entities'){ subId=m.id; ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:null})); const a={}; for(const k of m.entity_ids) if(S[k]) a[k]={s:S[k].s,a:S[k].a,lc:S[k].lc}; ws.send(JSON.stringify({id:m.id,type:'event',event:{a}})); }
+  else if(m.type==='subscribe_entities'){ subId=m.id; ws.subId=m.id; ws.ids=new Set(m.entity_ids); ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:null})); const a={}; for(const k of m.entity_ids) if(S[k]) a[k]={s:S[k].s,a:S[k].a,lc:S[k].lc}; ws.send(JSON.stringify({id:m.id,type:'event',event:{a}})); }
   else if(m.type==='ping') ws.send(JSON.stringify({id:m.id,type:'pong'}));
   else if(m.type==='get_config') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{latitude:39.05,longitude:-95.68}}));
   else if(m.type==='get_states') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:Object.keys(S).map(k=>({entity_id:k,state:S[k].s}))}));
@@ -60,8 +64,8 @@ wss.on('connection',ws=>{ ws.send(JSON.stringify({type:'auth_required'}));
           if(act==='restart'){ setTimeout(()=>{ push(guest,'unavailable'); os('stopping','off'); },3000); setTimeout(()=>{ push(up,new Date().toISOString()); os('starting'); },9000); setTimeout(()=>{ push(guest,'12.5'); os('running','on'); },15000); }
           if(act==='shut_down'){ setTimeout(()=>{ push(guest,'unavailable'); os('stopping','off'); },3000); setTimeout(()=>{ push(stt,'stopped'); os('stopped'); },8000); }
           if(act==='start'){ setTimeout(()=>{ push(stt,'running'); push(up,new Date().toISOString()); os('starting'); },4000); setTimeout(()=>{ push(guest,'10'); os('running','on'); },10000); } } }
-      if(m.domain==='mock'&&m.service==='set') { const d=m.service_data; S[d.entity]=Object.assign(S[d.entity]||{a:{}},{s:d.state}); c[d.entity]={'+':{s:d.state,lc:Date.now()/1000}}; }   // test hook: ha.call('mock.set', { entity, state })
+      if(m.domain==='mock'&&m.service==='set') { const d=m.service_data; S[d.entity]=Object.assign(S[d.entity]||{a:{}},{s:d.state},d.attributes?{a:d.attributes}:{}); c[d.entity]={'+':Object.assign({s:d.state,lc:Date.now()/1000},d.attributes?{a:d.attributes}:{})}; }   // test hook: ha.call('mock.set', { entity, state, attributes? })
       if(onCall) onCall(m,c);
-      ws.send(JSON.stringify({id:subId,type:'event',event:{c}})); },150); }
+      for(const cl of wss.clients){ const cc=Object.fromEntries(Object.entries(c).filter(([k])=>cl.ids&&cl.ids.has(k))); if(cl.subId!=null&&Object.keys(cc).length) cl.send(JSON.stringify({id:cl.subId,type:'event',event:{c:cc}})); } },150); }   // as with HA: every connection hears a change to the entities it subscribed (a TV page and its launcher's watcher), and only those
  }); });
 srv.listen(8125,()=>console.log('mock on 8125'));

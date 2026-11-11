@@ -1,0 +1,20 @@
+/* TV apps (cards/apps.js): banner tiles, 16:9, in rows of --cols. The highlight is css/cards/remote.css. */
+.apps { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: var(--sp-14); }
+.apps .app { position: relative; aspect-ratio: 16 / 9; border-radius: var(--tile-radius); overflow: hidden; background: var(--veil); border: 1px solid var(--edge); padding: 0; }
+.apps .app img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.apps .app .alabel { display: none; }
+/* no banner (a browser, or an app without one): the name on the tile */
+.apps .app.noimg img { display: none; }
+.apps .app.noimg .alabel, .apps .app.more .alabel { display: flex; position: absolute; inset: 0; align-items: center; justify-content: center; padding: var(--sp-8); text-align: center; font: 600 var(--fs-name)/1.2 var(--font-display); color: var(--text); }
+/* not installed: dimmed, "Get" in the corner (OK opens the Play Store) */
+.apps .app.missing img, .apps .app.missing .alabel { opacity: .45; }
+.apps .app .aget { position: absolute; right: var(--sp-8); bottom: var(--sp-8); padding: var(--sp-2) var(--sp-8); border-radius: var(--r-pill); background: rgba(var(--mist), var(--a-80)); color: var(--ink); font: 700 var(--fs-small)/1.4 var(--font); }
+/* All apps / Settings: quieter, icon over the name */
+.apps .app.more { background: var(--veil-faint); }
+.apps .app.more svg { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); width: var(--icon-lg); height: var(--icon-lg); fill: var(--text-2); }
+.apps .app.more .alabel { padding-top: 34%; color: var(--text-2); font: 600 var(--fs-item)/1.2 var(--font); }
+.apps .anone { grid-column: 1 / -1; color: var(--text-2); font-size: var(--fs-item); padding: var(--sp-12) 0; }
+/* row: one line that scrolls sideways with the highlight (core/remote.js keeps the focused tile in view); --cols tiles show */
+/* the padding is room for the highlight (scaled tile + ring), which the row would otherwise clip */
+.apps.row { display: flex; overflow: hidden; padding: var(--sp-16); margin: calc(var(--sp-16) * -1); }
+.apps.row .app { flex: 0 0 calc((100% - (var(--cols) - 1) * var(--sp-14)) / var(--cols)); }

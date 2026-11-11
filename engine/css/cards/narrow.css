@@ -44,11 +44,18 @@
   .tile:has(> .subs) { height: auto; min-height: var(--tile-h); flex-wrap: wrap; row-gap: var(--sp-8); padding: var(--sp-10) 0; }
   .tile > .subs { order: 3; flex-basis: 100%; justify-content: flex-end; margin: 0 var(--sp-12); }
 }
-/* weather Now: smaller hero so temperature + description fit (today it gets 243-252 px of content width) */
-@container cell (max-width: 230px) {
+/* weather Now: smaller hero so temperature + description fit, and the facts two across, by the card's own width (a TV gives
+   it ~260 px, a phone ~360 px) */
+@container cell (max-width: 300px) {
   .wxhero { gap: var(--sp-10); }
   .wxnow .wxicon img { width: calc(72px * var(--s)); height: calc(72px * var(--s)); margin: calc(-6px * var(--s)); }
   .wxnow .wxt { font-size: var(--fs-hero-l); }
+}
+@container cell (max-width: 320px) {
+  .wxnow .wxfacts { --n: 2; row-gap: var(--sp-14); padding: var(--sp-14) 0; }
+  .wxnow .wxfacts .sti { padding: 0 var(--sp-14); }
+  .wxnow .wxfacts .sti:nth-child(4n + 1) { border-left: 1px solid var(--hairline); }
+  .wxnow .wxfacts .sti:nth-child(2n + 1) { border-left: 0; }
 }
 /* alarm card: smaller shield and state, readiness checks one per row (fine at 390 px phones' ~300 px; tight at 280 px) */
 @container cell (max-width: 260px) {
@@ -67,3 +74,9 @@
   .kdet { display: none; }
 }
 
+
+/* a machine card in a narrow column (TV, small windows): the status badge keeps only its icon, so the name has room */
+@container cell (max-width: 300px) {
+  .host .hbadge, .pjob .hbadge { padding: 0; width: calc(30px * var(--s)); justify-content: center; }
+  .host .hbadge span, .pjob .hbadge span { display: none; }
+}

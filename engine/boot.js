@@ -17,7 +17,7 @@
     'contrast', 'tile-pills', 'map-pin', 'popup-tabs', 'confirm', 'chart', 'thermostat', 'time', 'routine', 'frame',
     'timer-alarm', 'camera-alert', 'alarm', 'glass', 'windows', 'view-tabs', 'health',
     'weather-page', 'month', 'weather-now', 'radar', 'frigate', 'camera-wall', 'drawer', 'reviews', 'media-detail',
-    'people-portrait', 'forecast-source', 'systems', 'trend', 'printer', 'phone-scroll', 'narrow', 'two-column', 'adapted'
+    'people-portrait', 'forecast-source', 'systems', 'trend', 'printer', 'apps', 'watchnext', 'nowplaying', 'statusbar', 'phone-scroll', 'narrow', 'two-column', 'adapted', 'remote'
   ];
   var css = ['css/tokens.css', 'css/base.css'].concat(CARDS.map(function (n) { return 'css/cards/' + n + '.css'; }));
   // start the app once every stylesheet has loaded (no flash of unstyled cards on a cold cache); 4 s safety net

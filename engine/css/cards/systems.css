@@ -10,6 +10,11 @@
 .cell.glass > .chart { background: none; box-shadow: none; padding: 0; }
 .chart.fit { display: flex; flex-direction: column; height: 100%; }
 .chart.fit .cplot { flex: 1; min-height: calc(90px * var(--s)); }
+/* natural heights (.nofill, core/fit.js): charts and meters that normally take the space they're given get a size of their own */
+.nofill .chart.fit { height: auto; }
+.nofill .chart.fit .cplot { flex: none; height: var(--chart-min); }
+.nofill .hmeters, .nofill .meter { flex: none; }
+.nofill .meter { height: auto; min-height: calc(86px * var(--s)); }
 
 /* trace: a 24-hour line with a soft fill, sized by its box */
 .spark { position: relative; --t: var(--mist); }
@@ -41,6 +46,16 @@
 .mtr-d:empty { display: none; }
 .mtr-s { position: relative; border-left: 1px solid var(--hairline); }
 .mtr-s .spark { position: absolute; inset: calc(26px * var(--s)) 0 0 0; }
+/* lines (host meterStyle: 'lines', TV): one short row per meter: name, value in its tone, a small trace; no gauge */
+.hmeters.lines { flex: none; gap: var(--sp-6); }
+.hmeters.lines .meter { flex: none; min-height: calc(40px * var(--s)); grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.2fr); align-items: center; column-gap: var(--sp-12); padding: 0 var(--sp-12); }
+.hmeters.lines .mtr-a { display: contents; }
+.hmeters.lines .mtr-l { order: 1; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hmeters.lines .mtr-g { order: 2; width: auto; max-width: none; }
+.hmeters.lines .mtr-g svg, .hmeters.lines .mtr-d, .hmeters.lines .mtr-hi { display: none; }
+.hmeters.lines .mtr-n { position: static; font-size: var(--fs-name); color: rgb(var(--t)); text-align: right; }
+.hmeters.lines .mtr-s { order: 3; align-self: stretch; border-left: 0; margin: var(--sp-6) 0; }
+.hmeters.lines .mtr-s .spark { inset: 0; }
 .mtr-hi { position: absolute; top: var(--sp-8); right: var(--sp-10); font-size: var(--fs-meta); color: var(--text-3); white-space: pre; }
 /* meterRow: a host card's meters side by side (big screens only), so a card sharing a column with another fits its half
    of a full-height page; phones keep them stacked (too narrow for gauge + trace side by side) */
@@ -117,6 +132,8 @@
 .atop .atitle { font: 600 var(--fs-name)/1.2 var(--font-display); }   /* scoped: the agenda has its own .atitle */
 .acount { min-width: calc(26px * var(--s)); height: calc(26px * var(--s)); padding: 0 8px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; background: rgba(var(--t), var(--a-20)); color: rgb(var(--t)); font-weight: 600; }
 .acount:empty { display: none; }
+.alist .amore { align-self: flex-start; color: var(--text-2); font-size: var(--fs-meta); padding: 0 var(--sp-4); }
+.alist .aitem[hidden] { display: none; }
 .alist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-6); scrollbar-width: none; }
 .aitem { display: flex; gap: var(--sp-10); align-items: center; padding: var(--sp-10) var(--sp-10); border-radius: var(--r-14); background: rgba(var(--t), var(--a-08)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-16)); text-align: left; flex: none; }
 .aic { width: calc(32px * var(--s)); height: calc(32px * var(--s)); border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); }
@@ -139,7 +156,7 @@
 /* 4 across needs ~125 px a bay ("Drive 1" + "129°" on one line); below that, 2 across. Measured on the bays themselves, so it holds
    whatever cell or phone they sit in (a 430 px phone left 4 bays of ~85 px and the name wrapped under the temperature) */
 .bays-wrap { container: bays / inline-size; }
-@container bays (max-width: 540px) { .bays { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container bays (max-width: 440px) { .bays { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* four across down to a TV column (~500 px) */
 .bname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bay { position: relative; overflow: hidden; border-radius: var(--r-14); background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); min-height: calc(96px * var(--s));
   padding: var(--sp-12) var(--sp-12); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto 1fr; align-items: center; column-gap: var(--sp-8); --t: var(--sage); }

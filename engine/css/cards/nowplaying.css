@@ -1,0 +1,30 @@
+/* Now playing (cards/nowplaying.js). Full: the artwork over a blurred, darkened wash of itself, text beside it. */
+.np { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp-32); height: 100%; min-height: calc(100vh - 2 * var(--page-pad-y, var(--page-pad))); padding: var(--sp-24); border-radius: var(--panel-radius); overflow: hidden; isolation: isolate; }
+.np .npbg { position: absolute; inset: 0; z-index: -1; background: var(--ink); }
+.np .npbg img { width: 100%; height: 100%; object-fit: cover; filter: blur(48px) saturate(1.4) brightness(.55); transform: scale(1.3); }
+.np .npbg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(var(--scrim-rgb), .25), rgba(var(--scrim-rgb), .7)); }
+.np .npart { width: calc(300px * var(--s)); aspect-ratio: 1; border-radius: var(--r-22); overflow: hidden; box-shadow: 0 var(--sp-20) var(--sp-32) rgba(0, 0, 0, .55); background: var(--veil); }
+.np .npart img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.np .nptx { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+.np .nptitle { font: 700 var(--fs-display-s)/1.1 var(--font-display); color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.np .npartist { font: 600 var(--fs-title)/1.2 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np .npalbum { font-size: var(--fs-item); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np .npbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-12); margin-top: var(--sp-16); font-size: var(--fs-meta); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.np .nptrack { height: var(--sp-4); border-radius: var(--r-pill); background: var(--veil-2); overflow: hidden; }
+.np .nptrack i { display: block; height: 100%; background: var(--text); border-radius: inherit; transition: width 1s linear; }
+.np .npctl { display: flex; gap: var(--sp-16); margin-top: var(--sp-16); }
+.np .npctl .rbtn { width: var(--ic-l); height: var(--ic-l); background: var(--veil-2); color: var(--text); }
+.np .npctl .npplay { width: var(--ic-xl); height: var(--ic-xl); background: var(--text); color: var(--ink); }
+.np .npctl .rbtn svg { width: var(--icon-lg); height: var(--icon-lg); }
+.np .npnone { display: none; grid-column: 1 / -1; text-align: center; color: var(--text-2); font-size: var(--fs-name); }
+.np.idle > :not(.npnone):not(.npbg) { display: none; }
+.np.idle .npnone { display: block; }
+/* bar: a slim strip that leads to the full screen */
+.npb { display: flex; align-items: center; gap: var(--sp-14); width: 100%; padding: var(--sp-10); border-radius: var(--tile-radius); background: var(--veil); border: 1px solid var(--edge); text-align: left; }
+.npb .npbart { width: calc(72px * var(--s)); aspect-ratio: 1; border-radius: var(--r-12); overflow: hidden; flex: none; background: var(--veil-2); }
+.npb .npbart img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.npb .npbtx { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; flex: 1; }
+.npb .npbtx .label { padding: 0; }
+.npb b { font: 600 var(--fs-name)/1.2 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.npb small { font-size: var(--fs-item); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.npb .npbgo svg { width: var(--icon-lg); height: var(--icon-lg); color: var(--text-2); }

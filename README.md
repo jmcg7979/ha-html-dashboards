@@ -47,6 +47,9 @@ You'll be editing JavaScript, though mostly lists of entity ids.
 9. **Open `http://<ha>:8123/local/dash/start.html?d=main`.** HA doesn't serve a bare folder URL, so include the file name.
 10. **To open it from HA's sidebar,** add a Webpage dashboard with that same URL (`/local/dash/start.html?d=mobile` on phones). The dashboard hides HA's top bar there; add `&chrome=1` to keep it.
 
+## TV home screen (optional)
+On Google TV, a small Android app in `tv/launcher/` makes a `tv` dashboard the TV's home screen: the streaming apps, Continue watching, the house at a glance, all moved with the remote, and the timer alarm or a camera alert shown over whatever is playing. You build it and install it over adb; `tv/launcher/README.md` has the steps. Try the page on the mock first: http://localhost:8125/local/dash/start.html?d=tv&p=tv&tvdemo=1
+
 ## Security
 Don't take this section's word for it: it's a map for checking, and the prompt above asks your tool to do that.
 
@@ -64,6 +67,8 @@ Don't take this section's word for it: it's a map for checking, and the prompt a
 
 **HA packages are optional, and each one needs your review.** `dashboard_helpers.yaml` adds an `alarm_disarm` script that uses your alarm code from `secrets.yaml`, so any HA login that can run scripts can disarm the alarm without typing a code. Leave that script out if that's not what you want.
 
+**TV launcher.** It keeps a long-lived HA token on the TV, so anyone with the remote has that user's rights: give the TVs their own non-admin user. It uses an accessibility service that sees only the stock home screen's window changes. Its settings can be changed only over adb.
+
 **Controls.** The dashboard can do whatever your HA login can, such as unlocking a door or opening the garage. Remove any control you don't want on a shared screen.
 
 ## Limits
@@ -78,3 +83,4 @@ MIT: see `LICENSE`. Bundled fonts, icons and libraries keep their own licences: 
 | `engine/` | The engine: cards, core, pages, styles, tools |
 | `engine/docs/` | Integrations, design system |
 | `sites/example/` | A complete made-up site, its mock data and HA packages |
+| `tv/launcher/` | Optional Android TV launcher for a `tv` dashboard |

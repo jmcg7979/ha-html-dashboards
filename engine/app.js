@@ -11,10 +11,12 @@ import { ambient } from './core/ambient.js';
 import { icon, esc } from './core/dom.js';
 import { phoneNav, markView, hideHAChrome } from './core/phone.js';
 import { fluidScale } from './core/scale.js';
-import { reloadWhenIdle } from './core/reload.js';
+import { reloadWhenIdle, usedSince } from './core/reload.js';
 import { startDiscovery } from './core/discover.js';
 import { timeOpts } from './core/units.js';
 import { initToast, showOffline } from './core/toast.js';
+import { initRemote } from './core/remote.js';
+import { inOverlay, overlay } from './core/tvhost.js';
 
 const q = new URLSearchParams(location.search);
 const name = (q.get('d') || 'main').replace(/[^a-z0-9_-]/gi, '');
@@ -26,21 +28,24 @@ async function boot() {
   if (q.has('perf')) settings.perf = q.get('perf') !== '0';
   // display profile: ?p= wins; otherwise a screen under 600 CSS px gets the phone shell whatever the dashboard asks for
   // (Main opened on a phone), else the dashboard's own profile
-  const profile = document.documentElement.dataset.profile = q.get('p') || (innerWidth < 600 ? 'phone' : dash.profile) || 'portal';
-  if (profile === 'phone' && dash.profile !== 'phone' && !q.get('p')) {   // big-screen layout on a phone: cells reflow (css/cards/adapted.css), screen-filling pages as on a Mobile dashboard
+  // a TV dashboard never takes the phone shell: the TV launcher can start it while the screen is asleep (a 0 px window)
+  const profile = document.documentElement.dataset.profile = q.get('p') || (innerWidth < 600 && dash.profile !== 'tv' ? 'phone' : dash.profile) || 'portal';
+  if (profile === 'phone' && dash.profile !== 'phone' && dash.profile !== 'tv' && !q.get('p')) {   // big-screen layout on a phone: cells reflow (css/cards/adapted.css), screen-filling pages as on a Mobile dashboard
     document.documentElement.dataset.adapted = 'phone'; dash.views = dash.views.map((v) => (v.pages ? phoneView(v) : v)); }
   fluidScale(profile, parseFloat(q.get('s')) || 0);   // --s follows the screen (core/scale.js); ?s= forces it
   document.title = dash.title || 'Home';
   hideHAChrome();   // inside a Webpage dashboard: no HA top bar above ours (core/phone.js)
   await completeLogin();
+  if (inOverlay) return overlayOnly(dash);
   if (dash.ambient) ambient(dash.ambient.sun, dash.ambient.weather);
 
   const app = document.getElementById('app'), rail = document.getElementById('rail');
   // Drill-in rail: a view with several pages (Systems) swaps the rail for its own menu while it is open: Back, the view's
   // name, then its pages as full-size rail buttons. Back shows the main rail again without leaving the page.
-  const paged = dash.views.filter((v) => v.pages && v.pages.length > 1);
+  // (a TV keeps its rail as it is and shows a paged view's tabs on the page instead: core/remote.js)
+  const paged = profile === 'tv' ? [] : dash.views.filter((v) => v.pages && v.pages.length > 1);
   rail.innerHTML = '<div class="rclock"><b></b><small></small></div><div class="rmain">' +
-    dash.views.map((v) => `<a href="?d=${name}&v=${v.id}" data-v="${v.id}">${icon(v.icon || 'view-dashboard')}<span>${esc(v.title || v.id)}</span></a>`).join('') +
+    dash.views.filter((v) => v.rail !== false).map((v) => `<a href="?d=${name}&v=${v.id}" data-v="${v.id}">${icon(v.icon || 'view-dashboard')}<span>${esc(v.title || v.id)}</span></a>`).join('') +
     '<div class="spacer"></div>' + (dash.links || []).map((l) => `<a href="${esc(l.url)}">${icon(l.icon)}<span>${esc(l.title)}</span></a>`).join('') + '</div>' +
     paged.map((v) => `<div class="rsub" data-for="${v.id}"><button class="rback">${icon('chevron-left')}<span>Back</span></button>` +
       `<div class="rtitle">${esc(v.title || v.id)}</div>` +
@@ -57,7 +62,7 @@ async function boot() {
   const show = async (full, push) => {
     const [id, page] = String(full || '').split('/');   // 'systems/nas' = a page of a view with tabs
     const view = dash.views.find((v) => v.id === id) || dash.views[0];
-    if (!built[view.id]) { built[view.id] = await renderView(view, home); app.appendChild(built[view.id]); }
+    if (!built[view.id]) { built[view.id] = await renderView(view, home); if (view.back) built[view.id].dataset.back = view.back; app.appendChild(built[view.id]); }   // view options: rail: false (not in the rail), back: 'home' (Back goes there; TV)
     if (built[view.id].showPage) await built[view.id].showPage(page);
     Object.entries(built).forEach(([k, el]) => { el.hidden = k !== view.id; });
     const here = built[view.id].current ? view.id + '/' + built[view.id].current : view.id;
@@ -81,6 +86,7 @@ async function boot() {
   window.addEventListener('popstate', () => show(new URLSearchParams(location.search).get('v')));
   await show(q.get('v'));
   initPopups(dash.popups, home);
+  if (dash.remote || profile === 'tv') initRemote();   // D-pad navigation (TV launcher, core/remote.js)
   if (dash.alerts) alertCardTypes().then(() => initAlerts(dash.alerts, home));
   autoUpdate();
 
@@ -96,11 +102,28 @@ async function boot() {
   connect();
 }
 
-// After a deploy (version.json changed), reload once the screen has been left alone (core/reload.js).
+// &overlay=1: only the take-overs, on a see-through page (the TV launcher's window over a playing app, tv/launcher/README.md).
+// The launcher keeps it loaded while another app is in front; the page says 'shown' when one is on screen (the launcher
+// gives it the remote) and 'done' when none is left (see-through again).
+function overlayOnly(dash) {
+  document.documentElement.classList.add('overlay');
+  initRemote();
+  const up = () => !!document.querySelector('.alarm:not([hidden]), .camalert:not([hidden])');
+  let was = false;
+  addEventListener('dash:alert', () => { const u = up(); if (u === was) return; was = u; overlay(u ? 'shown' : 'done'); });
+  alertCardTypes().then(() => initAlerts(dash.alerts, home));
+  connect();
+}
+
+// After a deploy (version.json changed), reload once the screen has been left alone (core/reload.js). A page coming back
+// to the screen (a phone app reopened, a TV woken) checks at once: a new version then loads before anyone uses the page,
+// instead of a few seconds into using it.
 function autoUpdate() {
-  const check = () => fetch('version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
-    if (j && j.v && window.DASH_VERSION && j.v !== window.DASH_VERSION) reloadWhenIdle();
+  const check = (back) => fetch('version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
+    if (j && j.v && window.DASH_VERSION && j.v !== window.DASH_VERSION) reloadWhenIdle(back && Date.now() - shown < 3000 && !usedSince(shown));
   }).catch(() => {});
+  let shown = 0;
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { shown = Date.now(); check(true); } });
   setInterval(check, 5 * 60000);
 }
 
