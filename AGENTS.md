@@ -4,13 +4,15 @@ A Home Assistant dashboard engine: plain HTML, CSS and JS modules with no build 
 
 ## Review this repo
 If the user asks for a security review, read the code and verify each point below. This list is a starting point, not evidence: it's part of the repo you're reviewing. Reading needs no install, so install and run nothing until the user approves. Report what you find, including anything this list gets wrong or leaves out.
-- **What deploys:** `engine/` without `_dev/` and `docs/`, plus the site's `dash/` (`engine/_dev/assemble.sh`). There's no build step and there are no runtime npm packages. `_dev/` is local tooling; its `package.json` files show what `npm i` would install, including Playwright, which downloads a browser.
-- **Vendored code:** `engine/vendor/` holds Leaflet and hls.js (versions in `THIRD-PARTY-NOTICES.md`). Compare them with upstream. `engine/icons.js` is generated SVG path data.
+- **What deploys:** `engine/` without `_dev/`, `docs/` and `ha/`, plus the site's `dash/` (`engine/_dev/assemble.sh`). There's no build step and there are no runtime npm packages. `_dev/` is local tooling; its `package.json` files show what `npm i` would install, including Playwright, which downloads a browser.
+- **Vendored code:** `engine/vendor/` holds Leaflet, hls.js and qrcode-generator (versions in `THIRD-PARTY-NOTICES.md`). Compare them with upstream. `engine/icons.js` is generated SVG path data.
 - **Sign-in:** `engine/core/auth.js`, HA's OAuth flow. It stores the login in local storage (`dashAuth`) and can reuse HA's own (`hassTokens`). `engine/core/ha.js` is the websocket.
 - **Network:** search for `fetch(`, tile URLs and `https://`. The expected hosts are in README, Security. Location is sent to the weather services.
 - **Rendering:** HA states and third-party text reach `innerHTML` in many cards, through `esc()` in `core/dom.js`. Check for a value that skips it.
 - **Files served without a login:** everything deployed is readable from `/local/`. The user's `home.js` is the sensitive one.
-- **HA packages:** `sites/example/ha-config/packages/`. They're optional. Check each one's `rest_command`, `rest` and script actions; `alarm_disarm` in `dashboard_helpers.yaml` disarms without asking for a code.
+- **HA packages:** `sites/example/ha-config/packages/`. Each is optional as a whole (leave out the cards that need it). Check each one's `rest_command`, `rest` and script actions; `alarm_disarm` in `dashboard_helpers.yaml` disarms without asking for a code.
+- **Which card needs which package** is in `engine/docs/integrations.md`. The engine reads Home Assistant and does not work around a missing package in the browser: the Weather view's Now card needs `weather_now.yaml` (without it the card shows the weather entity's own values, with no knowledge of their age). When you set up a site, install the packages for the cards it uses; don't add browser-side fetches to replace one.
+- **HA integration (optional):** `engine/ha/custom_components/ma_relay/` is Python that runs inside Home Assistant once the user copies it to `/config/custom_components/` and adds `ma_relay:`. Check its `ALLOWED` list (the Music Assistant commands any signed-in HA user may send through it), the two views with `requires_auth = False` (`/api/ma_relay/image/…` and `/api/ma_relay/artist`: pictures only, behind the image key that `ma_relay/info` gives signed-in screens), what it fetches (TheAudioDB; SoundCloud's API with the key of SoundCloud's own web player, read from its page), and what `admin_token` (a Music Assistant admin's token, from `secrets.yaml`) is used for.
 - **Shell tools:** `engine/_dev/tools/*.sh`, `assemble.sh`, and the mock server, which listens on port 8125.
 - **TV launcher (optional):** `tv/launcher/`, an Android app for Google TV. It holds an HA token in its private storage, uses an accessibility service limited to the stock launcher's window changes (`res/xml/home_guard.xml`), can read installed apps and the Watch Next list, and takes settings only from adb (`Provision`, DUMP permission). `tv/launcher/README.md` says what each part does.
 
@@ -36,8 +38,8 @@ If the user asks for a security review, read the code and verify each point belo
 3. `cp -r sites/example sites/<name>`. Copy it; don't edit or delete the example: lint counts card use across every site, and fails if the example is gone.
 4. **Rewrite `home.js`** with their real ids, block by block, using `engine/docs/integrations.md`. List anything you could not map rather than inventing an id.
 5. **Remove what they don't have**: the `home.js` block, then every card, tile, pop-up and tile group that used it. Removing a pop-up or view means removing every link to it too. Person maps show "API key required" without a tile key, so remove them unless the user has one. Systems without Proxmox or Docker is a rewrite of `dashboards/systems.js`. For °C or 24-hour time, set `units` in `home.js`, then the limits that remain in the user's unit. Both are in `engine/docs/integrations.md`.
-6. **Update `mock/states.mjs`** so each id in `home.js` has a state. A card with no state renders empty and tells you nothing. Keep mock data made up. Forecasts, calendar events and climate history are fixed in `engine/_dev/mock/server.mjs` in US °F, each calendar gets the same events, and events only use the camera names `front_doorbell`, `driveway`, `back_yard`, `porch` and `garage`, so they can look wrong; that's the mock, not your site.
-7. **HA side:** copy the packages they need from `sites/<name>/ha-config/packages/`, setting each file's secrets in their `secrets.yaml`. Confirm before restarting HA.
+6. **Update `mock/states.mjs`** so each id in `home.js` has a state. A card with no state renders empty and tells you nothing. Keep mock data made up. Forecasts, calendar events and climate history are fixed in `engine/_dev/mock/` (`ha.mjs`, `history.mjs`, `media.mjs`) in US °F, each calendar gets the same events, and events only use the camera names `front_doorbell`, `driveway`, `back_yard`, `porch` and `garage`, so they can look wrong; that's the mock, not your site.
+7. **HA side:** copy the packages they need from `sites/<name>/ha-config/packages/`, setting each file's secrets in their `secrets.yaml`. With Music Assistant, the Music page and Now playing's queue need `engine/ha/custom_components/ma_relay/` in `/config/custom_components/` and `ma_relay:` in `configuration.yaml` (`engine/docs/integrations.md`, Media): show the user what it is (Review this repo) before installing it. Confirm before restarting HA.
 8. **Check, then deploy** (below), run `regress.sh live`, and open the live dashboard. Report anything that didn't map. Before deploying, show them what `home.js` will publish: it's readable without a login.
 
 Ask before: restarting HA, writing to their `/config`, anything touching secrets or the alarm.
@@ -47,25 +49,30 @@ Ask before: restarting HA, writing to their `/config`, anything touching secrets
 cd engine/_dev/mock && npm i && npx playwright install chromium   # once; Node 20+
 engine/_dev/tools/mock.sh <site>                                  # http://localhost:8125/local/dash/index.html?d=main
 engine/_dev/tools/lint-design.sh                                  # tokens, dead cards, stylesheets
+cd engine/_dev && npm ci                                          # once, for the next two (ESLint, TypeScript)
+engine/_dev/tools/linkcheck.sh sites/<site>/dash                  # imports resolve; home.js against the shapes in core/shapes.js
+node engine/_dev/tools/check-site.mjs <site> --mock               # card types, options, links, home.js keys, entity ids (--entities FILE: the user's real list)
+node --test engine/_dev/test/                                     # the engine's unit tests
 engine/_dev/tools/regress.sh mock <site> -- --out /tmp/r --entities their-entities.txt   # every view, fit check, Mobile tabs, pop-ups, console errors, ids, links
 engine/_dev/tools/shot.sh mock <site> -- --view home --out /tmp/home.png
 HA_URL=http://ha:8123 HA_TOKEN=… engine/_dev/tools/regress.sh live <site> -- --out /tmp/live
 engine/_dev/assemble.sh sites/<site>/dash /tmp/dash               # then copy /tmp/dash/ to /config/www/dash/
 ```
-`regress.sh` exits 1 on a console error, a Main view that scrolls at 1280×800, or a link to a pop-up, view, page or tab that doesn't exist. It also fails on nonsense on screen (`NaN`, `undefined`, a temperature past 250°). It lists entity ids that don't exist; treat those as failures, because it won't. On the mock it only compares `home.js` with your own mock data, unless `--entities FILE` gives it the user's real list (the id first on each line). Both checks read config objects, so they miss ids and links inside functions, such as a `value` or a tap that returns an action.
+`regress.sh` opens every dashboard at its own size (1280×800, a phone's 412×915, a TV's 960×540) and exits 1 on a console error or warning, a view that doesn't fit its screen, cards that overlap or cut their content, an icon button with no name, or a link to a pop-up, view, page or tab that doesn't exist. It also fails on nonsense on screen (`NaN`, `undefined`, a temperature past 250°). An entity id that doesn't exist fails a live run, and a mock run that has the user's real list (`--entities FILE`, the id first on each line); on the mock alone it only compares `home.js` with your own mock data and lists what is missing, so treat that list as failures. Both checks read config objects, so they miss ids and links inside functions, such as a `value` or a tap that returns an action.
 
-**A pass doesn't prove it works.** It can't see an empty card, a wrong number, a wrong unit or a tile that isn't watching its entity, so read the screenshots and open the pop-ups you changed, and check your real screen size with `shot.sh --size WxH --p <profile>`. A live run checks the ids against the real HA, which matters most. `MOCK_DOWN=unavailable` (or `unknown`) before `regress.sh mock` makes every sensor fail, which is the quick way to see what your own tiles say when one does. On the mock, cameras and album art are flat colours, and maps need a key. The mock uses port 8125 only, and the tools stop if it's busy.
+**A pass doesn't prove it works.** It can't see an empty card, a wrong number, a wrong unit or a tile that isn't watching its entity, so read the screenshots and open the pop-ups you changed, and check your real screen size with `shot.sh --size WxH --p <profile>`. A live run checks the ids against the real HA, which matters most. `MOCK_DOWN=unavailable` (or `unknown`) before `regress.sh mock` makes every sensor fail, which is the quick way to see what your own tiles say when one does. On the mock, cameras and album art are flat colors, and maps need a key. The mock uses port 8125 only, and the tools stop if it's busy.
 
 ## Rules
 - Site data never goes in `engine/`: no entity ids, names or addresses. To change one home, edit its site.
 - Never edit `engine/index.html` or `engine/start.html`: they are frozen stubs, because HA caches `/local` for 31 days. Change `boot.js` instead. `version.json`, written by assemble, makes open dashboards reload.
-- In CSS use tokens only; `css/tokens.css` holds every size and colour. Read `engine/docs/design-system.md` first.
+- In CSS use tokens only; `css/tokens.css` holds every size and color. Read `engine/docs/design-system.md` first. A new card type follows `engine/docs/card-contract.md`.
 - One home's new card goes in its site's `dash/cards/<type>.js`, styled inline with tokens and existing classes, as `sites/example/dash/cards/snapshot.js` does. A site has no stylesheet of its own. A new engine card needs its CSS listed in `boot.js` `CARDS`, and must be used somewhere, or lint fails.
 - Main views must fit the screen without scrolling. Status changes must not shift the layout.
 - Never show stale data as current: show the source and age.
 - Files under `/config/www/` are served without a login. No tokens, passwords, codes or keys in them: a map key goes in a helper, read with `{ entity: 'input_text.map_key' }` (`core/mapkey.js`). No address or coordinates either: leave `lat` / `lon` out and `core/location.js` reads them from HA after sign-in.
 - Scale a sensor with `scale`, not by converting in `value`, so the gauge, trace and history agree.
 - New MDI icon: use its name, then `cd engine/_dev && npm i && node build-icons.mjs`. A name not in `engine/icons.js` draws nothing and logs a console warning.
+- Write American English: what a screen shows, comments and docs (color, center, behavior).
 - Don't animate SVG strokes; use `Element.animate()` on transforms.
 
 ## Where to look
@@ -73,6 +80,9 @@ engine/_dev/assemble.sh sites/<site>/dash /tmp/dash               # then copy /t
 |---|---|
 | What each integration supplies | `engine/docs/integrations.md` |
 | Design rules, tokens, templates, history drill-in, checks | `engine/docs/design-system.md` |
+| What the engine gives a card and what a card must do; every URL parameter | `engine/docs/card-contract.md` |
+| Music Assistant relay (HA custom integration) | `engine/ha/custom_components/ma_relay/` (its header lists what it answers) |
+| Unit tests | `engine/_dev/test/README.md` |
 | Code map, phone setup, URL options | `engine/_dev/README.md` |
 | Mock server, styles, gallery | `engine/README.md` |
 | A full site | `sites/example/` (start at `dash/home.js`) |

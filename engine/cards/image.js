@@ -1,5 +1,5 @@
 // A picture from an image or camera entity (e.g. the vacuum's map), refreshed when the entity updates.
-// { type: 'image', entity: 'image.q5_max_map_custom', ratio: '4/3', fit: 'contain', tap }
+// { type: 'image', entity: 'image.robot_map', ratio: '4/3', fit: 'contain', tap }
 // While the entity is unavailable the last picture stays, dimmed (never shown as current).
 import { h } from '../core/dom.js';
 import { st, watch } from '../core/store.js';

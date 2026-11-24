@@ -4,7 +4,7 @@
 // mode 'recordings': one camera's recordings by day: a 24-hour strip (recorded hours, events as ticks, playhead); tap anywhere to play from there.
 // { type: 'frigate-player', mode: 'review' | 'recordings', cameras: [{ entity, name, ratio }] }
 import { h, esc, icon, toggle } from '../core/dom.js';
-import { sel, select, instance, camId, vodPath, clipPath, snapshotPath, sign, playHls, markViewed, getReviews, getSummary, fmtTime, fmtDay, fmtDur, labels } from '../core/frigate.js';
+import { sel, select, camId, vodPath, clipPath, snapshotPath, sign, playHls, markViewed, getReviews, getSummary, fmtTime, fmtDay, fmtDur, labels } from '../core/frigate.js';
 import { timeOpts } from '../core/units.js';
 import { openLink } from '../core/actions.js';
 
@@ -18,7 +18,7 @@ export default function player(cfg) {
     ${rec ? `<div class="fpcams">${cams.map((c) => `<button class="chip" data-cam="${c.id}">${esc(c.name)}</button>`).join('')}</div>` : ''}
     <div class="fpvid"><video playsinline controls muted></video><img class="fpsnap" alt="" hidden><div class="fpmsg" hidden></div></div>
     <div class="fpinfo"><div class="fptx"><b></b><span class="sub"></span></div><div class="fpbtns"></div></div>
-    ${rec ? '<div class="fpday"><button class="rbtn" data-d="-1">' + icon('chevron-left') + '</button><b class="fpdl"></b><button class="rbtn" data-d="1">' + icon('chevron-right') + '</button><span class="sub fpnow"></span></div><div class="fpstrip"><div class="fphours"></div><div class="fpmarks"></div><div class="fphead"></div></div><div class="fpaxis"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div>' : ''}
+    ${rec ? '<div class="fpday"><button class="rbtn" data-d="-1" aria-label="The day before">' + icon('chevron-left') + '</button><b class="fpdl"></b><button class="rbtn" data-d="1" aria-label="The day after">' + icon('chevron-right') + '</button><span class="sub fpnow"></span></div><div class="fpstrip"><div class="fphours"></div><div class="fpmarks"></div><div class="fphead"></div></div><div class="fpaxis"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div>' : ''}
   </div>`);
   el.style.setProperty('--t', 'var(--mist)');
   const video = el.querySelector('video'), snap = el.querySelector('.fpsnap'), msg = el.querySelector('.fpmsg');
@@ -45,7 +45,7 @@ export default function player(cfg) {
       ${(r.data.detections || []).length ? `<button class="sb" data-a="snap">${icon('image-outline')}<span>Snapshot</span></button>` : ''}
       <button class="sb" data-a="rec">${icon('history')}<span>Recordings</span></button>
       <a class="sb" data-a="dl" target="_blank" rel="noopener">${icon('download')}<span>Download</span></a>`;
-    sign(clipPath(sel.inst, r.camera, r.start_time - PAD, end + PAD), 1).then((u) => { const a = btns.querySelector('[data-a="dl"]'); if (a && sel.list[sel.index] === r) { a.href = u; a.download = `${r.camera}-${new Date(r.start_time * 1000).toISOString().slice(0, 19).replace(/:/g, '')}.mp4`; } });
+    sign(clipPath(sel.inst, r.camera, r.start_time - PAD, end + PAD), 1).then((u) => { const a = btns.querySelector('[data-a="dl"]'); if (a && sel.list[sel.index] === r) { a.href = u; a.download = `${r.camera}-${new Date(r.start_time * 1000).toISOString().slice(0, 19).replace(/:/g, '')}.mp4`; } }).catch(() => {});   // no address (offline): the button stays without a link
     play(r.camera, r.start_time - PAD, end + PAD);
     if (!r.has_been_reviewed) { r.has_been_reviewed = true; markViewed(sel.inst, [r.id]); }
   }
@@ -85,6 +85,7 @@ export default function player(cfg) {
     head(t);
   }
   function head(t) {
+    if (t >= nextDay(day0)) { day0 = midnight(t); loadDay(); }   // played on past midnight: the strip follows into the new day
     const hd = el.querySelector('.fphead'); hd.hidden = !(t >= day0 && t < nextDay(day0)); hd.style.left = (clockF(t) * 100).toFixed(3) + '%';
     title.textContent = `${byId[cam] ? byId[cam].name : cam}`;
     sub.textContent = `${fmtDay(t)} · ${new Date(t * 1000).toLocaleTimeString([], timeOpts({ hour: 'numeric', minute: '2-digit', second: '2-digit' }))}`;
@@ -93,7 +94,7 @@ export default function player(cfg) {
     cam = sel.cam && byId[sel.cam] ? sel.cam : cam || cams[0].id;
     const t = sel.t || Date.now() / 1000 - 600;
     day0 = midnight(t);
-    btns.innerHTML = `<button class="sb" data-a="back">${icon('rewind-10')}</button><button class="sb" data-a="fwd">${icon('fast-forward-10')}</button>
+    btns.innerHTML = `<button class="sb" data-a="back" aria-label="Back 10 seconds">${icon('rewind-10')}</button><button class="sb" data-a="fwd" aria-label="Forward 10 seconds">${icon('fast-forward-10')}</button>
       <button class="sb" data-a="latest">${icon('skip-next')}<span>Latest</span></button><a class="sb" data-a="dl" target="_blank" rel="noopener">${icon('download')}<span>Download</span></a>`;
     loadDay(); playAt(t);
   }
@@ -110,11 +111,12 @@ export default function player(cfg) {
       const a = b.dataset.a;
       if (a === 'prev' || a === 'next') { sel.index += a === 'next' ? 1 : -1; showReview(); }
       else if (a === 'snap') { const r = sel.list[sel.index]; if (!snap.hidden) { snap.hidden = true; video.play(); return; }
-        video.pause(); sign(snapshotPath(sel.inst, r.data.detections[0]), 1).then((u) => { snap.src = u; snap.hidden = false; }); }
+        video.pause(); sign(snapshotPath(sel.inst, r.data.detections[0]), 1).then((u) => { snap.src = u; snap.hidden = false; })
+          .catch(() => { const p = video.play(); if (p && p.catch) p.catch(() => {}); }); }   // no snapshot to show: the video carries on
       else if (a === 'rec') { const r = sel.list[sel.index]; select({ cam: r.camera, t: r.start_time - PAD }); location.hash = '#recordings'; }
       else if (a === 'back' || a === 'fwd') { if (base) go((seekTo != null ? seekTo : base + video.currentTime) + (a === 'fwd' ? 10 : -10)); }
       else if (a === 'latest') { day0 = midnight(Date.now() / 1000); loadDay(); playAt(Date.now() / 1000 - 60); }
-      else if (a === 'dl') { const t = base + video.currentTime; if (rec && cam) { ev.preventDefault(); sign(clipPath(sel.inst, cam, t - 30, t + 30), 1).then((u) => openLink(u)); } }
+      else if (a === 'dl') { const t = base + video.currentTime; if (rec && cam) { ev.preventDefault(); sign(clipPath(sel.inst, cam, t - 30, t + 30), 1).then((u) => openLink(u)).catch(() => {}); } }
       return;
     }
     const c = ev.target.closest('.fpcams .chip'); if (c) { const t = seekTo != null ? seekTo : base + video.currentTime; cam = c.dataset.cam; sel.cam = cam; loadDay(); playAt(t || Date.now() / 1000 - 600); return; }

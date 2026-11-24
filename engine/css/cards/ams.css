@@ -1,0 +1,36 @@
+@layer cards {
+/* ---------- AMS spools (cards/ams.js) ---------- */
+.ams { display: flex; flex-direction: column; gap: var(--sp-12); height: 100%; min-height: 0; --t: var(--sage); }
+.ams .hh .ic { width: var(--ic-l); height: var(--ic-l); background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); box-shadow: 0 0 22px rgba(var(--t), var(--a-20)); }
+.ams-slots { flex: 1; min-height: 0; display: grid; align-content: center; grid-auto-rows: minmax(0, calc(240px * var(--s))); grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+.ams-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-4); padding: var(--sp-14) var(--sp-6) var(--sp-12); border-radius: var(--tile-radius);
+  background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); min-width: 0; text-align: center; --t: var(--lamp); transition: box-shadow .3s, background .3s; }
+.ams-slot.active { background: rgba(var(--t), var(--a-12)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-50)), 0 0 24px rgba(var(--t), var(--a-20)); }
+/* spool: the filament color wound round a dark hub; the ring outside it = filament left (Bambu spools only) */
+.ams-ring { position: relative; width: 78%; max-width: calc(96px * var(--s)); aspect-ratio: 1; border-radius: 50%; padding: var(--sp-4); margin-bottom: var(--sp-6); --p: 0; }
+.ams-ring.known { background: conic-gradient(rgb(var(--sage)) calc(var(--p) * 1%), var(--grid-line) 0); }
+.ams-spool { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; --fill: transparent;
+  background: repeating-radial-gradient(circle, rgba(0, 0, 0, 0) 0 calc(2px * var(--s)), rgba(0, 0, 0, .14) calc(2px * var(--s)) calc(3px * var(--s))), radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--fill);
+  box-shadow: inset 0 0 0 calc(3px * var(--s)) var(--edge-strong), inset 0 0 16px rgba(0, 0, 0, .5), 0 4px 14px rgba(0, 0, 0, .35); }
+.ams-hub { position: absolute; inset: 31%; border-radius: 50%; background: radial-gradient(circle, rgb(var(--ink-rgb)) 0 45%, #2a2f3b 46% 100%); box-shadow: 0 0 0 calc(2px * var(--s)) var(--edge-strong), inset 0 1px 3px rgba(0, 0, 0, .6); }
+.ams-slot.active .ams-spool, .ams-ext.active .ams-spool { box-shadow: inset 0 0 0 calc(3px * var(--s)) var(--edge-strong), inset 0 0 16px rgba(0, 0, 0, .5), 0 0 0 calc(2px * var(--s)) rgb(var(--lamp)), 0 0 22px rgba(var(--lamp), var(--a-50)); }
+.empty .ams-spool { background: none; box-shadow: inset 0 0 0 calc(2px * var(--s)) var(--veil-2); outline: calc(1.5px * var(--s)) dashed var(--edge-strong); outline-offset: calc(-9px * var(--s)); }
+.empty .ams-hub { opacity: .45; }
+.ams-id { font-size: var(--fs-micro); font-weight: 700; letter-spacing: .08em; color: var(--text-3); }
+.ams-type { font: 600 var(--fs-title)/1.1 var(--font-display); }
+.ams-slot.empty .ams-type { color: var(--text-3); font-weight: 500; }
+.ams-name, .ams-left { font-size: var(--fs-small); color: var(--text-2); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.3em; }
+.ams-left { color: var(--text-3); }
+.ams-slot.active .ams-left { color: rgb(var(--lamp)); font-weight: 600; }
+/* external spool: one slim row */
+.ams-ext { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-8) var(--sp-12); border-radius: var(--tile-radius); background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); }
+.ams-ext .ams-ring { width: calc(38px * var(--s)); padding: 0; margin: 0; flex: none; }
+.ams-ext .ams-spool { box-shadow: inset 0 0 0 calc(2px * var(--s)) var(--edge-strong), 0 2px 8px rgba(0, 0, 0, .35); }
+.ams-ext.empty .ams-spool { outline-offset: calc(-5px * var(--s)); }
+.ams-etx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ams-elab { font-size: var(--fs-sub); font-weight: 600; }
+.ams-ename { font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ams-etag { font-size: var(--fs-small); font-weight: 600; color: rgb(var(--lamp)); }
+.ams .hfacts .fact:first-child { border-top: 0; }
+@container cell (max-width: 340px) { .ams-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+}

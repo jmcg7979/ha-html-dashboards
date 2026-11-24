@@ -2,12 +2,13 @@
 //   alerts (red banners) · hero: big icon, temperature, condition, today's high/low · tonight (and NWS text when it has some)
 //   · eight fact tiles at the bottom: wind, gusts, rain chance, humidity, dew point, pressure, sunrise, sunset.
 // If it doesn't all fit the panel (e.g. while an alert banner shows), it drops the NWS text first, then the tonight row, then the alert's headline.
-// "Now" comes from the freshest source (core/current.js: NWS observation, airport METAR via IEM, Open-Meteo); a line under the
+// "Now" is HA's reading (core/current.js: the weather_now.yaml package's sensor, which picks the freshest of the NWS
+// observation, the airport's METAR and Open-Meteo; without the package, the weather entity itself); a line under the
 // condition names the source and the time of the reading, so an old reading is never passed off as current.
-// { type: 'wx-now', entity: 'weather.home_nws', alerts: 'sensor.nws_alerts', sun: 'sun.sun', lat, lon, iem: { station, network, name }, maxAge: 75 }   lat, lon: optional, default HA's home location
+// { type: 'wx-now', entity: 'weather.home_nws', alerts: 'sensor.nws_alerts', sun: 'sun.sun', ha: 'sensor.outdoor_temperature', lat, lon, iem: { name } }   lat, lon: for the forecast's direct fallback, default HA's home location; iem.name: what to call the station
 import { h, esc, icon, setHTML } from '../core/dom.js';
 import { st, watch, tick } from '../core/store.js';
-import { forecast, TEXT, wxIcon, wxImg, compass } from '../core/forecast.js';
+import { forecast, running, periodName, sameDay, viaLine, TEXT, condText, wxIcon, wxImg, compass } from '../core/forecast.js';
 import { current } from '../core/current.js';
 import { timeOpts } from '../core/units.js';
 import { stripCell } from './strip.js';
@@ -19,29 +20,30 @@ const t = (iso) => (iso ? new Date(iso).toLocaleTimeString([], timeOpts({ hour: 
 
 export default function wxNow(cfg) {
   const el = h('<div class="wxnow"><div class="wxalerts"></div><div class="wxhero"></div><div class="wxnext"></div><div class="wxfacts strip"></div></div>');
-  let periods = [], hours = [], cur = null;
+  let list = [], meta = null, hours = [], cur = null;
   const draw = () => {
     const w = st(cfg.entity), sun = st(cfg.sun || 'sun.sun'); if (!w) return;
     const night = sun && sun.state === 'below_horizon';
-    const h0 = hours[0], a = cur || { ...w.attributes, condition: w.state, time: (w.lu || 0) * 1000, label: 'NWS station' };
+    const h0 = hours.find((x) => new Date(x.datetime) > Date.now() - 3600e3), a = cur || { ...w.attributes, condition: w.state, time: (w.lu || 0) * 1000, label: 'NWS station' };
     let cond = a.condition; if (night && cond === 'sunny') cond = 'clear-night';
     const mins = Math.round((Date.now() - a.time) / 60e3);
     const when = a.source === 'model' ? 'estimate for here · ' + t(a.time) : mins < 2 ? 'just now' : mins < 60 ? `${mins} min ago` : t(a.time);
-    const day = periods.find((p) => p.is_daytime), nite = periods.find((p) => p.is_daytime === false);
-    const today = periods[0] && periods[0].is_daytime ? periods[0] : null;
+    // the periods from the one running now on, each read by its date: the list may be hours old
+    const periods = running(list), now = new Date();
+    const today = periods.find((p) => p.is_daytime !== false && sameDay(new Date(p.datetime), now)), nite = periods.find((p) => p.is_daytime === false);
 
     setHTML(el.querySelector('.wxhero'), `<div class="wxicon">${wxImg(wxIcon(cond, night))}</div>
       <div class="wxtemp"><div class="wxt">${r(a.temperature)}°</div>
-        <div class="wxd"><div class="wxc">${esc(TEXT[cond] || cond)}</div>
-          <div class="wxhl">${day && today ? `<span>${icon('arrow-up')}${r(day.temperature)}°</span>` : ''}${nite ? `<span>${icon('arrow-down')}${r(nite.temperature)}°</span>` : ''}</div>
+        <div class="wxd"><div class="wxc">${esc(condText(cond))}</div>
+          <div class="wxhl">${today ? `<span>${icon('arrow-up')}${r(today.temperature)}°</span>` : ''}${nite ? `<span>${icon('arrow-down')}${r(nite.temperature)}°</span>` : ''}</div>
           <div class="wxsrc${mins > 90 ? ' old' : ''}">${esc(a.label)} · ${esc(when)}</div></div></div>`);
 
-    // tonight (or tomorrow once it's night), plus NWS's own words when the integration provides them
-    const next = periods.find((p, i) => i > 0) || null, words = periods[0] && (periods[0].detailed_description || periods[0].short_description);
-    const nextName = next ? (next.is_daytime ? 'Tomorrow' : 'Tonight') : '';
-    setHTML(el.querySelector('.wxnext'), (next ? `<div class="wxnx"><span class="wxni">${wxImg(wxIcon(next.condition, !next.is_daytime))}</span>
-        <span class="wxnt"><b>${nextName}</b><span class="sub">${esc(TEXT[next.condition] || next.condition)}${next.precipitation_probability ? ` · ${r(next.precipitation_probability)}% rain` : ''}</span></span>
-        <span class="wxnv">${next.is_daytime ? 'High' : 'Low'} <b>${r(next.temperature)}°</b></span></div>` : '') + (words ? `<div class="wxtext">${esc(words)}</div>` : ''));
+    // the period after this one (tonight, tomorrow, or today before dawn), plus NWS's own words when the integration provides them
+    const next = periods[1] || null, words = periods[0] && (periods[0].detailed_description || periods[0].short_description);
+    const nextName = next ? periodName(next, now) : '', via = viaLine(meta, now);
+    setHTML(el.querySelector('.wxnext'), (next ? `<div class="wxnx"><span class="wxni">${wxImg(wxIcon(next.condition, next.is_daytime === false))}</span>
+        <span class="wxnt"><b>${esc(nextName)}</b><span class="sub">${esc(TEXT[next.condition] || next.condition)}${next.precipitation_probability ? ` · ${r(next.precipitation_probability)}% rain` : ''}</span></span>
+        <span class="wxnv">${next.is_daytime !== false ? 'High' : 'Low'} <b>${r(next.temperature)}°</b></span></div>` : '') + (words ? `<div class="wxtext">${esc(words)}</div>` : '') + (via ? `<div class="wxvia">${esc(via)}</div>` : ''));
 
     const rain = today ? today.precipitation_probability : h0 ? h0.precipitation_probability : null;
     const facts = [
@@ -67,9 +69,9 @@ export default function wxNow(cfg) {
   };
   new ResizeObserver(fit).observe(el);
   watch([cfg.entity, cfg.alerts, cfg.sun || 'sun.sun'], draw);
-  current({ entity: cfg.entity, lat: cfg.lat, lon: cfg.lon, iem: cfg.iem, maxAge: cfg.maxAge, ha: cfg.ha }, (c) => { cur = c; draw(); });
-  forecast(cfg.entity, 'twice_daily', (l) => { periods = l; draw(); }, { lat: cfg.lat, lon: cfg.lon });
-  forecast(cfg.entity, 'hourly', (l) => { hours = l.filter((x) => new Date(x.datetime) > Date.now() - 3600e3); draw(); }, { lat: cfg.lat, lon: cfg.lon });
+  current({ entity: cfg.entity, iem: cfg.iem, ha: cfg.ha }, (c) => { cur = c; draw(); });
+  forecast(cfg.entity, 'twice_daily', (l, m) => { list = l; meta = m; draw(); }, { lat: cfg.lat, lon: cfg.lon });
+  forecast(cfg.entity, 'hourly', (l) => { hours = l; draw(); }, { lat: cfg.lat, lon: cfg.lon });
   let last = 0; tick(() => { if (Date.now() - last > 60e3) { last = Date.now(); draw(); } });   // staleness and the hour roll over
   return el;
 }

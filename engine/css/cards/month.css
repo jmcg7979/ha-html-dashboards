@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- month calendar ---------- */
 .month { display: flex; flex-direction: column; gap: var(--sp-8); position: relative; }
 .mhead { display: flex; align-items: center; gap: var(--sp-8); }
@@ -5,6 +6,9 @@
 .month .mtitle { font: 600 var(--fs-figure)/1 var(--font-display); min-width: calc(190px * var(--s)); text-align: center; }
 .mhead .mtoday { flex: none; padding: 0 var(--sp-14); }
 .mcals { display: flex; gap: var(--sp-6); margin-left: auto; }
+/* a load that failed, said next to the Today chip */
+.mnote { min-width: 0; font-size: var(--fs-small); color: rgb(var(--lamp)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mnote:empty { display: none; }
 .mcal { flex: none; padding: 0 var(--sp-14); gap: 8px; }
 .mcal i { width: 10px; height: 10px; border-radius: 50%; background: rgb(var(--t)); opacity: .35; }
 .mcal.on i { opacity: 1; }
@@ -24,4 +28,13 @@
 .mdhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .aicon svg { width: 14px; height: 14px; color: rgb(var(--t)); }
 .aev .aicon { margin-left: auto; }
-
+/* month: the calendar chips get their own row; days show colored bars instead of titles (tap a day for its list) */
+@container cell (max-width: 560px) {
+  .mhead { flex-wrap: wrap; row-gap: 8px; }
+  .mcals { order: 9; width: 100%; margin-left: 0; }
+  .mcal { flex: 1; }
+  .month .mgrid { grid-auto-rows: 52px; }
+  .mev { font-size: 0; height: 5px; padding: 0; border-left: 0; background: rgb(var(--t)); margin-top: 2px; }
+  .mev.all { background: rgb(var(--t)); }
+}
+}

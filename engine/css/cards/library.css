@@ -1,0 +1,23 @@
+@layer cards {
+/* A player's library (cards/library.js): tabs or Back + the folder's name on top, a grid of covers that scrolls. */
+.lib { display: flex; flex-direction: column; gap: var(--sp-16); min-height: 0; height: calc(100vh - 2 * var(--page-pad-y, var(--page-pad))); padding: var(--sp-20); border-radius: var(--panel-radius); background: var(--veil-faint); border: 1px solid var(--hairline); }
+:root[data-profile="phone"] .lib { height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - var(--safe-top) - var(--vtabs-h, 0px) - 2 * var(--page-pad) - 6px); padding: var(--sp-12); }
+.libtop { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--chip-h); flex: none; }
+.libtabs { display: flex; gap: var(--sp-8); min-width: 0; }
+.libtabs[hidden] { display: none; }
+.libtabs .chip { flex: none; padding: 0 var(--sp-18); --t: var(--plum); }
+.libtitle { font: 700 var(--fs-title)/1.2 var(--font-display); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.libback { background: var(--veil-2); color: var(--text); }
+.libgrid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(150px * var(--s)), 1fr)); gap: var(--sp-18) var(--sp-16); align-content: start; scrollbar-width: none; transition: opacity .2s; }
+.libgrid::-webkit-scrollbar { display: none; }
+.libgrid[hidden] { display: none; }
+.lib.busy .libgrid { opacity: .45; }
+.libt { display: flex; flex-direction: column; gap: var(--sp-8); padding: 0; background: none; color: var(--text); text-align: left; min-width: 0; }
+.libart { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: var(--r-14); overflow: hidden; background: var(--veil-2); color: var(--text-2); box-shadow: 0 var(--sp-8) var(--sp-20) rgba(0, 0, 0, .35); }
+.libart img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.libart svg { width: var(--icon-art); height: var(--icon-art); }
+.libt.dir .libart { border-radius: var(--tile-radius); box-shadow: none; border: 1px solid var(--edge); }
+.libname { font: 600 var(--fs-item)/1.25 var(--font); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.libnote { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-2); font-size: var(--fs-name); }
+.libnote[hidden] { display: none; }
+}

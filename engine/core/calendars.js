@@ -2,10 +2,13 @@
 // the agenda lists; remembered in localStorage).
 import { token, origin } from './auth.js';
 
-export async function events(entities, start, end) {
+// calendars: entity ids, or { entity, skip } where skip is a regular expression: events whose title matches are left out
+// (a daily reminder that would crowd out everything else)
+export async function events(calendars, start, end) {
   const tk = await token();
-  const lists = await Promise.all(entities.map((c) => fetch(`${origin}/api/calendars/${c}?start=${start.toISOString()}&end=${end.toISOString()}`, { headers: { Authorization: 'Bearer ' + tk } })
-    .then((r) => (r.ok ? r.json() : null)).catch(() => null).then((evs) => evs && evs.map((e) => ({ ...e, cal: c })))));
+  const cals = calendars.map((c) => (typeof c === 'string' ? { entity: c } : c)), entities = cals.map((c) => c.entity);
+  const lists = await Promise.all(cals.map((c) => fetch(`${origin}/api/calendars/${c.entity}?start=${start.toISOString()}&end=${end.toISOString()}`, { headers: { Authorization: 'Bearer ' + tk } })
+    .then((r) => (r.ok ? r.json() : null)).catch(() => null).then((evs) => evs && evs.filter((e) => !(c.skip && c.skip.test(e.summary || ''))).map((e) => ({ ...e, cal: c.entity })))));
   // none loaded is an error, not an empty calendar; some loaded: the list says which didn't
   const failed = entities.filter((c, i) => !lists[i]); if (entities.length && failed.length === entities.length) throw new Error('calendar');
   const out = lists.filter(Boolean).flat().map((e) => {

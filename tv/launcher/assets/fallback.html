@@ -1,6 +1,7 @@
 <!doctype html>
-<!-- Built-in home screen for when the dashboard can't load (HA down, not set up yet): every installed app and a Settings
-     button. Self-contained, no network. The app checks HA every 20 s and returns to the dashboard once it answers. -->
+<!-- Built-in home screen for when the dashboard can't load (HA down, not set up yet, a page that keeps failing): every
+     installed app, Settings, and Try again (the dashboard now). Self-contained, no network. The app looks for HA by
+     itself (every 20 s; after a page that kept failing, in five minutes) and returns to the dashboard once it answers. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -13,20 +14,21 @@
   header { display: flex; align-items: baseline; gap: 16px; }
   #clock { font-size: 40px; font-weight: 600; }
   #why { color: var(--text-2); flex: 1; }
-  #grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; overflow: auto; padding: 6px; }
+  #grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; overflow: auto; padding: 14px; margin: -8px; }   /* room for the highlight around an edge tile */
   button { all: unset; display: block; border-radius: 10px; background: var(--veil); outline: 3px solid transparent; outline-offset: 3px;
     transition: transform .12s, outline-color .12s; }
+  button[hidden] { display: none; }
   button:focus { outline-color: rgb(var(--lamp)); transform: scale(1.06); }
   .app img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 10px; }
   .app span { display: none; }
   .app.noimg span { display: flex; aspect-ratio: 16 / 9; align-items: center; justify-content: center; padding: 8px; text-align: center; }
   .app.noimg img { display: none; }
-  #settings { padding: 10px 18px; }
+  #settings, #again { padding: 10px 18px; }
 </style>
 </head>
 <body>
 <main>
-  <header><div id="clock"></div><div id="why"></div><button id="settings">Settings</button></header>
+  <header><div id="clock"></div><div id="why"></div><button id="again" hidden>Try again</button><button id="settings">Settings</button></header>
   <div id="grid"></div>
 </main>
 <script>
@@ -50,13 +52,15 @@
     grid.appendChild(b);
   });
   document.getElementById('settings').onclick = function () { host.settings(); };
+  var again = document.getElementById('again');
+  again.hidden = !info.url; again.onclick = function () { host.home(); };
 
   // D-pad: move to the nearest button in the arrow's direction
   var DIR = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
   addEventListener('keydown', function (e) {
     var d = DIR[e.key]; if (!d) return; e.preventDefault();
-    var all = [].slice.call(document.querySelectorAll('button')), cur = document.activeElement;
-    if (all.indexOf(cur) < 0) { (all[1] || all[0]).focus(); return; }
+    var all = [].slice.call(document.querySelectorAll('button:not([hidden])')), cur = document.activeElement;
+    if (all.indexOf(cur) < 0) { (grid.firstChild || all[0]).focus(); return; }
     var r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, best = null, bd = 1e9;
     all.forEach(function (b) {
       if (b === cur) return;

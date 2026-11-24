@@ -1,4 +1,5 @@
-/* Weather page, Now (cards/wx-now.js): hero centred in the space left over, tonight, the facts along the bottom */
+@layer cards {
+/* Weather page, Now (cards/wx-now.js): hero centered in the space left over, tonight, the facts along the bottom */
 .wxnow { display: flex; flex-direction: column; gap: var(--sp-10); min-height: 0; overflow: hidden; }
 .wxnow .wxalerts .wxalert { margin-bottom: 0; }
 .wxnow .wxalerts:not(:empty) { display: flex; flex-direction: column; gap: var(--sp-8); }
@@ -35,3 +36,17 @@
 :root[data-profile="phone"] .wxnow .wxfacts .stl { gap: var(--sp-6); font-size: var(--fs-detail); }
 :root[data-profile="phone"] .wxnow .wxfacts .stl svg { width: var(--icon-xs); height: var(--icon-xs); }
 :root[data-profile="phone"] .wxnow .wxfacts .sti b { font: 600 var(--fs-figure)/1.2 var(--font-display); letter-spacing: -0.01em; }
+/* weather Now: smaller hero so temperature + description fit, and the facts two across, by the card's own width (a TV gives
+   it ~260 px, a phone ~360 px) */
+@container cell (max-width: 300px) {
+  .wxhero { gap: var(--sp-10); }
+  .wxnow .wxicon img { width: calc(72px * var(--s)); height: calc(72px * var(--s)); margin: calc(-6px * var(--s)); }
+  .wxnow .wxt { font-size: var(--fs-hero-l); }
+}
+@container cell (max-width: 320px) {
+  .wxnow .wxfacts { --n: 2; row-gap: var(--sp-14); padding: var(--sp-14) 0; }
+  .wxnow .wxfacts .sti { padding: 0 var(--sp-14); }
+  .wxnow .wxfacts .sti:nth-child(4n + 1) { border-left: 1px solid var(--hairline); }
+  .wxnow .wxfacts .sti:nth-child(2n + 1) { border-left: 0; }
+}
+}

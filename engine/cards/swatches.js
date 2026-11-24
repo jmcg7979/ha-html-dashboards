@@ -1,4 +1,4 @@
-// Colour presets for an RGB light.  { type: 'swatches', entity, colors: [[255,147,41], ...] }
+// Color presets for an RGB light.  { type: 'swatches', entity, colors: [[255,147,41], ...] }
 import { h } from '../core/dom.js';
 import { run } from '../core/actions.js';
 

@@ -10,7 +10,8 @@ export default function select(cfg) {
     <div class="tx"><div class="name">${esc(cfg.name)}</div><div class="sub"></div></div><div class="chev">${icon('chevron-down')}</div></div><div class="opts" hidden></div></div>`);
   const sub = el.querySelector('.sub'), opts = el.querySelector('.opts'), ic = el.querySelector('.ic');
   setTone(el, cfg.tone || 'mist');
-  const options = (e) => (!e ? [] : isEffect ? e.attributes.effect_list || [] : e.attributes.options || []);
+  // an empty name is not a choice (some integrations list '' among a light's effects, for "no effect")
+  const options = (e) => (!e ? [] : isEffect ? e.attributes.effect_list || [] : e.attributes.options || []).filter((o) => o !== '');
   const current = (e) => (!e ? '' : isEffect ? e.attributes.effect || '' : e.state);
   watch([id], () => {
     const e = st(id), cur = current(e);

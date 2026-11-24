@@ -1,0 +1,12 @@
+@layer cards {
+/* ---------- map: a person on a map (Leaflet) ---------- */
+.map { border-radius: var(--tile-radius); overflow: hidden; background: #141824; font-family: inherit; }   /* the page's font, not Leaflet's Helvetica / Arial */
+.map .leaflet-tile-pane { filter: brightness(.92); }   /* CARTO Voyager in its own colors, eased slightly for the dark UI */
+.map .leaflet-control-attribution { background: rgba(var(--ink-rgb), .55); color: rgba(255, 255, 255, .6); font-size: var(--fs-micro); padding: 0 var(--sp-6); border-radius: var(--r-8) 0 0 0; }
+.map .leaflet-control-attribution a { color: inherit; }
+/* maps (radar, person) stay below pop-ups and sheets: Leaflet's panes have z-indexes up to 1000 */
+.leaflet-container { z-index: 0; isolation: isolate; }
+/* ---------- map pin: the person's photo ---------- */
+.map-pin { border-radius: 50%; border: 3px solid rgb(var(--sage)); background: var(--raised); box-shadow: 0 4px 14px rgba(0, 0, 0, .55); overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--text-2); }
+.map-pin img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}

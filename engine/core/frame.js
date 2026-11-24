@@ -1,14 +1,15 @@
 // A view that is another page in a frame, next to the rail: { id, title, icon, frame: [{ name, url, ha: true }] }
 // Several sources get chips to switch; the choice is remembered on this screen. Frames load the first time they're picked.
 // ha: true = a Home Assistant dashboard page (same origin): its header and sidebar are hidden so it reads as part of this dashboard.
-// addon: '<slug>' = an HA app's web UI through HA ingress (same origin, signed in as this HA user, no separate login):
-//   like HA's own app panels, this creates an ingress session cookie and keeps it valid while the page is open.
+// Not inside the TV launcher: its bridge (core/tvhost.js: start apps, read the TV's watch list) is handed to every frame
+// of its page, and it can't tell a frame's call from the dashboard's. A frame view there shows one line instead.
 import { h, esc } from './dom.js';
-import { request, onReady, connected } from './ha.js';
+import { onTV } from './tvhost.js';
 
 const KEY = 'dash.frame.';
 
 export function frameView(view) {
+  if (onTV) return h(`<div class="view fview view-${view.id}"><div class="fbox fnone">A page in a frame isn't shown on a TV.</div></div>`);
   const srcs = view.frame;
   const el = h(`<div class="view fview view-${view.id}">${srcs.length > 1 ? `<div class="fbar">${srcs.map((s, i) => `<button class="chip" data-i="${i}">${esc(s.name)}</button>`).join('')}</div>` : ''}<div class="fbox"></div></div>`);
   const box = el.querySelector('.fbox'), chips = [...el.querySelectorAll('.fbar .chip')], frames = [];
@@ -17,8 +18,7 @@ export function frameView(view) {
     if (frames[i] && frames[i].failed) { frames[i].remove(); frames[i] = null; }   // try a failed open again
     if (!frames[i]) {
       const f = document.createElement('iframe');
-      if (srcs[i].addon) ingress(srcs[i].addon).then((url) => { f.src = url; }).catch((e) => { f.failed = true; f.srcdoc = `<body style="font:15px sans-serif;color:#aaa;background:#0d1017;padding:40px">Couldn't open ${esc(srcs[i].name)} through Home Assistant (${esc(String(e && e.message || e))}).</body>`; });
-      else f.src = srcs[i].url;
+      f.src = srcs[i].url;
       f.allow = 'autoplay; fullscreen; clipboard-write'; f.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
       if (srcs[i].ha) f.addEventListener('load', () => { clearInterval(f._tidy); f._tidy = 0; tidyHA(f); });
       box.appendChild(f); frames[i] = f;
@@ -57,7 +57,7 @@ function tidyHA(f) {
   step();
 }
 // HA re-creates hui-root when its dashboard reloads; re-apply then
-function watchNav(f, doc) { if (f._tidy) return; f._tidy = setInterval(() => { if (!f.offsetParent) return; const r = deep(doc, 'hui-root'); if (r && r.shadowRoot && !r.shadowRoot.querySelector('style[data-dash]')) tidyHA(f); }, 10000); }
+function watchNav(f, doc) { if (f._tidy) return; f._tidy = setInterval(() => { if (!f.isConnected) { clearInterval(f._tidy); return; } if (!f.offsetParent) return; const r = deep(doc, 'hui-root'); if (r && r.shadowRoot && !r.shadowRoot.querySelector('style[data-dash]')) tidyHA(f); }, 10000); }
 // find an element by tag name through open shadow roots
 function deep(root, tag) {
   const q = [root];
@@ -70,20 +70,3 @@ function deep(root, tag) {
   return null;
 }
 
-// ---- HA ingress (what HA's app panels do): session cookie on /api/hassio_ingress/, re-validated every minute ----
-let session = null, keep = 0;
-const ready = () => new Promise((res) => (connected() ? res() : onReady(res)));
-const sup = (endpoint, method, data) => request({ type: 'supervisor/api', endpoint, method, ...(data ? { data } : {}) });
-async function newSession() {
-  const r = await sup('/ingress/session', 'post');
-  session = r.session;
-  document.cookie = `ingress_session=${session};path=/api/hassio_ingress/;SameSite=Strict${location.protocol === 'https:' ? ';Secure' : ''}`;
-}
-async function ingress(slug) {
-  await ready();
-  const info = await sup(`/addons/${slug}/info`, 'get');
-  if (!info || !info.ingress_url) throw new Error('this app has no web UI through ingress');
-  if (!session) await newSession();
-  if (!keep) keep = setInterval(() => { if (!connected()) return; sup('/ingress/validate_session', 'post', { session }).catch(() => newSession().catch(() => {})); }, 60000);
-  return info.ingress_url;
-}

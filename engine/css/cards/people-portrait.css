@@ -1,4 +1,5 @@
-/* ---------- people, style 'portrait' (status row): cut-out portrait inside the tile, greyed and sunk while away ---------- */
+@layer cards {
+/* ---------- people, style 'portrait' (status row): cut-out portrait inside the tile, grayed and sunk while away ---------- */
 .people.portrait { min-height: 0; height: var(--stat-h-lg); padding: 0; gap: 0; border-radius: var(--r-20); position: relative; overflow: hidden;
   --people-sink: calc(10px * var(--s)); --fig-w: calc(70px * var(--s)); --fig-img: calc(76px * var(--s)); }
 .people.portrait .pp { position: relative; min-width: 0; height: 100%; cursor: pointer; }
@@ -28,4 +29,9 @@
 .people.portrait.round .pfig img.round { position: static; display: block; width: 100%; height: 100%; transform: none; border-radius: 50%; object-fit: cover; }
 .people.portrait.round :is([data-where="away"], [data-where="zone"], [data-where="unknown"]) .pfig img { transform: none; filter: grayscale(.7) brightness(.85); }
 .people.portrait.round .ptxt { left: calc(14px * var(--s) + var(--fig-w) + 14px * var(--s)); }
-
+/* in a narrow cell: smaller figures, no state line */
+@container cell (max-width: 300px) {
+  .people.portrait { --fig-w: calc(48px * var(--s)); }
+  .people.portrait .pst { display: none; }
+}
+}

@@ -1,3 +1,4 @@
+@layer cards {
 /* Continue watching (cards/watchnext.js): artwork 16:9 with the app's banner in the corner and a progress line, title and
    episode under it; one row that scrolls sideways. */
 .wnext { display: flex; flex-direction: column; min-width: 0; }
@@ -10,3 +11,4 @@
 .wnart i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--p); background: rgb(var(--lamp)); }
 .wntitle { font: 600 var(--fs-item)/1.25 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: var(--sp-2) var(--sp-2) 0; }
 .wnsub { font-size: var(--fs-meta); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 var(--sp-2); }
+}

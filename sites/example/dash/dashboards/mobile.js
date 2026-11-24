@@ -12,10 +12,10 @@ const half = (cfg) => ({ ...cfg, span: 6 });
 
 const home = { id: 'home', title: 'Home', icon: 'home-variant', sections: [
   { panel: false, cards: [
-    { type: 'people', compact: true, style: 'portrait', round: true, people: [{ ...H.people.alex, tap: { nav: '#alex' } }, { ...H.people.sam, tap: { nav: '#sam' } }] },
+    { type: 'people', round: true, people: [{ ...H.people.alex, tap: { nav: '#alex' } }, { ...H.people.sam, tap: { nav: '#sam' } }] },
     ...top.map((s) => half({ type: 'stat', ...s })),
 
-    { type: 'heading', title: 'Front door', buttons: [{ icon: 'view-grid-outline', action: { view: 'cameras' } }] },
+    { type: 'heading', title: 'Front door', buttons: [{ icon: 'view-grid-outline', label: 'All cameras', action: { view: 'cameras' } }] },
     { type: 'camera', ...H.cameras[0] },
 
     { type: 'heading', title: 'Climate', pill: { weather: H.weather, label: 'Outside' } },
@@ -28,9 +28,9 @@ const home = { id: 'home', title: 'Home', icon: 'home-variant', sections: [
 
     { type: 'media', title: 'Playing', players: H.players },
 
-    { type: 'heading', title: 'Weather', buttons: [{ icon: 'radar', action: { view: 'weather' } }] },
+    { type: 'heading', title: 'Weather', buttons: [{ icon: 'radar', label: 'Radar and forecast', action: { view: 'weather' } }] },
     { type: 'weather', entity: H.weather, sun: 'sun.sun' },
-    { type: 'heading', title: 'Coming up', buttons: [{ icon: 'calendar-month', action: { nav: '#calendar' } }] },
+    { type: 'heading', title: 'Coming up', buttons: [{ icon: 'calendar-month', label: 'Full calendar', action: { nav: '#calendar' } }] },
     { type: 'agenda', calendars: H.calendars, days: 7, limit: 4, follow: true, empty: 'Nothing this week.', compact: true },
   ] },
 ] };
@@ -51,7 +51,6 @@ const systems = phoneView(systemsView);
 export default {
   title: 'Home',
   profile: 'phone',
-  settings: { perf: false },
   tabs: ['home', 'cameras', 'weather', 'systems'],
   links: [{ title: 'HA', icon: 'home-assistant', url: '/lovelace' }],
   popups,

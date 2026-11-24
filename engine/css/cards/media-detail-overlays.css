@@ -1,0 +1,65 @@
+@layer cards {
+/* Over the player (cards/media-detail.js): Rooms (the shared picker: picker.css), and on phones or for a stopped player
+   the queue and the lyrics under a mini player; on large screens the same boxes are the panel beside the art. The
+   party's code, large, takes the panel's place. */
+/* ---- over the card: Play on (the shared picker), and on phones / a stopped player the queue and the lyrics under a mini player ---- */
+.mdmove { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; gap: var(--sp-14); padding: var(--sp-4) var(--sp-4) var(--sp-16); overflow-y: auto; scrollbar-width: none;
+  background: rgba(var(--scrim-rgb), .94); backdrop-filter: blur(14px); border-radius: var(--r-20); }
+.mdmove[hidden] { display: none; }
+.mdmhead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-12); padding: var(--sp-8) var(--sp-8) 0; }
+.mdmhead .mtx b { font: 600 var(--fs-title)/1.2 var(--font-display); }
+.mdmhead .mclose { position: static; flex: none; }
+.mdmove .mpick { display: flex; flex-direction: column; gap: var(--sp-14); padding: 0 var(--sp-8); }
+.mdmall { padding: 0 var(--sp-8); max-width: calc(520px * var(--s)); }   /* all rooms at once, over the rooms */
+.mdmall[hidden] { display: none; }
+.mdmall > b { flex: none; font: 600 var(--fs-sub)/1 var(--font); color: var(--text-2); }
+.mdet.overed { min-height: min(calc(560px * var(--s)), 70vh); }
+.mdq { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r-20);
+  background: rgba(var(--scrim-rgb), .95); backdrop-filter: blur(14px); }
+.mdq[hidden] { display: none; }
+.mdqtop { flex: none; display: flex; align-items: center; gap: var(--sp-10); padding: var(--sp-12) var(--sp-12) var(--sp-10); background: rgba(var(--scrim-rgb), .97); }
+.mdqmini { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-12); }
+.mdqmini .mqa { width: calc(52px * var(--s)); height: calc(52px * var(--s)); }
+.mdqtop .rbtn { color: var(--text); background: var(--veil-2); }
+.mdqtop .mplay { --rbtn: calc(46px * var(--s)); }
+.mdqtop .mclose { position: static; flex: none; }
+.mdqchips { flex: none; display: flex; align-items: center; gap: var(--sp-8); padding: 0 var(--sp-12) var(--sp-10); background: rgba(var(--scrim-rgb), .97); border-bottom: 1px solid var(--hairline); }
+.mdqchips .chip { flex: none; padding: 0 var(--sp-16); }
+.mdqchips .chip.on { background: rgba(var(--t), var(--a-26)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+.mdqn { margin-left: auto; font-size: var(--fs-meta); color: var(--text-2); }
+.mdqb { flex: 1; min-height: 0; padding: var(--sp-6) var(--sp-8) var(--sp-10); }
+.mdqb.mdlb { padding: var(--sp-8) var(--sp-20) var(--sp-16); }
+.mdet.mdet.idle > .mdq:not([hidden]) { display: flex; }
+/* as a layer the queue has finger-sized rows and a solid menu */
+.mdet:not(.panes) .pq { --pq-art: calc(48px * var(--s)); --pq-pad: var(--sp-6) var(--sp-8); }
+.mdet:not(.panes) .pqi { gap: var(--sp-12); }
+.mdet:not(.panes) .pqtx b { font-size: var(--fs-name); }
+.mdet:not(.panes) .pqtx small { font-size: var(--fs-sub); }
+.mdet:not(.panes) .pqmenu, .mdet:not(.panes) .pqsub { background: rgba(var(--scrim-rgb), .97); }
+.mdet .pqmb, .mdet .pqmt { width: min(100%, calc(420px * var(--s))); align-self: center; }
+/* the panel: Up next, Lyrics or the Remote. The queue and lyrics take the height the left side gives (they scroll inside) */
+.mdet.panes > .mdq { position: relative; inset: auto; z-index: auto; grid-column: 2; grid-row: 1 / 5; contain: size; min-height: min(calc(430px * var(--s)), 52vh);   /* as tall as the Remote, so the pop-up keeps its size from panel to panel */ padding: var(--sp-10); border-radius: var(--tile-radius); background: rgba(var(--scrim-rgb), .35); backdrop-filter: none; }
+.mdet.panes > .mdq > .mdqtop, .mdet.panes > .mdq > .mdqchips { display: none; }
+.mdet.panes .mdqb { padding: 0; }
+.mdet.panes .mdqb.mdlb { padding: 0 var(--sp-8); }
+/* OK or a tap on it: the code large with what guests may do, in the panel's place (over the whole card when there is no panel);
+   OK or a tap again, or Back, closes it */
+.mdjoin { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-12); padding: var(--sp-16); border-radius: var(--r-20); background: rgba(var(--scrim-rgb), .94); text-align: center; cursor: pointer; }
+.mdjoin[hidden] { display: none; }
+.mdet.panes > .mdjoin { position: relative; inset: auto; z-index: auto; grid-column: 2; grid-row: 1 / 5; contain: size; border-radius: var(--tile-radius); background: rgba(var(--scrim-rgb), .7); }
+.mjbig { flex: 0 1 auto; min-height: 0; height: 58%; aspect-ratio: 1; border-radius: var(--r-14); }
+.mjbig svg { display: block; width: 100%; height: 100%; border-radius: inherit; }
+.mjcap { flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
+.mjcap b { font: 600 var(--fs-title)/1.2 var(--font-display); color: var(--text); }
+.mjcap small { font-size: var(--fs-sub); color: var(--text-2); }
+.mjrules { margin: var(--sp-4) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); font-size: var(--fs-sub); color: var(--text); }
+.mdet.page .mdmove { justify-content: safe center; gap: var(--sp-8); padding: var(--sp-12) var(--sp-24); border-radius: 0; }
+.mdet.page .mdmove .mpick { gap: var(--sp-10); }   /* a TV: three rows of rooms with their volumes fit without scrolling */
+html.remote .mdet .mclose { display: none; }
+.mdet.photo.panes > .mdq { background: rgba(var(--scrim-rgb), .7); }
+/* a Spotify account's devices on a TV: five short rows fit the screen */
+.mdet.page .mdmove .mpick[data-sp] { gap: var(--sp-6); }
+.mdet.page .mdmove .mpick[data-sp] .mpsec { gap: var(--sp-4); }
+.mdet.page .mdmove .mpick[data-sp] .mpgrid { gap: var(--sp-6); }
+.mdet.page .mdmove .mpick[data-sp] .mpk { padding-top: var(--sp-4); padding-bottom: var(--sp-4); }
+}

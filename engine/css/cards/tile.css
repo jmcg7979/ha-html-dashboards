@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- tiles (lights, fans, blinds, mode...) ---------- */
 .tile { position: relative; height: var(--tile-h); border-radius: var(--tile-radius); background: var(--veil); display: flex; align-items: center; overflow: hidden; touch-action: pan-y; }
 .tile .fill { position: absolute; inset: 0 auto 0 0; width: 0; pointer-events: none; transition: width .25s cubic-bezier(.2, .8, .2, 1);
@@ -8,9 +9,36 @@
 .tile.slider > .ic.on { background: rgba(var(--t), var(--a-30)); color: #fff8ec; box-shadow: 0 0 18px rgba(var(--t), var(--a-45)); }
 .tile .tx { flex: 1; min-width: 0; z-index: 1; pointer-events: none; }
 .tile .subs { display: flex; gap: var(--sp-6); margin-right: var(--sp-12); z-index: 1; }
+/* in a pop-up; the variants below and a tile that wraps (at the end) keep their own heights */
+.pbody .tile { height: calc(64px * var(--s)); }
 .tile.vert { flex-direction: column; justify-content: center; gap: var(--sp-6); text-align: center; height: calc(var(--tile-h) * 1.35); }
 .tile.vert > .ic { margin: 0; }
 .tile.vert .tx { flex: none; width: 100%; padding: 0 var(--sp-6); }
 .tile.vert .name { font-size: var(--fs-sub); }
 button.tile { width: 100%; text-align: left; }
-
+/* an idle tile keeps a visible outline; an active one tints as a whole */
+.tile { box-shadow: inset 0 0 0 1px var(--edge); }
+.tile.on { background: linear-gradient(135deg, rgba(var(--t), var(--a-26)), rgba(var(--t), var(--a-08))); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+.tile.on > .ic.on { background: rgba(var(--t), var(--a-30)); box-shadow: 0 0 16px rgba(var(--t), var(--a-35)); }
+.tile.on .sub { color: rgb(var(--t)); }
+/* info pills on a tile (Wi-Fi, steps, alarm...) */
+.tile .pills { display: flex; gap: var(--sp-6); margin-right: var(--sp-12); z-index: 1; flex: 0 1 auto; min-width: 0; }
+/* a long pill (a preset's name) gives way first and trims its text; the tile's name and state keep at least 45% */
+.tile:has(.pills) .tx { min-width: 45%; }
+.tile .pill { min-width: 0; flex: 0 1 auto; height: calc(30px * var(--s)); padding: 0 var(--sp-12); border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--edge); }
+.tile .pill > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tile .pill svg { flex: none; }
+.tile .pill > span:empty { display: none; }
+.tile .pill:has(> span:empty) { padding: 0; width: calc(30px * var(--s)); justify-content: center; }
+.tile .pill.on { box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+/* tiles with buttons (blinds, vacuum): buttons move to their own row instead of running off the edge.
+   4+ buttons need ~200 px of their own, so those wrap sooner; 390 px phones (320 px cells) and the Portal keep one row. */
+@container cell (max-width: 300px) {
+  .tile:has(> .subs > .sb:nth-child(4)) { height: auto; min-height: var(--tile-h); flex-wrap: wrap; row-gap: var(--sp-8); padding: var(--sp-10) 0; }
+  .tile:has(> .subs > .sb:nth-child(4)) > .subs { order: 3; flex-basis: 100%; justify-content: flex-end; margin: 0 var(--sp-12); }
+}
+@container cell (max-width: 230px) {
+  .tile:has(> .subs) { height: auto; min-height: var(--tile-h); flex-wrap: wrap; row-gap: var(--sp-8); padding: var(--sp-10) 0; }
+  .tile > .subs { order: 3; flex-basis: 100%; justify-content: flex-end; margin: 0 var(--sp-12); }
+}
+}

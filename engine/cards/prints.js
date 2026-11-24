@@ -9,11 +9,19 @@ import { h, esc, icon, setText } from '../core/dom.js';
 import { request } from '../core/ha.js';
 import { run } from '../core/actions.js';
 import { watch } from '../core/store.js';
+import { onDispose } from '../core/scope.js';
 import { sign, vodPath, clipPath, playHls, instance, fmtTime, fmtDay } from '../core/frigate.js';
 import { load, savedPairs, invalidate } from '../core/prints.js';
+import { lengthWord } from '../core/time.js';
 
-const dur = (s) => { const m = Math.round(s / 60); return m < 60 ? `${Math.max(1, m)} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) + ' min' : ''}`; };
+const dur = (s) => lengthWord(s / 60);
 const bare = (n) => String(n || '').replace(/\s+–\s+[A-Z][a-z]{2} \d{1,2} \d{1,2}:\d{2} [AP]M.*$/, '').replace(/\s*\(timelapse\)$/, '') || '3D print';
+
+// Prints being saved, by the minute they started (the same print is a new object after every refresh, and its start can
+// differ by a second between two reads): true while its export is awaited, 'gone' when it never showed up.
+export const saving = new Map();
+export const jobKey = (j) => Math.round(j.start / 60);
+const SAVE_LOOKS = [6e3, 30e3, 120e3];   // when the list is read again after Save
 
 export default function prints(cfg) {
   const P = cfg.printer, R = P.rec, CAM = P.camera.entity, cam = CAM.split('.')[1];
@@ -21,13 +29,14 @@ export default function prints(cfg) {
     <div class="prpl"><div class="fpvid prvid"><video playsinline controls muted></video><div class="fpmsg" hidden></div>
       <div class="prnone">${icon('printer-3d-nozzle-outline')}<span>Pick a print to play it</span></div></div>
       <div class="fpinfo"><div class="fptx"><b></b><span class="sub"></span></div><div class="fpbtns"></div></div></div>
-    <div class="prls"><div class="prtabs"><button class="chip" data-t="new"></button><button class="chip" data-t="saved"></button><button class="rbtn prref" title="Refresh">${icon('refresh')}</button></div>
+    <div class="prls"><div class="prtabs"><button class="chip" data-t="new"></button><button class="chip" data-t="saved"></button><button class="rbtn prref" aria-label="Refresh">${icon('refresh')}</button></div>
       <div class="prnote" hidden></div><div class="rvlist prlist"></div></div></div>`);
   el.style.setProperty('--ratio', (P.camera.ratio || '16/9'));
   const video = el.querySelector('video'), msg = el.querySelector('.fpmsg'), none = el.querySelector('.prnone');
   const title = el.querySelector('.fptx b'), sub = el.querySelector('.fptx .sub'), btns = el.querySelector('.fpbtns');
   const listEl = el.querySelector('.prlist'), note = el.querySelector('.prnote'), tabs = [...el.querySelectorAll('.prtabs .chip')];
   const inst = () => instance(CAM);
+  const timers = new Set(); onDispose(() => timers.forEach(clearTimeout));
   let data = null, tab = 'new', cur = null, stop = null, open = false, gen = 0;
 
   // every pick or close bumps gen: a sign or file lookup still on its way sees that and drops out
@@ -49,10 +58,11 @@ export default function prints(cfg) {
   // keepPlaying: new details for the print already on screen; the player and its position stay
   const showJob = (j, keepPlaying) => {
     const pick = cur = { kind: 'job', j }; setText(title, j.name); setText(sub, `${fmtDay(j.start)} ${fmtTime(j.start)}${j.lost ? ' · end not recorded' : ' · ' + dur(j.end - j.start)}${j.open ? ' · printing now' : ''}`);
+    const wait = saving.get(jobKey(j));   // 'gone' = the export never showed up
     btns.innerHTML = (j.open ? '' : j.saved ? `<span class="sb on prok">${icon('check-circle')}<span>Saved</span></span>`
-      : `<button class="sb prsave" data-a="save">${icon('content-save-outline')}<span>Save</span></button>`)
+      : `<button class="sb prsave" data-a="save"${wait === true ? ' disabled' : ''}>${icon('content-save-outline')}<span>${wait === true ? 'Saving…' : wait === 'gone' ? 'Not saved: try again' : 'Save'}</span></button>`)
       + `<a class="sb" data-a="dl" target="_blank" rel="noopener">${icon('download')}<span>Download</span></a>`;
-    sign(clipPath(inst(), cam, j.start - 15, j.end + 15), 1).then((u) => { const a = btns.querySelector('[data-a="dl"]'); if (a && cur === pick) { a.href = u; a.download = `${bare(j.name)}-${new Date(j.start * 1000).toISOString().slice(0, 16).replace(/:/g, '')}.mp4`; } });
+    sign(clipPath(inst(), cam, j.start - 15, j.end + 15), 1).then((u) => { const a = btns.querySelector('[data-a="dl"]'); if (a && cur === pick) { a.href = u; a.download = `${bare(j.name)}-${new Date(j.start * 1000).toISOString().slice(0, 16).replace(/:/g, '')}.mp4`; } }).catch(() => {});   // not connected: the link stays without a file
     if (!keepPlaying) playRange(j.start - 15, j.end + 15);
     mark();
   };
@@ -61,7 +71,7 @@ export default function prints(cfg) {
     const fr = R.frigate ? `<a class="sb" href="${esc(R.frigate)}/export" target="_blank" rel="noopener">${icon('open-in-new')}<span>Open in Frigate</span></a>` : '';
     btns.innerHTML = `<div class="seg prseg">${p.real ? `<button class="sb${which === 'real' ? ' on' : ''}" data-a="real"><span>Real speed</span></button>` : ''}${p.timelapse ? `<button class="sb${which === 'tl' ? ' on' : ''}" data-a="tl"><span>Timelapse</span></button>` : ''}</div>${fr}`;
     const x = which === 'tl' ? p.timelapse : p.real;
-    if (which === 'real' && inBuffer(p.end) && !R.mediaFirst) playRange(p.start, p.end); else playFile(x);
+    if (which === 'real' && inBuffer(p.end)) playRange(p.start, p.end); else playFile(x);
     mark();
   };
 
@@ -76,7 +86,7 @@ export default function prints(cfg) {
     note.hidden = data.exportsOk && data.historyOk; if (!data.historyOk) note.textContent = 'Can\'t read the print history right now, so this list may be incomplete.'; else if (!data.exportsOk) note.textContent = `Can't read the saved prints from Frigate right now${data.error ? ' (' + data.error + ')' : ''}, so prints show as not saved.`;
     const days = R.buffer_days || 7, nowS = Date.now() / 1000;
     if (tab === 'new') {
-      listEl.innerHTML = unsaved.length ? unsaved.map((j, i) => {
+      listEl.innerHTML = unsaved.length ? unsaved.map((j) => {
         const left = (j.end + days * 86400 - nowS) / 86400, soon = left < 1.5;
         const meta = j.open ? `<span class="prtag live">${icon('record-circle-outline')}Printing</span>` : `<span class="prtag${soon ? ' soon' : ''}">${left < 1 ? Math.max(1, Math.round(left * 24)) + ' h left' : Math.round(left) + ' d left'}</span>`;
         return row('j' + data.jobs.indexOf(j), `${icon('printer-3d-nozzle-outline')}<i>${dur(j.end - j.start)}</i>`, j.name, `${fmtDay(j.start)} · ${fmtTime(j.start)}`, meta);
@@ -89,9 +99,12 @@ export default function prints(cfg) {
     }
     mark();
   };
-  const mark = () => listEl.querySelectorAll('.pri').forEach((b) => {
-    const k = b.dataset.k; b.classList.toggle('sel', !!cur && ((cur.kind === 'job' && k === 'j' + data.jobs.indexOf(cur.j)) || (cur.kind === 'saved' && el._pairs && k === 's' + el._pairs.indexOf(cur.p))));
-  });
+  // the picked row, found by when the print started: every refresh makes new objects for the same prints
+  const mark = () => {
+    const on = !cur || !data ? '' : cur.kind === 'job' ? 'j' + data.jobs.findIndex((x) => jobKey(x) === jobKey(cur.j))
+      : 's' + (el._pairs || []).findIndex((p) => p.start === cur.p.start && p.name === cur.p.name);
+    listEl.querySelectorAll('.pri').forEach((b) => b.classList.toggle('sel', b.dataset.k === on));
+  };
   const refresh = (force) => load(R, force, P.status).then((d) => { data = d; draw(); }).catch(() => { listEl.innerHTML = '<div class="rvempty">Couldn\'t load the prints.</div>'; });
 
   el.addEventListener('click', (ev) => {
@@ -102,13 +115,18 @@ export default function prints(cfg) {
     const b = ev.target.closest('.fpbtns [data-a]'); if (!b || !cur) return;
     const a = b.dataset.a;
     if (a === 'save' && cur.kind === 'job') {
-      const j = cur.j; if (b.disabled) return; b.disabled = true; b.innerHTML = `${icon('content-save-outline')}<span>Saving…</span>`;
+      const j = cur.j, key = jobKey(j); if (b.disabled || saving.get(key) === true) return;
       run({ call: 'script.turn_on', target: R.script, data: { variables: { start: j.start, end: j.end, name: j.name } } }, { el: b, ev });
-      // exports take a few seconds to appear (the timelapse longer); refresh twice
-      // the button stays on Saving… until the export is listed, so a second tap can't start a second export
-      const settle = () => refresh(true).then(() => { if (cur && cur.kind === 'job' && Math.abs(cur.j.start - j.start) < 2) { const n = data.jobs.find((x) => Math.abs(x.start - j.start) < 2); if (n && n.saved) showJob(n, true); } });
-      setTimeout(() => { invalidate(); settle(); }, 6000);
-      setTimeout(() => { invalidate(); settle(); }, 30000);
+      saving.set(key, true); showJob(j, true);
+      // Exports take a few seconds to appear (the timelapse longer), so the list is read again a few times. The print
+      // reads Saving… (also when it is picked again) until its export is listed, so a second tap can't start a second
+      // export; if it is still not listed at the last look, the button says so and can be used again.
+      const settle = (last) => { invalidate(); refresh(true).then(() => {
+        const n = data && data.jobs.find((x) => jobKey(x) === key), done = n && n.saved;
+        if (done || last) { if (saving.get(key) === true) { if (done) saving.delete(key); else saving.set(key, 'gone'); } }
+        if ((done || last) && cur && cur.kind === 'job' && jobKey(cur.j) === key) showJob(n || cur.j, true);
+      }); };
+      SAVE_LOOKS.forEach((ms, i) => { const t = setTimeout(() => { timers.delete(t); settle(i === SAVE_LOOKS.length - 1); }, ms); timers.add(t); });
     }
     if ((a === 'real' || a === 'tl') && cur.kind === 'saved') showSaved(cur.p, a);
   });

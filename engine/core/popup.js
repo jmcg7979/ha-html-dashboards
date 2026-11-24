@@ -3,34 +3,51 @@
 // onOpen runs every time the pop-up is shown (e.g. ask a phone for a fresh location).
 // Multi-page: pages: [{ title, icon, cols, cards }] instead of cards -> tabs in the header; each page is built the first time it is shown.
 // #vacuum/schedule opens a page directly. Re-opening a pop-up starts on its first page.
-// Content is built the first time a pop-up opens (keeps start-up light) and kept for next time.
+// Content is built the first time a pop-up opens (keeps start-up light), kept while it is used and removed a while after
+// it closes (unloadAfter, set by app.js to the views' time), with everything its cards hooked up (core/scope.js).
 import { grid, preload } from './layout.js';
 import { h, esc, icon, setText, setHTML, cap } from './dom.js';
 import { st, watch } from './store.js';
-import { swipeToClose } from './phone.js';
+import { swipeToClose } from './gesture.js';
 import { trendPopup } from './trend.js';
+import { capture } from './scope.js';
+import { layer } from './layers.js';
+import { toast } from './toast.js';
 
 // pop-ups the engine's own cards open, present at every site (a site's popups can't remove them, but may override one by id)
 const ENGINE_POPUPS = { trend: trendPopup };
 
-let defs = {}, home = null, current = null;
-const built = {};
+let defs = {}, home = null, current = null, after = 0, routed = 0;
+const built = {}, building = {}, leaving = {};
+export function unloadAfter(seconds) { after = seconds || 0; }
+export const popupsBuilding = () => Object.keys(building).length;
 
 export function initPopups(popups, homeRef) {
   defs = { ...ENGINE_POPUPS, ...(popups || {}) }; home = homeRef;
   window.addEventListener('hashchange', route);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current && !e.defaultPrevented) close(); });   // the TV remote handles its own Back (core/remote.js)
   route();
 }
 
+// The hash decides which pop-up is open. A pop-up is built once, however often it is asked for while its card types
+// load, and the hash seen last wins: one that finishes loading after the hash has moved on stays hidden.
+const hashed = () => { try { return decodeURIComponent(location.hash.slice(1)).split('/'); } catch (e) { return ['']; } };   // [id, page]; a hash that isn't ours: none
 async function route() {
-  const [id, page] = decodeURIComponent(location.hash.slice(1)).split('/');
+  const [id, page] = hashed();
+  const turn = ++routed;
   if (current && current.id !== id) hide();
-  if (!defs[id] || (current && current.id === id)) { if (current && page != null) current.el.showPage(page); return; }
-  if (!built[id]) { await preload(defs[id].pages ? defs[id].pages.flatMap((p) => p.cards) : defs[id].cards); built[id] = build(id, defs[id]); }
+  if (!Object.hasOwn(defs, id) || (current && current.id === id)) { if (current && page != null) current.el.showPage(page); return; }
+  clearTimeout(leaving[id]); delete leaving[id];
+  if (!built[id]) {
+    building[id] = building[id] || preload(defs[id].pages ? defs[id].pages.flatMap((p) => p.cards) : defs[id].cards)
+      .then(() => { built[id] = build(id, defs[id]); }).finally(() => { delete building[id]; });
+    // a card type that didn't load: said, and the address given back, so the same press can ask again
+    try { await building[id]; } catch (e) { console.error(e); if (turn === routed && hashed()[0] === id) { toast('That didn’t open. Try again.'); close(); } return; }
+    if (turn !== routed) { unloadLater(id); return; }
+  }
   current = { id, el: built[id] };
   if (current.el.showPage) current.el.showPage(page || 0);
   current.el.hidden = false;
+  current.el.layer.open();   // Back and Escape close it, the remote's highlight stays in it (core/layers.js)
   if (current.el.fit) current.el.fit();
   if (defs[id].onOpen) { try { defs[id].onOpen(); } catch (x) { console.error(x); } }
   document.documentElement.classList.add('modal-open');
@@ -38,26 +55,42 @@ async function route() {
 
 function hide() {
   if (!current) return;
-  current.el.hidden = true; current = null;
+  const { id, el } = current; current = null;
+  el.hidden = true;
+  unloadLater(id);
   document.documentElement.classList.remove('modal-open');
+  el.layer.shut();
+}
+// closed (or built and never shown) for a while: removed, and built again the next time it opens
+function unloadLater(id) {
+  clearTimeout(leaving[id]); delete leaving[id];
+  if (after) leaving[id] = setTimeout(() => {
+    delete leaving[id];
+    const el = built[id]; if (!el || !el.hidden || (current && current.id === id)) return;
+    try { el.dispose(); } catch (e) { console.error(e); }
+    el.remove(); delete built[id];
+  }, after * 1000);
 }
 
+// Close the pop-up, whoever asks (its button, an action's `close`, Back): the hash goes, and one still loading stays hidden.
 export function close() {
   history.replaceState(null, '', location.pathname + location.search);
-  hide();
+  route();
 }
 
 function build(id, d) {
   const pages = d.pages || [{ cards: d.cards, cols: d.cols }];
   const el = h(`<div class="pwrap" hidden><div class="popup${d.width ? ' ' + d.width : ''}${d.pages ? ' paged' : ''}" style="--t:var(--${d.tone || 'mist'})">
     <div class="phead"><div class="ic on">${icon(d.icon || 'information-outline')}</div><div class="tx"><div class="name">${esc(d.title || '')}</div><div class="sub"></div></div>
-    ${d.pages ? `<div class="ptabs">${d.pages.map((p, i) => `<button class="ptab" data-i="${i}">${p.icon ? icon(p.icon) : ''}<span>${esc(p.title)}</span></button>`).join('')}</div>` : ''}
-    <button class="rbtn pclose">${icon('close')}</button></div><div class="pbody"></div></div></div>`);
-  const body = el.querySelector('.pbody'), tabs = [...el.querySelectorAll('.ptab')], made = [];
+    ${d.pages ? `<div class="ptabs">${d.pages.map((p, i) => `<button class="ptab" data-i="${i}" aria-label="${esc(p.title)}">${p.icon ? icon(p.icon) : ''}<span>${esc(p.title)}</span></button>`).join('')}</div>` : ''}
+    <button class="rbtn pclose" aria-label="Close">${icon('close')}</button></div><div class="pbody"></div></div></div>`);
+  const body = el.querySelector('.pbody'), tabs = [...el.querySelectorAll('.ptab')], made = [], parts = [];
+  el.dispose = () => parts.forEach((d) => d());
+  el.layer = layer({ el, kind: 'popup', scope: el.querySelector('.popup'), close });
   el.showPage = (k) => {
     let i = typeof k === 'number' ? k : pages.findIndex((p) => p.title && p.title.toLowerCase() === String(k).toLowerCase());
     if (!(i >= 0 && i < pages.length)) i = isNaN(+k) ? 0 : Math.min(+k, pages.length - 1);
-    if (!made[i]) { made[i] = grid(pages[i].cards, pages[i].cols || 12, home); made[i].classList.add('ppage'); body.appendChild(made[i]); }
+    if (!made[i]) { const c = capture(() => grid(pages[i].cards, pages[i].cols || 12, home)); parts.push(c.dispose); made[i] = c.value; made[i].classList.add('ppage'); body.appendChild(made[i]); }
     made.forEach((m, j) => { if (m) m.hidden = j !== i; });
     tabs.forEach((t, j) => t.classList.toggle('on', j === i));
     body.scrollTop = 0;
@@ -67,6 +100,7 @@ function build(id, d) {
     if (ev.target === el || ev.target.closest('.pclose')) close();
   });
   const sub = el.querySelector('.phead .sub');
+  parts.push(capture(() => {
   if (d.entity) watch([d.entity, ...(d.deps || [])], () => { const e = st(d.entity); setText(sub, d.state ? d.state(e) : e ? cap(e.state) : ''); });
   if (d.headerIcon) watch([d.entity], () => setHTML(el.querySelector('.phead .ic'), icon(d.headerIcon(st(d.entity)))));
   if (document.documentElement.dataset.profile === 'phone') swipeToClose(el.querySelector('.popup'), close);   // drag down to close
@@ -77,6 +111,7 @@ function build(id, d) {
     const ro = new ResizeObserver(() => { if (!el.hidden) el.fit(); });
     ro.observe(el); ro.observe(el.querySelector('.pbody'));
   }
+  }).dispose);
   return el;
 }
 

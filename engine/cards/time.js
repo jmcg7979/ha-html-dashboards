@@ -1,41 +1,49 @@
 // A time of day you can nudge: input_datetime (time only) or time.* entities. − / + by `step` minutes, sent after a short pause.
 // { type: 'time', entity, name, icon, step: 15, big: true (a pop-up's main control: label on top, large − time +),
-//   state: () => text, deps: [ids]           optional line under the name (e.g. "Next Wed 6:30 AM"); deps = what it reads
-//   subs: [{ icon, label, action, on: () => bool, tone, show: () => bool }] }   buttons after the clock (run now, skip...)
-import { h, esc, icon, setText, setTone, toggle } from '../core/dom.js';
-import { st, watch, optimistic, tapStart } from '../core/store.js';
+//   state: () => text, deps: [ids] }         optional line under the name (e.g. "Next Wed 6:30 AM"); deps = what it reads
+// nudge() is the tile itself, for any value that is nudged this way (cards/stepper.js: a number).
+import { h, esc, icon, setText } from '../core/dom.js';
+import { st, watch, optimistic, dropOptimistic, tapStart } from '../core/store.js';
 import { call } from '../core/ha.js';
-import { run } from '../core/actions.js';
 import { hmParts } from '../core/units.js';
 
 const toMin = (s) => { const p = String(s || '').split(':').map(Number); return p.length >= 2 && !isNaN(p[0]) ? p[0] * 60 + p[1] : null; };
 const label = (m) => (m == null ? '—' : hmParts(Math.floor(m / 60), m % 60).join(' ').trim());
 const hhmmss = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
 
-export default function time(cfg) {
-  const id = cfg.entity, dom = id.split('.')[0], step = cfg.step || 15;
-  const el = h(`<div class="tile timecard${(cfg.subs || []).length ? ' has-x' : ''}${cfg.big ? ' big' : ''}"><div class="ic">${icon(cfg.icon || 'clock-outline')}</div><div class="tx"><div class="name">${esc(cfg.name || '')}</div>${cfg.state ? '<div class="sub"></div>' : ''}</div>
-    <div class="subs"><button class="sb" data-d="-1">${icon('minus')}</button><span class="tclock"></span><button class="sb" data-d="1">${icon('plus')}</button>${(cfg.subs || []).map((x, i) => `<button class="sb xs${i ? '' : ' x0'}${x.label ? ' lbl' : ''}" data-i="${i}">${x.icon ? icon(x.icon) : ''}${x.label ? `<span>${esc(x.label)}</span>` : ''}</button>`).join('')}</div></div>`);
-  const clock = el.querySelector('.tclock'), sub = el.querySelector('.sub'), xs = [...el.querySelectorAll('.sb.xs')], subs = cfg.subs || [];
+// The tile: icon, name, − value +. The value is held here while it is nudged and sent 0.9 s after the last press.
+// M: { icon, less, more (what − and + are called), get: (entity) => value | null, text: (value) => what is shown,
+//      next: (value, -1 | 1, entity) => value, send: (value) => [service, data, the state HA then reports],
+//      same: (state, sent) => bool (optional: HA's state is the one sent; default: the same text) }
+export function nudge(cfg, M) {
+  const id = cfg.entity;
+  const el = h(`<div class="tile timecard${cfg.big ? ' big' : ''}"><div class="ic">${icon(cfg.icon || M.icon)}</div><div class="tx"><div class="name">${esc(cfg.name || '')}</div>${cfg.state ? '<div class="sub"></div>' : ''}</div>
+    <div class="subs"><button class="sb" data-d="-1" aria-label="${M.less}">${icon('minus')}</button><span class="tclock"></span><button class="sb" data-d="1" aria-label="${M.more}">${icon('plus')}</button></div></div>`);
+  const clock = el.querySelector('.tclock'), sub = el.querySelector('.sub');
   let local = null, sendT = 0, t0 = 0;
-  watch([id], () => { if (local == null) { const e = st(id); setText(clock, label(e ? toMin(e.state) : null)); } });
-  if (sub || xs.length) watch([id].concat(cfg.deps || []), () => {
-    if (sub) setText(sub, cfg.state(st(id)) || '');
-    xs.forEach((b, i) => { const x = subs[i]; setTone(b, x.tone || 'mist'); toggle(b, 'on', !!(x.on && x.on())); b.hidden = !!(x.show && !x.show()); });
-  });
+  const show = () => { if (local == null) { const e = st(id); setText(clock, M.text(e ? M.get(e) : null)); } };
+  watch([id], show);
+  if (sub) watch([id].concat(cfg.deps || []), () => setText(sub, cfg.state(st(id)) || ''));
   el.addEventListener('click', (ev) => {
-    const x = ev.target.closest('.sb.xs'); if (x) { run(subs[+x.dataset.i].action, { el: x, ev, entity: id }); return; }
     const b = ev.target.closest('.sb'); if (!b) return;
     const e = st(id); if (!e) return;
-    if (local == null) { local = toMin(e.state) || 0; t0 = tapStart(ev); }
-    local = (((Math.round(local / step) * step + +b.dataset.d * step) % 1440) + 1440) % 1440;
-    setText(clock, label(local));
+    if (local == null) t0 = tapStart(ev);
+    local = M.next(local == null ? M.get(e) : local, +b.dataset.d, e);
+    setText(clock, M.text(local));
     clearTimeout(sendT);
     sendT = setTimeout(() => {
-      const v = hhmmss(local); local = null;
-      optimistic(id, v, null, (r) => r.state === v, t0);
-      call(dom === 'time' ? 'time.set_value' : 'input_datetime.set_datetime', { time: v }, id);
+      const [service, data, s] = M.send(local); local = null;
+      // shown at once; back to the real value when nothing was sent (not connected) or HA refuses it
+      if (call(service, data, id, () => dropOptimistic(id))) optimistic(id, s, null, (r) => (M.same ? M.same(r.state, s) : r.state === s), t0);
+      show();
     }, 900);
   });
   return el;
+}
+
+export default function time(cfg) {
+  const step = cfg.step || 15, service = cfg.entity.split('.')[0] === 'time' ? 'time.set_value' : 'input_datetime.set_datetime';
+  return nudge(cfg, { icon: 'clock-outline', less: 'Earlier', more: 'Later', get: (e) => toMin(e.state), text: label,
+    next: (m, d) => (((Math.round((m || 0) / step) * step + d * step) % 1440) + 1440) % 1440,
+    send: (m) => [service, { time: hhmmss(m) }, hhmmss(m)] });
 }

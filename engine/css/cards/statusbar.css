@@ -1,3 +1,4 @@
+@layer cards {
 /* Status line (cards/statusbar.js): plain text on the page, no boxes. Time and date left; people, alarm, weather and
    round buttons right, on one baseline. */
 .sbar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp-28); min-width: 0; }
@@ -16,6 +17,7 @@ button.sbi { background: none; }
 .sbic svg { width: var(--icon); height: var(--icon); }
 .sbalarm[data-s="armed"] { color: rgb(var(--sage)); }
 .sbalarm[data-s="alert"] { color: rgb(var(--ember)); }
+.sbalarm[data-s="none"] .sbic { color: rgb(var(--lamp)); }   /* the alarm is not reporting */
 .sbimg img { display: block; width: var(--ic-s); height: var(--ic-s); margin: calc(var(--sp-4) * -1) 0; }
 /* who's home: photo rings, sage while home, dimmed while away */
 .sbp { position: relative; width: var(--ic-xs); height: var(--ic-xs); border-radius: 50%; box-shadow: 0 0 0 var(--ring-w) rgb(var(--sage)); overflow: hidden; background: var(--veil); }
@@ -24,3 +26,17 @@ button.sbi { background: none; }
 .sbp[data-where="away"], .sbp[data-where="unknown"] { box-shadow: 0 0 0 var(--ring-w) var(--hairline); }
 .sbp[data-where="away"] img, .sbp[data-where="unknown"] img { filter: grayscale(1); opacity: .45; }
 .sbbtns { display: flex; gap: var(--sp-10); }
+/* what plays elsewhere in the house, and a note (a cook on the grill): only there while something does */
+.sbi[hidden] { display: none; }
+.sbplay .sbt, .sbnote .sbt { max-width: calc(170px * var(--s)); }
+.sbplay .sbt b, .sbplay .sbt small, .sbnote .sbt b, .sbnote .sbt small { overflow: hidden; text-overflow: ellipsis; }
+.sbplay[data-s="on"] .sbic { color: rgb(var(--plum)); }
+.sbnote .sbic { color: rgb(var(--t)); }
+/* with both of them there the line is longer than a TV is wide: the weather's second line gives way first (its words cut
+   short), then theirs */
+.sbright { max-width: 100%; }
+.sbwx { flex-shrink: 20; }
+.sbplay, .sbnote, .sbwx, .sbplay .sbt, .sbnote .sbt, .sbwx .sbt { min-width: 0; }
+.sbwx .sbt small { overflow: hidden; text-overflow: ellipsis; }
+.sbplay .sbic, .sbnote .sbic, .sbwx .sbimg { flex: none; }
+}

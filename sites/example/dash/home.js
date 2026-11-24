@@ -1,8 +1,10 @@
+// @ts-check
 // The example site: every entity id the dashboards use, in one place. Dashboards pick from here instead of repeating ids.
 // Everything is made up and played by the mock (sites/example/mock/states.mjs). Edit this file and dashboards/ for your own hardware.
 const person = (key, name) => ({ entity: `person.${key}`, name,
   devices: [{ battery: `sensor.${key}_phone_battery_level`, charging: `sensor.${key}_phone_battery_state`, icon: 'cellphone' }] });
 // optional: temperature 'F' or 'C' (what your sensors report), clock '12h' or '24h' (engine/core/units.js)
+/** @type {import('./core/shapes.js').Units} */
 export const units = { temperature: 'F', clock: '12h' };
 
 export const people = { alex: person('alex', 'Alex'), sam: person('sam', 'Sam') };
@@ -39,6 +41,7 @@ export const lights = {
 };
 
 // stream / fullStream: Frigate's go2rtc stream names. fit, ratio: cards/camera-wall.js
+/** @type {import('./core/shapes.js').Camera[]} */
 export const cameras = [
   { entity: 'camera.front_doorbell', name: 'Front Door', stream: 'front_doorbell_sub', fullStream: 'front_doorbell', ratio: '4/3' },
   { entity: 'camera.back_yard', name: 'Back Yard', stream: 'back_yard_sub', fullStream: 'back_yard', ratio: '16/9' },
@@ -53,23 +56,27 @@ export const vacuum = {
 
 export const timers = { count: 4, prefix: 'voice_timer', ringing: 'input_boolean.voice_timer_ringing', last: 'input_text.voice_timer_last_ended' };
 
+/** @type {import('./core/shapes.js').Player[]} */
 export const players = [
   { entity: 'media_player.living_room_tv', name: 'Living Room TV', power: 'media_player.living_room_tv_remote', remote: 'remote.living_room_tv' },
   { entity: 'media_player.kitchen_speaker', name: 'Kitchen Speaker' },
 ];
+/** @type {import('./core/shapes.js').PlayTarget[]} */
 export const playTargets = [{ entity: 'media_player.kitchen_speaker_ma', name: 'Kitchen', icon: 'speaker' }];
+/** @type {import('./core/shapes.js').TvApp[]} */
 export const tvApps = [{ name: 'YouTube', pkg: 'com.google.android.youtube.tv' }];
 
 export const weather = 'weather.forecast_home';
-// US National Weather Service. The cards and radar read home's location from HA after sign-in, so it stays out of this file (see README, Security). iem: { station, network, name } adds an airport's METAR as a source (core/current.js).
+// US National Weather Service. The cards and radar read home's location from HA after sign-in, so it stays out of this file (see README, Security). `now` is the sensor of ha-config/packages/weather_now.yaml (the Now card's reading: required for a reading that knows its age); iem.name is what the card calls the station.
 export const nws = { entity: 'weather.home_nws', alerts: 'sensor.nws_alerts', now: 'sensor.outdoor_temperature' };
 // CARTO's base maps need a browser key of your own: the radar's map stays blank without one.
 // Map tiles: put the key in a Text helper in HA, because this file has no login (core/mapkey.js)
 export const carto_key = { entity: 'input_text.map_key' };
+/** @type {import('./core/shapes.js').MapTiles} */
 export const map_tiles = { provider: 'carto', style: 'voyager', key: carto_key };   // person maps, cards/map.js lists the providers
 
 export const calendars = [
-  { entity: 'calendar.family', name: 'Family', tone: 'mist', color: '#4fc3f7' },
+  { entity: 'calendar.family', name: 'Family', tone: 'mist' },
 ];
 
 // Bambu Lab printer (ha-bambulab integration)
@@ -93,10 +100,11 @@ const rt = (x) => `sensor.router_${x}`;
 const vm = (v) => ({ ...v, power: { restart: `button.proxmox_${v.p}_restart`, shut_down: `button.proxmox_${v.p}_shut_down`, start: `button.proxmox_${v.p}_start` },
   status: `sensor.proxmox_${v.p}_status`, up: `sensor.proxmox_${v.p}_uptime`, cpu: `sensor.proxmox_${v.p}_cpu_usage`, mem: `sensor.proxmox_${v.p}_memory_usage_percentage`, ram: `sensor.proxmox_${v.p}_max_memory_usage` });
 // A real site finds containers in HA's registries: containers: cachedContainers() from core/discover.js. Listed by hand here, as the mock has no registries.
-const container = (cname, name, opts = {}) => { const c = (x) => `sensor.${cname}_container_${x}`; return { cname, name, p: cname, controls: true, ...opts,
+const container = (cname, name, opts = {}) => { const c = (x) => `sensor.${cname}_container_${x}`; return { cname, name, controls: true, ...opts,
   state: c('state'), health: c('health'), started: c('started'), cpu: c('cpu_usage'), mem: c('memory_usage_percentage'), mem_mb: c('memory_usage'), restarts: c('restart_count'), image: c('image'), version: c('image_version'),
   status: `binary_sensor.${cname}_container_status`, oom: `binary_sensor.${cname}_container_out_of_memory`, power: `switch.${cname}_container`, restart: `button.${cname}_container_restart`, update: `update.${cname}_container_image_update` }; };
 const ap = (key, name) => ({ name, state: `sensor.${key}_ap_state`, up: `sensor.${key}_ap_uptime`, cpu: `sensor.${key}_ap_cpu_utilization`, fw: `update.${key}_ap_firmware`, clients: `sensor.${key}_ap_clients` });
+/** @type {import('./core/shapes.js').Systems} */
 export const systems = {
   network: {
     router: { up: rt('uptime'), temp: rt('cpu_temperature'), mem: rt('memory_usage'), load: rt('load_avg_15m'), fw: 'update.router_firmware', clients: rt('connected_clients'),
@@ -134,7 +142,7 @@ export const systems = {
   docker: {
     cores: 4,   // Portainer reports container CPU per core
     impact: { frigate: 'Cameras and recordings stop while it is down.', mosquitto: 'Everything on MQTT drops while it is down.' },
-    status: 'binary_sensor.docker_host_status', running: 'sensor.docker_host_containers_running', stopped: 'sensor.docker_host_containers_stopped',
+    running: 'sensor.docker_host_containers_running', stopped: 'sensor.docker_host_containers_stopped',
     images: 'sensor.docker_host_image_count', image_size: 'sensor.docker_host_image_disk_usage_total_size', reclaim: 'sensor.docker_host_image_disk_usage_reclaimable',
     cpu: 'sensor.ubuntu_server_containers_cpu_usage', mem_used: 'sensor.ubuntu_server_containers_memory_used', mem_total: 'sensor.docker_host_total_memory',
     glances: 'sensor.glances_container_network',   // attributes.containers: { <name>: { in, out } }, Mbit/s

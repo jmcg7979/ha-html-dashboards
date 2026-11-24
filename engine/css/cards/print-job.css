@@ -1,0 +1,51 @@
+@layer cards {
+/* ---------- print job (cards/print-job.js). The printer panel itself is a host (systems.css). ---------- */
+/* print job */
+.pjob { display: flex; flex-direction: column; gap: var(--sp-12); height: 100%; min-height: 0; --t: var(--sage); }
+.pjob .hh .ic { width: var(--ic-l); height: var(--ic-l); background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); box-shadow: 0 0 22px rgba(var(--t), var(--a-20)); }
+.pjob .hname, .pjob .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* camera: a box in the printer camera's shape (the standard camera tile fills it) */
+.pj-pic { position: relative; flex: none; aspect-ratio: 1 / .643; border-radius: var(--tile-radius); overflow: hidden; background: rgb(var(--media-rgb)); }
+.pj-pic[hidden] { display: none; }
+.pj-pic > .camera { position: absolute; inset: 0; aspect-ratio: auto; border-radius: inherit; box-shadow: none; }
+.pj-pic > .camera.full { position: fixed; border-radius: 0; }
+/* Record: a red dot that glows while the job is marked */
+.pj-recdot { width: calc(10px * var(--s)); height: calc(10px * var(--s)); border-radius: 50%; background: rgb(var(--ember)); opacity: .75; flex: none; }
+.pj-rec.on .pj-recdot { opacity: 1; box-shadow: 0 0 8px rgb(var(--ember)); animation: pulse 1.6s ease-in-out infinite; }
+/* a TV redraws its whole screen for as long as anything animates: there the dot glows without pulsing */
+:root[data-profile="tv"] .pj-rec.on .pj-recdot { animation: none; }
+.pj-count { min-width: calc(20px * var(--s)); height: calc(20px * var(--s)); padding: 0 var(--sp-6); border-radius: var(--r-pill); background: rgb(var(--lamp)); color: rgb(var(--ink-rgb)); font-size: var(--fs-micro); font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-left: var(--sp-2); }
+.pj-count[hidden] { display: none; }
+/* model: the rest of the panel (all of it without a camera); a fixed shape where nothing grows (phones) */
+.pj-mbox { position: relative; aspect-ratio: 4 / 3; border-radius: var(--tile-radius); overflow: hidden; background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); }
+.pjob.hascam .pj-mbox { aspect-ratio: 16 / 9; }
+.cell.grow .pj-mbox { aspect-ratio: auto; flex: 1; min-height: calc(110px * var(--s)); }
+.pj-mbox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: var(--sp-14); filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .55)); }
+.pj-mbox [hidden] { display: none; }
+.pj-none { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); color: var(--text-3); font-size: var(--fs-sub); }
+.pj-none svg { width: var(--icon-empty); height: var(--icon-empty); opacity: .6; }
+.pj-tag { position: absolute; top: var(--sp-8); left: var(--sp-10); display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-small); font-weight: 600; color: var(--text-3); }
+.pj-tag svg { width: var(--icon-xs); height: var(--icon-xs); }
+
+/* progress: big figure, bar, layer count */
+.pj-prog { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-12); }
+.pj-pct { font: 600 var(--fs-big)/1 var(--font-display); min-width: calc(64px * var(--s)); }
+.pj-pct small { font-size: .5em; font-weight: 500; color: var(--text-2); margin-left: 1px; }
+.pj-layer { font-size: var(--fs-sub); color: var(--text-2); white-space: nowrap; }
+
+/* three figures */
+.pj-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); }
+.pj-st { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-10) var(--sp-12); border-radius: var(--tile-radius); background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); min-width: 0; }
+.pj-k { display: flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-small); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pj-k svg { width: var(--icon-xs); height: var(--icon-xs); flex: none; }
+.pj-v { display: flex; align-items: center; gap: 3px; font: 600 var(--fs-title)/1.15 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pj-dot { width: calc(10px * var(--s)); height: calc(10px * var(--s)); border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); flex: none; margin-right: 2px; }
+.pjob.active .pj-left, .pjob.active .pj-end { color: rgb(var(--t)); }
+.pj-ctl .sb[hidden] { display: none; }
+@container cell (max-width: 300px) { .pj-stats { grid-template-columns: 1fr 1fr; } .pj-st:last-child { grid-column: 1 / -1; } .pj-layer { display: none; } }
+/* in a narrow column (TV, small windows): the status badge keeps only its icon, so the name has room */
+@container cell (max-width: 300px) {
+  .pjob .hbadge { padding: 0; width: calc(30px * var(--s)); justify-content: center; }
+  .pjob .hbadge span { display: none; }
+}
+}

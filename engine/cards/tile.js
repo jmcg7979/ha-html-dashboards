@@ -4,17 +4,18 @@
 //         default: light/number = slider, fan/switch/input_boolean = toggle, else state.
 //         slider works for lights (brightness), number/input_number (value) and media players (volume).
 //         button = name only, runs `tap`
-//   tone: 'lamp' | (entity) => tone         colour when active; a function may return [r, g, b] (the light's own colour)
+//   tone: 'lamp' | (entity) => tone         color when active; a function may return [r, g, b] (the light's own color)
 //   active: (entity) => bool                 default: state on/open/playing/cleaning...
 //   showState: true, state: (entity) => text
 //   ring: battery sensor id or [ids]         battery ring around the icon (lowest wins); or (entity) => 0..100
 //   tap / iconTap: action                    see core/actions.js
-//   subs: [{ icon, label, action, on: ['cleaning'] | { attr, eq }, tone, show: { entity, state } }]
+//   subs: [{ icon, label, name, action, on: ['cleaning'] | { attr, eq }, tone, show: { entity, state } }]
+//         label: words on the button; name: what a button with only an icon is called (core/tips.js says it beside it)
 //   pills: [{ entity, icon, text: (entity) => string | null (null hides it), tone }]   read-only info pills on the right
 //   read-only (state mode, no tap / iconTap / subs) gets .ro: a well inside pop-ups (base.css), not a button
 //   icon may be a function of the entity (e.g. lock / lock-open). Active non-slider tiles tint the whole tile (.tile.on). }
 import { h, esc, icon, setTone, setText, setHTML, toggle, setRing, cap } from '../core/dom.js';
-import { st, num, watch, optimistic, tapStart } from '../core/store.js';
+import { st, num, watch, optimistic, dropOptimistic, tapStart } from '../core/store.js';
 import { run } from '../core/actions.js';
 import { call } from '../core/ha.js';
 import { settings } from '../core/settings.js';
@@ -35,7 +36,7 @@ export default function tile(cfg) {
     <button class="ic">${icon(icoFn ? 'help-circle-outline' : cfg.icon || 'help-circle-outline')}</button>
     <div class="tx"><div class="name">${esc(cfg.name || '')}</div>${cfg.showState === false ? '' : '<div class="sub"></div>'}</div>
     ${pills.length ? `<div class="pills">${pills.map((p) => `<span class="pill" hidden>${p.icon ? icon(p.icon) : ''}<span></span></span>`).join('')}</div>` : ''}
-    ${subs.length ? `<div class="subs">${subs.map((s, i) => `<button class="sb" data-i="${i}">${s.icon ? icon(s.icon) : ''}${s.label ? esc(s.label) : ''}</button>`).join('')}</div>` : ''}
+    ${subs.length ? `<div class="subs">${subs.map((s, i) => `<button class="sb" data-i="${i}"${s.name ? ` aria-label="${esc(s.name)}"` : ''}>${s.icon ? icon(s.icon) : ''}${s.label ? esc(s.label) : ''}</button>`).join('')}</div>` : ''}
   </div>`);
   const icEl = el.querySelector('.ic'), fill = el.querySelector('.fill'), sub = el.querySelector('.sub'), sbs = [...el.querySelectorAll('.sb')], pls = [...el.querySelectorAll('.pill')];
 
@@ -47,7 +48,7 @@ export default function tile(cfg) {
     if (icoFn) setHTML(icEl, icon(icoFn(e)));
     pls.forEach((b, i) => { const p = pills[i], t = pillText(p, st(p.entity)); b.hidden = t == null; if (t != null) { setText(b.lastChild, t); toggle(b, 'on', !!p.tone); if (p.tone) setTone(b, p.tone); } });
     if (model && !el.classList.contains('drag')) fill.style.width = (e ? model.pct(e) : 0) + '%';
-    if (sub && !el.classList.contains('adjusting')) setText(sub, cfg.state ? cfg.state(e) : model && e && e.state !== 'unavailable' ? model.text(e) : stateText(e, dom));
+    if (sub && !el.classList.contains('drag')) setText(sub, cfg.state ? cfg.state(e) : model && e && e.state !== 'unavailable' ? model.text(e) : stateText(e, dom));
     if (typeof cfg.ring === 'function') setRing(icEl, cfg.ring(e));
     else if (cfg.ring) { const v = [].concat(cfg.ring).map(num).filter((x) => x != null); setRing(icEl, v.length ? Math.min(...v) : null); }
     sbs.forEach((b, i) => {
@@ -73,7 +74,7 @@ export default function tile(cfg) {
     const a = cfg.iconTap || (mode === 'slider' || mode === 'toggle' ? 'toggle' : cfg.tap);
     if (a) { ev.preventDefault(); run(a, { el: icEl, ev, entity: id }); }
   });
-  if (model) slider(el, fill, sub, id, model, (e) => (cfg.state ? cfg.state(e) : model.text(e)));
+  if (model) slider(el, fill, sub, id, model, (e) => (cfg.state ? cfg.state(e) : e.state !== 'unavailable' ? model.text(e) : stateText(e, dom)));
   return el;
 }
 
@@ -90,33 +91,45 @@ function stateText(e, dom) {
   return u ? (isNaN(parseFloat(e.state)) ? cap(e.state) : e.state + (u === '%' ? '%' : ' ' + u)) : cap(e.state);
 }
 
-// How a slider reads and sets each kind of entity (pct = 0..100 fill)
-const MODELS = {
+// Send a slider's value and show it at once. When nothing was sent (not connected) or HA refuses it, the tile goes back
+// to the real value instead of showing the new one until it times out.
+function put(id, service, data, state, attrs, ok, t0) {
+  if (call(service, data, id, () => dropOptimistic(id))) optimistic(id, state, attrs, ok, t0);
+}
+// the value a number slider sets at p (0..100): on the entity's own steps counted from its minimum, never past its maximum
+export function numberAt(r, p) {
+  const steps = Math.round(((p / 100) * (r.max - r.min)) / r.step), top = Math.floor((r.max - r.min) / r.step + 1e-9);
+  return +(r.min + Math.max(0, Math.min(top, steps)) * r.step).toFixed(4);
+}
+const withUnit = (v, u) => v + (u ? (u === '%' ? '%' : ' ' + u) : '');
+// How a slider reads and sets each kind of entity (pct = 0..100 fill; at = the text while the slider is held at p)
+export const MODELS = {
   light: {
     pct: (e) => (e.state === 'on' ? (e.attributes.brightness != null ? e.attributes.brightness / 2.55 : 100) : 0),
     text: (e) => (e.state === 'on' ? (e.attributes.brightness != null ? Math.round(e.attributes.brightness / 2.55) + '%' : 'On') : 'Off'),
+    at: (e, p) => Math.round(p) + '%',
     set(id, p, t0) {
-      if (p < 2) { optimistic(id, 'off', null, (r) => r.state === 'off', t0); call('light.turn_off', settings.instantLightOff ? { transition: 0 } : {}, id); return; }
+      if (p < 2) { put(id, 'light.turn_off', settings.instantLightOff ? { transition: 0 } : {}, 'off', null, (r) => r.state === 'off', t0); return; }
       const bri = Math.round(p * 2.55);
-      optimistic(id, 'on', { brightness: bri }, (r) => r.state === 'on' && Math.abs((r.attributes.brightness || 0) - bri) <= 4, t0);
-      call('light.turn_on', { brightness_pct: p }, id);
+      put(id, 'light.turn_on', { brightness_pct: p }, 'on', { brightness: bri }, (r) => r.state === 'on' && Math.abs((r.attributes.brightness || 0) - bri) <= 4, t0);
     },
   },
   number: {
     range: (e) => { const a = e.attributes, min = +a.min || 0, max = a.max != null ? +a.max : 100; return { min, max, step: +a.step || 1 }; },
     pct(e) { const r = this.range(e), v = parseFloat(e.state); return isNaN(v) ? 0 : ((v - r.min) / (r.max - r.min || 1)) * 100; },
     text: (e) => stateText(e, 'number'),
+    at(e, p) { return withUnit(numberAt(this.range(e), p), e.attributes.unit_of_measurement); },
     set(id, p, t0) {
       const e = st(id); if (!e) return;
-      const r = this.range(e), v = Math.round((r.min + (p / 100) * (r.max - r.min)) / r.step) * r.step, val = +v.toFixed(4);
-      optimistic(id, String(val), null, (x) => Math.abs(parseFloat(x.state) - val) < r.step / 2, t0);
-      call(id.split('.')[0] + '.set_value', { value: val }, id);
+      const r = this.range(e), val = numberAt(r, p);
+      put(id, id.split('.')[0] + '.set_value', { value: val }, String(val), null, (x) => Math.abs(parseFloat(x.state) - val) < r.step / 2, t0);
     },
   },
   media_player: {
     pct: (e) => (e.attributes.volume_level || 0) * 100,
     text: (e) => (e.attributes.is_volume_muted ? 'Muted' : Math.round((e.attributes.volume_level || 0) * 100) + '%'),
-    set(id, p, t0) { const v = p / 100; optimistic(id, null, { volume_level: v }, (r) => Math.abs((r.attributes.volume_level || 0) - v) < 0.02, t0); call('media_player.volume_set', { volume_level: v }, id); },
+    at: (e, p) => Math.round(p) + '%',
+    set(id, p, t0) { const v = p / 100; put(id, 'media_player.volume_set', { volume_level: v }, null, { volume_level: v }, (r) => Math.abs((r.attributes.volume_level || 0) - v) < 0.02, t0); },
   },
 };
 MODELS.input_number = MODELS.number;
@@ -136,13 +149,15 @@ function slider(el, fill, sub, id, model, text) {
       if (dx < 8) return;
       d.moved = true; el.classList.add('drag'); try { el.setPointerCapture(ev.pointerId); } catch (x) { /* ignore */ }
     }
-    d.pct = pct(ev, d.r); fill.style.width = d.pct + '%'; if (sub) sub.textContent = Math.round(d.pct) + '%';
+    d.pct = pct(ev, d.r); fill.style.width = d.pct + '%'; const e = st(id); if (sub && e) sub.textContent = model.at(e, d.pct);
   });
+  // the fill and the text as the entity has them (with the value just sent, while HA has not answered)
+  const real = () => { const e = st(id); if (!e) return; fill.style.width = model.pct(e) + '%'; if (sub) sub.textContent = text(e); };
   const end = (ev, cancel) => {
     if (!d || ev.pointerId !== d.pid) return;
     const x = d; d = null; el.classList.remove('drag');
-    if (cancel) return;
-    model.set(id, Math.round(x.moved ? x.pct : pct(ev, x.r)), tapStart(ev));
+    if (!cancel) model.set(id, Math.round(x.moved ? x.pct : pct(ev, x.r)), tapStart(ev));
+    if (x.moved) real();   // a drag that was canceled, or whose value could not be sent, must not leave its own figure on the tile
   };
   el.addEventListener('pointerup', (ev) => end(ev, false));
   el.addEventListener('pointercancel', (ev) => end(ev, true));
@@ -157,7 +172,7 @@ function slider(el, fill, sub, id, model, text) {
     a = { pct: Math.round(model.pct(e) / 10) * 10, t: 0 };
     el.classList.add('drag', 'adjusting'); show();
   });
-  const show = () => { fill.style.width = a.pct + '%'; if (sub) sub.textContent = `‹  ${a.pct}%  ›`; };
+  const show = () => { fill.style.width = a.pct + '%'; const e = st(id); if (sub && e) sub.textContent = `‹  ${model.at(e, a.pct)}  ›`; };
   el.addEventListener('dash:adjust', (ev) => {
     if (!a) return;
     a.pct = Math.max(0, Math.min(100, a.pct + ev.detail * 10)); show();
@@ -167,7 +182,7 @@ function slider(el, fill, sub, id, model, text) {
     if (!a) return;
     if (a.t) send();
     a = null; el.classList.remove('drag', 'adjusting');
-    const e = st(id); if (sub && e) sub.textContent = text(e);
+    real();
   };
   el.addEventListener('dash:adjust-end', done);
   el.addEventListener('focusout', done);

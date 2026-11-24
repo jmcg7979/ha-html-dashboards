@@ -15,8 +15,8 @@ export function h(html) { const t = document.createElement('template'); t.innerH
 export const q = (el, sel) => el.querySelector(sel);
 
 // tone names map to the r,g,b tokens in tokens.css
-const TONES = ['lamp', 'mist', 'sage', 'ember', 'plum', 'stone'];   // tokens.css meaning colours
-// tone: a palette name ('lamp', 'sage'...) or a light's own colour as [r, g, b] (e.g. a lamp tinted with what it shows)
+const TONES = ['lamp', 'mist', 'sage', 'ember', 'plum', 'stone'];   // tokens.css meaning colors
+// tone: a palette name ('lamp', 'sage'...) or a light's own color as [r, g, b] (e.g. a lamp tinted with what it shows)
 export function setTone(el, tone) {
   if (Array.isArray(tone) && tone.length === 3) { el.style.setProperty('--t', tone.map((x) => Math.round(+x || 0)).join(', ')); return; }
   if (tone != null && !TONES.includes(tone)) console.warn('setTone: unknown tone', tone);
@@ -25,9 +25,16 @@ export function setTone(el, tone) {
 
 export function setText(el, text) { if (el.textContent !== text) el.textContent = text; }
 export function setHTML(el, html) { if (el.__h !== html) { el.__h = html; el.innerHTML = html; } }
+// setHTML for a list the focus may be in: afterwards the focus is on the item that carries the same `attr` value as the
+// one it was on (a list drawn again while the remote's highlight is in it)
+export function setHTMLKeeping(el, html, attr) {
+  const a = document.activeElement, v = a && el.contains(a) ? a.getAttribute(attr) : null;
+  setHTML(el, html);
+  if (v != null) { const b = [...el.querySelectorAll(`[${attr}]`)].find((x) => x.getAttribute(attr) === v); if (b) b.focus({ preventScroll: true }); }
+}
 export function toggle(el, cls, on) { el.classList.toggle(cls, !!on); }
 
-// battery level -> ring colour + fill on an .ic element
+// battery level -> ring color + fill on an .ic element
 export function battTone(v) { return v == null ? null : v < 25 ? 'ember' : v < 40 ? 'lamp' : 'sage'; }
 export function setRing(el, v) {
   if (v == null) { el.classList.remove('ring'); return; }

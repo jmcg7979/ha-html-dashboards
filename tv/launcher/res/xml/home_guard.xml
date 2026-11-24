@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- HomeGuard: only window changes, only from the stock launcher and the cast screen (mediashell); no content is read. -->
+<!-- HomeGuard: only window changes, only from the stock launcher and the cast screen (mediashell); no content is read.
+     canRequestFilterKeyEvents: the remote's keys, asked for only while a camera alert sits in its corner over an app
+     (HomeGuard.hearKeys), to take Back for dismissing it. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:packageNames="com.google.android.apps.tv.launcherx,com.google.android.tvlauncher,com.google.android.apps.mediashell"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="0"
     android:canRetrieveWindowContent="false"
+    android:canRequestFilterKeyEvents="true"
     android:description="@string/guard_desc" />

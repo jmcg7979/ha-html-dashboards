@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- weather (Home) ---------- */
 /* A Main page has to fit the screen; a phone page scrolls, so the same card takes more room there (same materials, different density). */
 .weather { --wx-icon: calc(76px * var(--s)); --wx-temp: var(--fs-hero-l); --wx-chart: calc(106px * var(--s)); --wx-day-icon: calc(28px * var(--s)); display: flex; flex-direction: column; gap: var(--sp-8); }
@@ -28,3 +29,4 @@
 /* drawings shared with the Weather page's chart (cards/wx-hours.js) */
 .wline { fill: none; stroke: rgb(var(--lamp)); stroke-width: 2; stroke-linecap: round; }
 .wdot { fill: var(--ink); stroke: rgb(var(--lamp)); stroke-width: 1.6; }
+}

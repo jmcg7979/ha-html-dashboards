@@ -1,5 +1,6 @@
 // 3D printer job: what's on the plate, how far along, when it's done. One layout for every state, so nothing moves when
 // a print starts or ends: idle it shows the last model with "Ready", printing it fills in progress, layers, time and filament.
+// "Ready" needs the printer to say so: a status that is unavailable, unknown or not in HA reads "Not reporting".
 // Pictures: the printer's camera at its own shape (never cropped; the normal camera tile, so tap = full screen), and under
 // it the model's plate preview filling the rest of the panel; with no camera the model takes the whole space.
 // Saving prints: Record (while a job runs) marks it to be exported from Frigate when it ends. Prints opens the #prints pop-up
@@ -13,6 +14,7 @@ import { run } from '../core/actions.js';
 import { origin } from '../core/auth.js';
 import camera from './camera.js';
 import { load, invalidate } from '../core/prints.js';
+import { lengthWord, since } from '../core/time.js';
 
 // print_status -> label, tone, icon
 export const panel = true;   // on a page: its own glass panel (core/layout.js)
@@ -20,20 +22,22 @@ export const panel = true;   // on a page: its own glass panel (core/layout.js)
 const STATUS = {
   running: ['Printing', 'lamp', 'printer-3d-nozzle'], prepare: ['Preparing', 'lamp', 'printer-3d-nozzle-heat'], slicing: ['Slicing', 'lamp', 'printer-3d-nozzle-heat'],
   init: ['Starting', 'lamp', 'printer-3d-nozzle-heat'], pause: ['Paused', 'plum', 'pause-circle'], finish: ['Finished', 'sage', 'check-circle'],
-  failed: ['Failed', 'ember', 'alert-octagon'], idle: ['Ready', 'sage', 'check-circle'], unknown: ['No status', 'stone', 'help-circle-outline'], offline: ['Offline', 'stone', 'cloud-off-outline'],
+  failed: ['Failed', 'ember', 'alert-octagon'], idle: ['Ready', 'sage', 'check-circle'], unknown: ['Not reporting', 'stone', 'help-circle-outline'], offline: ['Offline', 'stone', 'cloud-off-outline'],
 };
 const ACTIVE = ['running', 'prepare', 'slicing', 'init', 'pause'];
 // stage names that read badly through cap()
 const STAGE = { m400_pause: 'Paused (G-code)', paused_user: 'Paused', paused_user_gcode: 'Paused (G-code)', check_plaform: 'Checking platform',
-  heatbed_preheating: 'Preheating bed', heated_bedcooling: 'Cooling bed', auto_bed_leveling: 'Auto bed levelling', bed_level_phase_1: 'Bed levelling',
-  bed_level_phase_2: 'Bed levelling', bed_level_high_temperature: 'Bed levelling (hot)', active_arc_fitting: 'Arc fitting', idle: '' };
+  heatbed_preheating: 'Preheating bed', heated_bedcooling: 'Cooling bed', auto_bed_leveling: 'Auto bed leveling', bed_level_phase_1: 'Bed leveling',
+  bed_level_phase_2: 'Bed leveling', bed_level_high_temperature: 'Bed leveling (hot)', active_arc_fitting: 'Arc fitting', idle: '' };
 const stageText = (s) => (s == null || s === 'unknown' || s === 'offline' ? '' : STAGE[s] != null ? STAGE[s] : cap(s).replace(/\bams\b/i, 'AMS'));
 const val = (id) => { const e = st(id); return !e || ['unknown', 'unavailable', ''].includes(e.state) ? null : e.state; };
 const n = (id) => { const v = parseFloat(val(id)); return isNaN(v) ? null : v; };
-export const dur = (hours) => { if (hours == null || hours <= 0) return '–'; const m = Math.round(hours * 60); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) + ' min' : ''}`; };
-const ago = (t) => { const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
-// "#161616FF" -> "#161616"; fully transparent = no colour
+export const dur = (hours) => (hours == null || !(hours > 0) ? '–' : lengthWord(hours * 60));
+// "#161616FF" -> "#161616"; fully transparent = no color
 export const hex = (c) => (typeof c === 'string' && /^#[0-9a-f]{6}/i.test(c) && !/00$/i.test(c.slice(7, 9)) ? c.slice(0, 7) : null);
+
+// the printer's status; with none to show: 'offline' when the printer says it is off, else 'unknown' (not reporting)
+export const statusOf = (P) => val(P.status) || (st(P.online) && st(P.online).state === 'off' ? 'offline' : 'unknown');
 
 export default function printJob(cfg) {
   const P = cfg.printer, C = P.controls || {};
@@ -60,7 +64,7 @@ export default function printJob(cfg) {
   const model = $('.pj-model'), none = $('.pj-none'), picBox = $('.pj-pic');
   const pct = $('.pj-pct'), bar = $('.pj-bar i'), layer = $('.pj-layer'), left = $('.pj-left'), end = $('.pj-end'), fil = $('.pj-fil');
   const bLight = $('.pj-light'), bPause = $('.pj-pause'), bResume = $('.pj-resume'), bStop = $('.pj-stop');
-  const status = () => val(P.status) || (st(P.online) && st(P.online).state === 'off' ? 'offline' : st(P.status) ? 'unknown' : 'idle');
+  const status = () => statusOf(P);
 
   // ---- header, progress, numbers ----
   const draw = () => {
@@ -69,21 +73,21 @@ export default function printJob(cfg) {
     setHTML(el.querySelector('.hh .ic'), icon(ic));
     setHTML(badge, `${icon(STATUS[s] ? STATUS[s][2] : 'information-outline')}<span>${esc(label)}</span>`);
     const task = val(P.task);
-    setText(title, task || (s === 'offline' ? 'Printer offline' : active ? 'Printing' : 'Nothing printing'));
+    setText(title, task || (s === 'offline' ? 'Printer offline' : s === 'unknown' ? 'Printer not reporting' : active ? 'Printing' : 'Nothing printing'));
     const cov = st(P.cover), door = st(P.door);
     const sub = active ? stageText(val(P.stage)) || label
       : s === 'finish' || s === 'failed' ? `${label}${val(P.end) ? ' ' + hm(val(P.end), true) : ''}`
-      : [cov && cov.state && !isNaN(new Date(cov.state)) ? 'Last model ' + ago(cov.state) : '', door && door.state === 'on' ? 'Door open' : ''].filter(Boolean).join(' · ') || 'Ready';
+      : [cov && cov.state && !isNaN(new Date(cov.state)) ? 'Last model ' + since(cov.state) : '', door && door.state === 'on' ? 'Door open' : ''].filter(Boolean).join(' · ') || (s === 'idle' ? 'Ready' : '');
     setText(stage, sub);
 
     const p = active || s === 'finish' ? Math.max(0, Math.min(100, n(P.progress) || 0)) : 0;
     setHTML(pct, active || s === 'finish' ? `${Math.round(p)}<small>%</small>` : '–');
     bar.style.width = p + '%';
     const L = n(P.layer), T = n(P.layers);
-    setText(layer, T ? `Layer ${L || 0} of ${T}` : active ? 'Layer –' : 'No job');
+    setText(layer, T ? `Layer ${L || 0} of ${T}` : active ? 'Layer –' : s === 'unknown' || s === 'offline' ? '–' : 'No job');
     setText(left, active ? dur(n(P.remaining)) : '–');
     const e = val(P.end); setText(end, active && e && !isNaN(new Date(e)) ? hm(e, true) : '–');
-    // filament this job uses, with a dot per tray in the tray's colour
+    // filament this job uses, with a dot per tray in the tray's color
     const w = n(P.weight), lm = n(P.length), wa = (st(P.weight) || {}).attributes || {};
     const dots = Object.keys(wa).map((k) => { const m = /AMS\s*(\d+)\s*Tray\s*(\d+)/i.exec(k); if (!m) return /external/i.test(k) ? P.external && P.external.entity : null; return P.ams && +m[1] === 1 ? P.ams.trays[+m[2] - 1] : null; })
       .filter(Boolean).map((id) => hex((st(id) || {}).attributes && st(id).attributes.color)).filter(Boolean);

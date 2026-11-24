@@ -4,7 +4,7 @@
 import * as H from '../home.js';
 import { num } from '../core/store.js';
 import { degUnit } from '../core/units.js';
-import { n0, whole, pct, of, rate, s, okState, upFor, pxTime, bytes, mbit, fmt1, mbps, fwText, meterOf, host, fact } from '../pages/common.js';
+import { whole, pct, of, rate, s, okState, upFor, pxTime, bytes, mbit, fmt1, mbps, fwText, meterOf, host, fact } from '../pages/common.js';
 import { proxmoxNodes, proxmoxPage } from '../pages/proxmox.js';
 import { dockerNodes, dockerMap, dockerPage } from '../pages/docker.js';
 

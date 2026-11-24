@@ -1,132 +1,212 @@
 // One-command regression check for the dashboard engine (engine/docs/design-system.md, "Checks"). Run through regress.sh.
-// One browser session: every Main view and page at 1280x800 (screenshot + "must fit the screen" check), every Mobile tab at
-// 412x915 (house), every pop-up and tab at phone size (full height), console errors per screen; then, with --baseline,
-// a pixel diff against an earlier run. Prints a short summary; screenshots land in --out.
-//   --base URL --out DIR [--baseline DIR] [--threshold 3] [--skip-popups]
-import { createRequire } from 'node:module'; import fs from 'node:fs'; import path from 'node:path'; import { parseArgs } from 'node:util'; import { fileURLToPath } from 'node:url';
-const require = createRequire(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../mock') + '/');
-const { chromium } = require('playwright');
-const { values: o } = parseArgs({ options: { base: { type: 'string' }, out: { type: 'string' }, baseline: { type: 'string' }, threshold: { type: 'string', default: '3' }, entities: { type: 'string' }, 'skip-popups': { type: 'boolean', default: false } } });
-if (!o.base || !o.out) { console.error('usage: regress.mjs --base URL --out DIR [--baseline DIR] [--threshold 3] [--skip-popups] [--entities FILE]'); process.exit(2); }
-fs.mkdirSync(o.out, { recursive: true });
-const base = o.base.replace(/\/$/, ''), token = process.env.HA_TOKEN || 'A', root = new URL(base).pathname;
-const b = await chromium.launch();
-const errors = {}, unfit = [], shots = [];
-async function page(w, h, mobile) {
-  const p = await b.newPage({ viewport: { width: w, height: h }, userAgent: mobile ? 'Mozilla/5.0 (Linux; Android 14) Mobile' : undefined });
-  let cur = '';
-  p.on('pageerror', (e) => (errors[cur] ||= []).push('pageerror: ' + e.message));
-  p.on('requestfailed', (r) => { if (!/\/api\/frigate\/.*\/vod\//.test(r.url()) && r.failure()?.errorText !== 'net::ERR_ABORTED') (errors[cur] ||= []).push('failed ' + r.failure()?.errorText + ' ' + r.url().replace(/(token|authSig)=[^&]+/g, '$1=x').slice(0, 160)); });
-  p.on('console', (m) => { if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) (errors[cur] ||= []).push(m.text().replace(/(token=)[^&\s"]+/g, '$1x').slice(0, 200)); });
-  p.on('response', (r) => { if (r.status() >= 400 && !/\/api\/frigate\/.*\/vod\/|\/auth\/token$|\/popups\.js|\/dashboards\/mobile\.js/.test(r.url())) (errors[cur] ||= []).push(r.status() + ' ' + r.url().replace(/(token|authSig)=[^&]+/g, '$1=x').slice(0, 160)); });
-  p.mark = (k) => { cur = k; };
-  await p.goto(`${base}/index.html?d=main`);
-  await p.evaluate((t) => localStorage.setItem('hassTokens', JSON.stringify({ hassUrl: location.origin, refresh_token: 'unused', access_token: t, expires: Date.now() + 864e5, clientId: location.origin + '/' })), token);
-  return p;
-}
-// nonsense on screen, which throws no error: NaN, undefined, a temperature no sensor could read. Looks at values, not layout.
-const sanity = async (p, label) => { const hits = await p.evaluate(() => { const out = new Set(), w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    for (let n = w.nextNode(); n; n = w.nextNode()) { if (/^(SCRIPT|STYLE)$/.test(n.parentElement.tagName)) continue; const s = n.nodeValue.trim(); if (!s) continue;
-      if (/\bNaN\b|\bundefined\b|\[object |Invalid Date|\bInfinity\b|\b(null|unavailable|unknown)[°%]/.test(s) || [...s.matchAll(/(-?\d+(?:\.\d+)?)°/g)].some((m) => Math.abs(+m[1]) > 250)) out.add(s.slice(0, 60)); }
-    return [...out].slice(0, 5); }).catch(() => []);
-  if (hits.length) nonsense.push(`${label}: ${hits.join(' | ')}`); };
-const nonsense = [];
-const viewIds = (d) => (d.views || []).filter((v) => !v.frame).flatMap((v) => (v.pages ? v.pages.map((pg) => v.id + '/' + pg.id) : [v.id]));
-const load = async (p, d, v) => { p.mark(`${d}:${v}`); await p.goto(`${base}/index.html?d=${d}&v=${encodeURIComponent(v)}`); await p.waitForTimeout(2500); };
+// One browser session over the whole site: every dashboard in dashboards/ that is a screen (lib/browser.mjs, dashboards()),
+// each at the size and profile it runs at (TV 960x540, phone 412x915, else the panel's 1280x800; a TV dashboard once per
+// `tv=<id>` the site lists). Per dashboard: every view and page (screenshot, "must fit the screen" and the layout rules
+// of lib/fit.mjs), every pop-up it has and each of their tabs (full height), console errors and warnings per screen,
+// nonsense on screen, icon buttons with no name, ids and links in its config; then, with --baseline, a pixel diff against
+// an earlier run.
+// Prints a short summary; screenshots land in --out as <dashboard>-<view>.png and <dashboard>-pop-<id>[-<tab>].png.
+// --styles also saves what every element of each screen is styled as (lib/styles.mjs) and, with --baseline, lists every
+// element and property that changed: for a stylesheet change that is meant to change nothing. Both runs need --styles.
+// --size WxH opens every dashboard at that size instead of its own (a small phone, a window between phone and panel):
+// for the narrow versions of cards, which the usual sizes mostly don't reach.
+//   --base URL --out DIR [--baseline DIR] [--threshold 3] [--skip-popups] [--only main,tv] [--entities FILE] [--styles] [--size WxH]
+import fs from 'node:fs';
+import path from 'node:path';
+import { args, launch, newPage, watchErrors, open, settle, dashUrl, LIVE, screenOf, manifest, dashboardFiles, dashboards, viewIds, popupIds,
+  openPopup, openTrend, closePopup, popupOnScreen, FULL_HEIGHT_CSS, siteScreens, tvIds, stats } from './lib/browser.mjs';
+import { measure, problems } from './lib/fit.mjs';
+import { differ } from './lib/pixeldiff.mjs';
+import * as styles from './lib/styles.mjs';
 
-// Main at panel size
-const pm = await page(1280, 800, false);
-const main = await pm.evaluate(async (r) => (await import(r + '/dashboards/main.js')).default, root).then((d) => viewIds(d)).catch(() => []);
-const mainViews = main.length ? main : await (async () => { await load(pm, 'main', ''); return pm.evaluate(() => [...document.querySelectorAll('#rail a[data-v]')].map((a) => a.dataset.v)); })();
-for (const v of mainViews) {
-  await load(pm, 'main', v);
-  const [sh, ih] = await pm.evaluate(() => [document.documentElement.scrollHeight, innerHeight]);
-  if (sh > ih) unfit.push(`${v} (${sh - ih} px)`);
-  await sanity(pm, 'main:' + v);
-  const f = `main-${v.replace(/\//g, '-')}.png`; await pm.screenshot({ path: path.join(o.out, f) }); shots.push(f);
-}
-// Site audit: ids in home.js and the dashboards that HA doesn't have, and links to a pop-up, view or page that doesn't exist. A card with a wrong id just
-// renders empty. Reads config objects, so anything inside a function (a `value`, a tap that returns an action) is not seen. On the mock, "HA" is the site's own mock data:
-// --entities FILE (one id at the start of each line) compares against a real entity list instead.
-await load(pm, 'main', mainViews[0] || '');
-const audit = await pm.evaluate(async (r) => {
-  const get = (f) => import(r + f).catch(() => ({}));
-  const [home, main, mobile, popups, ha] = await Promise.all(['/home.js', '/dashboards/main.js', '/dashboards/mobile.js', '/popups.js', '/core/ha.js'].map(get));
+const o = args({ base: { type: 'string' }, out: { type: 'string' }, baseline: { type: 'string' }, threshold: { type: 'string', default: '3' }, entities: { type: 'string' },
+  only: { type: 'string' }, 'skip-popups': { type: 'boolean', default: false }, styles: { type: 'boolean', default: false }, size: { type: 'string' } },
+'regress.mjs --base URL --out DIR [--baseline DIR] [--threshold 3] [--skip-popups] [--only dashboard,...] [--entities FILE] [--styles] [--size WxH]', { required: ['base', 'out'] });
+fs.mkdirSync(o.out, { recursive: true });
+const base = o.base.replace(/\/$/, ''), root = new URL(base).pathname;
+const man = await manifest(base), site = await siteScreens();
+const b = await launch();
+const STILL = { animations: 'disabled' };   // screenshots with spinners and other endless animations at their first frame, so two runs give the same picture
+const errList = [], unfit = [], layout = [], nonsense = [], nameless = new Map(), shots = [], notes = [], rows = [];
+// after a screenshot: the styles of the screen it shows, next to it
+const keepStyles = async (p, f) => { if (o.styles) styles.save(path.join(o.out, styles.fileOf(f)), await styles.take(p)); };
+
+// nonsense on screen, which throws no error: NaN, undefined, a temperature no sensor could read. Looks at values, not layout.
+const sanity = async (p, label) => {
+  const hits = await p.evaluate(() => {
+    const out = new Set(), w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (/^(SCRIPT|STYLE)$/.test(n.parentElement.tagName)) continue;
+      const s = n.nodeValue.trim(); if (!s) continue;
+      if (/\bNaN\b|\bundefined\b|\[object |Invalid Date|\bInfinity\b|\b(null|unavailable|unknown)[°%]/.test(s) || [...s.matchAll(/(-?\d+(?:\.\d+)?)°(C?)/g)].some((m) => Math.abs(+m[1]) > (m[2] ? 350 : 250))) out.add(s.slice(0, 60));   // named °C: a printer's nozzle reaches 300
+    }
+    return [...out].slice(0, 5);
+  }).catch(() => []);
+  if (hits.length) nonsense.push(`${label}: ${hits.join(' | ')}`);
+  // an icon button with no name (core/tips.js): nothing says what it does, to the eye or to a screen reader. Each once, with the first screen it was seen on
+  for (const b of await p.evaluate(() => (window.dashUnnamed ? window.dashUnnamed() : [])).catch(() => [])) if (!nameless.has(b)) nameless.set(b, label);
+};
+
+// Ids and links in one dashboard's config, read in its own page (a dashboard may depend on the page's address: which TV).
+// ids: entity ids named in home.js, the site's popups.js and the dashboard. navs: pop-ups a { nav: '#id' } opens.
+// deadGo: a view, page or tab the dashboard links to and doesn't have. A card with a wrong id just renders empty.
+// Reads config objects, so anything inside a function (a `value`, a tap that returns an action) is not seen.
+const auditInPage = async ([root, d, hasPopups]) => {
+  const [home, dash, popups] = await Promise.all([import(root + '/home.js'), import(`${root}/dashboards/${d}.js`), hasPopups ? import(root + '/popups.js') : {}]);
   const ID = /^(alarm_control_panel|binary_sensor|button|calendar|camera|climate|cover|fan|image|input_[a-z]+|light|lock|media_player|number|person|remote|script|select|sensor|sun|switch|time|timer|update|vacuum|weather)\.[a-z0-9_]+$/;
   const ids = new Set(), navs = new Set(); let seen = new Set(), goes = new Set();
   const walk = (v, key) => {
-    if (typeof v === 'string') { if (key === 'nav' && v[0] === '#') navs.add(v.slice(1)); else if (ID.test(v) && key !== 'call') ids.add(v);
-      if (key === 'view' || key === 'page' || key === 'tabs' || (key === 'tap' && /^[a-z0-9-]+\/[a-z0-9-]+$/.test(v))) goes.add(v); return; }
+    if (typeof v === 'string') {
+      if (key === 'nav' && v[0] === '#') navs.add(v.slice(1)); else if (ID.test(v) && key !== 'call') ids.add(v);
+      if (key === 'view' || key === 'page' || key === 'tabs' || (key === 'tap' && /^[a-z0-9-]+\/[a-z0-9-]+$/.test(v))) goes.add(v);
+      return;
+    }
     if (!v || typeof v !== 'object' || seen.has(v) || v instanceof RegExp) return;
     seen.add(v); for (const k of Object.keys(v)) walk(v[k], Array.isArray(v) ? key : k);
   };
   walk({ ...home }); walk(popups.default);
-  const deadGo = [];   // views and pages differ per dashboard, so each is checked against its own
-  for (const [name, d] of [['main', main.default], ['mobile', mobile.default]]) { if (!d) continue;
-    seen = new Set(); goes = new Set(); walk(d); walk(popups.default);
-    const has = new Set(d.views.flatMap((v) => [v.id, ...(v.pages || []).map((pg) => v.id + '/' + pg.id)]));
-    for (const g of goes) if (!has.has(g)) deadGo.push(name + ': ' + g); }
-  const known = new Set(['trend', ...Object.keys(popups.default || {}), ...Object.keys((main.default || {}).popups || {}), ...Object.keys((mobile.default || {}).popups || {})]);
-  const states = ha.request ? await Promise.race([ha.request({ type: 'get_states' }), new Promise((f) => setTimeout(() => f(null), 5000))]).catch(() => null) : null;
-  const have = states && new Set(states.map((e) => e.entity_id));
-  return { ids: [...ids].sort(), deadGo, missing: have ? [...ids].filter((i) => !have.has(i)).sort() : null, deadNav: [...navs].filter((n) => !known.has(n) && !/^media-/.test(n)).sort(), checked: ids.size };
-}, root).catch((e) => ({ missing: null, deadNav: [], deadGo: [], checked: 0, err: e.message }));
-if (o.entities && audit.ids) { const have = new Set(fs.readFileSync(o.entities, 'utf8').split('\n').map((l) => (l.match(/^\s*([a-z_]+\.[a-z0-9_]+)/) || [])[1]).filter(Boolean)); audit.missing = audit.ids.filter((i) => !have.has(i)); audit.src = o.entities; }
-// Mobile tabs (sites that have a Mobile dashboard)
-const pp = await page(412, 915, true);
-// a site without a Mobile dashboard has no dashboards/mobile.js
-const hasMobile = await pm.evaluate(async (r) => (await fetch(r + '/dashboards/mobile.js', { method: 'HEAD' })).ok, root).catch(() => false);
-if (hasMobile) await load(pp, 'mobile', '');
-const mob = !hasMobile ? [] : await pp.evaluate(async (r) => { try { const d = (await import(r + '/dashboards/mobile.js')).default; return (d.views || []).filter((v) => !v.frame).flatMap((v) => (v.pages ? v.pages.map((pg) => v.id + '/' + pg.id) : [v.id])); } catch (e) { return []; } }, root);
-for (const v of mob) { await load(pp, 'mobile', v); await sanity(pp, 'mobile:' + v); const f = `mob-${v.replace(/\//g, '-')}.png`; await pp.screenshot({ path: path.join(o.out, f), fullPage: true }); shots.push(f); }
-// Pop-ups (engine + site), each tab, full height, at phone size
-let popCount = 0;
-if (!o['skip-popups']) {
-  const d = mob.length ? 'mobile' : 'main';
-  await load(pp, d, mob[0] || mainViews[0] || '');
-  // the site's pop-ups (the engine's #trend needs a reading to show, so it is checked through the views, not here)
-  const ids = await pp.evaluate(async (r) => Object.keys((await import(r + '/popups.js')).default), root).catch(() => []);
-  await pp.addStyleTag({ content: '.popup{max-height:none!important}.pbody{overflow:visible!important}.pwrap{position:absolute!important;align-items:flex-start!important;min-height:100%}' });
-  for (const id of ids) {
-    pp.mark(`popup:${id}`);
-    await pp.evaluate((h) => { location.hash = h; }, id); await pp.waitForTimeout(1200);
-    const pop = pp.locator('.pwrap:not([hidden]) .popup');
-    if (!(await pop.count())) { (errors[`popup:${id}`] ||= []).push('did not open'); continue; }
-    const tabs = await pop.locator('.ptab').count();
-    for (let t = 0; t < Math.max(1, tabs); t++) {
-      if (tabs) { await pop.locator('.ptab').nth(t).click(); await pp.waitForTimeout(700); }
-      await sanity(pp, `popup:${id}${tabs ? '-' + (t + 1) : ''}`);
-      const f = `pop-${id}${tabs ? '-' + (t + 1) : ''}.png`; await pop.screenshot({ path: path.join(o.out, f) }); shots.push(f); popCount++;
+  seen = new Set(); goes = new Set(); walk(dash.default);   // views and pages differ per dashboard, so each is checked against its own
+  const has = new Set(dash.default.views.flatMap((v) => [v.id, ...(v.pages || []).map((pg) => v.id + '/' + pg.id)]));
+  return { ids: [...ids], navs: [...navs], known: ['trend', ...Object.keys(popups.default || {}), ...Object.keys(dash.default.popups || {})], deadGo: [...goes].filter((g) => !has.has(g)).map((g) => d + ': ' + g) };
+};
+const audit = { ids: new Set(), navs: new Set(), known: new Set(), deadGo: [], have: null, err: '' };
+
+// Pop-ups of this dashboard that an earlier dashboard on the same kind of screen has as the very same definition
+// (a dashboard that spreads another's pop-ups): they were checked there.
+const samePopups = (p, d, earlier) => p.evaluate(async ([root, d, earlier]) => {
+  const pops = async (n) => (await import(`${root}/dashboards/${n}.js`)).default.popups || {};
+  const seen = new Set(); for (const e of earlier) Object.values(await pops(e)).forEach((x) => seen.add(x));
+  return Object.entries(await pops(d)).filter(([, def]) => seen.has(def)).map(([k]) => k);
+}, [root, d, earlier]);
+
+// ---- which dashboards, at which screens ----
+const first = await newPage(b, { base });
+const firstErrors = watchErrors(first); firstErrors.mark('main');
+await open(first, dashUrl(base), { errors: firstErrors, patience: 0 });
+const started = !!(await stats(first).catch(() => null));
+const kinds = started ? await dashboards(first, base, dashboardFiles(man)) : [];
+for (const k of kinds) if (k.error) errList.push(`dashboards/${k.name}.js: ${k.error}`);
+const order = (k) => ['main', 'mobile', 'tv'].indexOf(k.name) + 1 || 9;
+let todo = kinds.filter((k) => k.screen).sort((x, y) => order(x) - order(y) || x.name.localeCompare(y.name));
+if (o.only) { const want = o.only.split(','); const unknown = want.filter((w) => !todo.some((k) => k.name === w)); if (unknown.length) notes.push(`--only: no such dashboard: ${unknown.join(', ')}`); todo = todo.filter((k) => want.includes(k.name)); }
+const parts = kinds.filter((k) => !k.screen && !k.error).map((k) => k.name);
+if (started) audit.have = await first.evaluate(async (root) => {   // the entity ids HA has
+  const ha = await import(root + '/core/ha.js');
+  const states = await Promise.race([ha.request({ type: 'get_states' }), new Promise((f) => setTimeout(() => f(null), 5000))]);
+  return states && states.map((e) => e.entity_id);
+}, root).catch((e) => { audit.err = e.message; return null; });
+errList.push(...firstErrors.lines());
+const tvs = todo.some((k) => k.profile === 'tv') ? await tvIds(first, base, site) : [];
+await first.context().close();
+
+// ---- every dashboard ----
+const done = [];   // { name, key } of dashboards already checked, for samePopups
+for (const k of todo) {
+  const scr = o.size ? { ...screenOf(k.profile), size: o.size } : screenOf(k.profile), key = scr.size + (scr.p || '') + (scr.mobile ? 'm' : '');
+  const variants = k.profile === 'tv' ? (tvs.length ? tvs.map((id) => ({ label: `${k.name}-${id}`, q: 'tv=' + id, say: `tv=${id}, ` })) : [{ label: k.name, q: '', say: '' }]) : [{ label: k.name, q: '', say: '' }];
+  if (k.profile === 'tv' && !tvs.length) notes.push(`${k.name}: opened without tv=<id> (the site lists no TVs in mock/screens.mjs or home.js)`);
+  const showcase = (site.showcase || []).includes(k.name);   // long lists of cards from the other dashboards: no fit, layout or link checks
+  for (const va of variants) {
+    const p = await newPage(b, { base, size: scr.size, mobile: scr.mobile });
+    const errors = watchErrors(p);
+    const url = (v) => dashUrl(base, { d: k.name, p: scr.p, q: va.q, v });
+    errors.mark(va.label);
+    await open(p, url(), { errors, patience: 0 });
+    const views = (await stats(p).catch(() => null)) ? await viewIds(p, base, k.name) : [];
+    if (!views.length) errList.push(`${va.label}: did not start`);
+    for (const v of views) {
+      errors.mark(`${va.label}:${v}`);
+      await open(p, url(v), { errors });
+      if (!showcase) {
+        const r = await measure(p, k.profile === 'tv');
+        if (r.scroll && k.profile !== 'phone') unfit.push(`${va.label}:${v} (${r.scroll} px)`);
+        const found = problems(r, false); if (found.length) layout.push(`${va.label}:${v}: ${found.join('; ')}`);
+      }
+      await sanity(p, `${va.label}:${v}`);
+      const f = `${va.label}-${v.replace(/\//g, '-')}.png`; await p.screenshot({ path: path.join(o.out, f), fullPage: !!scr.mobile, ...STILL }); shots.push(f); await keepStyles(p, f);
     }
-    await pp.evaluate(() => { history.replaceState(null, '', location.pathname + location.search); window.dispatchEvent(new HashChangeEvent('hashchange')); });
+    let popCount = 0, same = [];
+    if (views.length) {
+      errors.mark(`${va.label}:audit`);
+      const a = await p.evaluate(auditInPage, [root, k.name, 'popups.js' in man.files]).catch((e) => { audit.err = e.message; return null; });
+      if (a) { a.ids.forEach((i) => audit.ids.add(i)); a.navs.forEach((n) => audit.navs.add(n)); a.known.forEach((n) => audit.known.add(n)); if (!showcase) audit.deadGo.push(...a.deadGo); }
+    }
+    // pop-ups (engine + dashboard), each tab, full height, at this dashboard's size
+    if (views.length && !o['skip-popups']) {
+      const earlier = done.filter((x) => x.key === key && x.name !== k.name).map((x) => x.name);
+      same = earlier.length ? ['trend', ...await samePopups(p, k.name, earlier)] : [];
+      const ids = (await popupIds(p, base, k.name)).filter((id) => !same.includes(id));
+      if (ids.length) { errors.mark(`${va.label}:${views[0]}`); await open(p, url(views[0]), { errors }); await p.addStyleTag({ content: FULL_HEIGHT_CSS }); }   // every pop-up over the first view
+      for (const id of ids) {
+        const label = `${va.label}:popup:${id}`; errors.mark(label);
+        if (id === 'trend') await openTrend(p, base); else await openPopup(p, id);
+        await settle(p, { base });
+        const pop = popupOnScreen(p);
+        if (!(await pop.count())) { errList.push(`${label}: did not open`); continue; }
+        const tabs = await pop.locator('.ptab').count();
+        for (let t = 0; t < Math.max(1, tabs); t++) {
+          if (tabs) { await pop.locator('.ptab').nth(t).click(); await settle(p, { base }); }
+          await sanity(p, `${label}${tabs ? '-' + (t + 1) : ''}`);
+          const f = `${va.label}-pop-${id}${tabs ? '-' + (t + 1) : ''}.png`; await pop.screenshot({ path: path.join(o.out, f), ...STILL }); shots.push(f); popCount++; await keepStyles(p, f);
+        }
+        await closePopup(p);
+      }
+    }
+    errList.push(...errors.lines());
+    rows.push({ label: va.label, text: `${k.name} (${va.say}${scr.size}): ${views.length} views, ${popCount} pop-up screens${same.length ? `; ${same.length} pop-ups are the same as on a dashboard above, checked there` : ''}`, views: views.length, pops: popCount });
+    await p.context().close();
+  }
+  done.push({ name: k.name, key });
+}
+
+// ---- ids, links, pixel diff ----
+const ids = [...audit.ids].sort();
+let missing = audit.have && ids.filter((i) => !audit.have.includes(i)), src = 'HA';
+// --entities FILE (one id at the start of each line) compares against a real entity list instead of what the page's HA has
+if (o.entities) { const have = new Set(fs.readFileSync(o.entities, 'utf8').split('\n').map((l) => (l.match(/^\s*([a-z_]+\.[a-z0-9_]+)/) || [])[1]).filter(Boolean)); missing = ids.filter((i) => !have.has(i)); src = o.entities; }
+const deadNav = [...audit.navs].filter((n) => !audit.known.has(n) && !/^media-/.test(n)).sort(), deadGo = [...new Set(audit.deadGo)];
+const changed = [], restyled = [], resized = [], unlike = [];
+if (o.baseline && o.styles) {
+  for (const f of shots) {
+    const bf = path.join(o.baseline, styles.fileOf(f)); if (!fs.existsSync(bf)) continue;
+    const r = styles.compare(bf, path.join(o.out, styles.fileOf(f)));
+    if (r.same) continue;
+    if (r.changes.length) restyled.push({ shot: f, changes: r.changes });
+    if (r.sizes.length) resized.push({ shot: f, changes: r.sizes });
+    if (r.only[0] || r.only[1]) unlike.push(`${f} (${r.only[0]} gone, ${r.only[1]} new)`);
   }
 }
-// pixel diff against a baseline run
-const changed = [];
 if (o.baseline) {
-  const dp = await b.newPage(); await dp.setContent('<canvas id=c></canvas>');
+  const compare = await differ(b);
   for (const f of shots) {
     const bf = path.join(o.baseline, f); if (!fs.existsSync(bf)) { changed.push(`${f}: new`); continue; }
-    const r = await dp.evaluate(async ([x, y]) => {
-      const ld = (s) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = 'data:image/png;base64,' + s; });
-      const [i1, i2] = await Promise.all([ld(x), ld(y)]);
-      if (i1.width !== i2.width || i1.height !== i2.height) return `size ${i1.width}x${i1.height} -> ${i2.width}x${i2.height}`;
-      const c = document.getElementById('c'); c.width = i1.width; c.height = i1.height; const g = c.getContext('2d');
-      g.drawImage(i1, 0, 0); const d1 = g.getImageData(0, 0, c.width, c.height).data; g.drawImage(i2, 0, 0); const d2 = g.getImageData(0, 0, c.width, c.height).data;
-      let n = 0; for (let k = 0; k < d1.length; k += 4) if (Math.abs(d1[k] - d2[k]) + Math.abs(d1[k + 1] - d2[k + 1]) + Math.abs(d1[k + 2] - d2[k + 2]) > 40) n++;
-      return (100 * n) / (d1.length / 4);
-    }, [fs.readFileSync(bf, 'base64'), fs.readFileSync(path.join(o.out, f), 'base64')]);
-    if (typeof r === 'string') changed.push(`${f}: ${r}`); else if (r > +o.threshold) changed.push(`${f}: ${r.toFixed(1)}%`);
+    const r = await compare(bf, path.join(o.out, f));
+    if (r.size) changed.push(`${f}: size ${r.size}`); else if (r.pct > +o.threshold) changed.push(`${f}: ${r.pct.toFixed(1)}%`);
   }
 }
 await b.close();
-const errList = Object.entries(errors).flatMap(([k, l]) => [...new Set(l)].map((e) => `${k}: ${e}`));
-console.log(`regress: ${mainViews.length} Main views, ${mob.length} Mobile tabs, ${popCount} pop-up screens -> ${o.out}`);
-console.log(`  fit (1280x800): ${unfit.length ? 'SCROLLS ' + unfit.join(', ') : 'all fit'}`);
-if (!mainViews.length) console.log('  SITE FAILED TO LOAD: nothing below means anything; see the console errors');
-console.log(audit.missing ? `  entities (${audit.checked} named): ${audit.missing.length ? audit.missing.length + ' not in ' + (audit.src || 'HA') + ': ' + audit.missing.slice(0, 15).join(' ') + (audit.missing.length > 15 ? ' …' : '') : 'all exist'}` : `  entities: not checked ${audit.err || ''}`);
-console.log(`  links: ${audit.deadNav.length || audit.deadGo.length ? 'NOWHERE TO GO ' + [...audit.deadNav.map((n) => '#' + n), ...audit.deadGo].join(', ') : 'all resolve'}`);
-console.log(`  on-screen values: ${nonsense.length ? 'NONSENSE\n    ' + nonsense.join('\n    ') : 'nothing odd'}`);
-console.log(`  console errors: ${errList.length ? '\n    ' + errList.join('\n    ') : 'none'}`);
-if (o.baseline) console.log(`  changed > ${o.threshold}% vs ${o.baseline}: ${changed.length ? '\n    ' + changed.join('\n    ') : 'none'}`);
-process.exit(!mainViews.length || unfit.length || errList.length || nonsense.length || audit.deadNav.length || audit.deadGo.length ? 1 : 0);
+
+const list = (items) => '\n    ' + items.join('\n    ');
+const views = rows.reduce((n, r) => n + r.views, 0), pops = rows.reduce((n, r) => n + r.pops, 0);
+console.log(`regress: ${rows.length} dashboards, ${views} views, ${pops} pop-up screens -> ${o.out}`);
+for (const r of rows) console.log('  ' + r.text);
+if (parts.length) console.log(`  not screens (no views of their own; other dashboards import them): ${parts.join(' ')}`);
+for (const n of notes) console.log('  note: ' + n);
+if (!views) console.log('  SITE FAILED TO LOAD: nothing below means anything; see the console errors');
+console.log(`  fit: ${unfit.length ? 'SCROLLS ' + unfit.join(', ') : 'all fit'}`);
+console.log(`  layout: ${layout.length ? 'PROBLEMS' + list(layout) : 'nothing overlaps, runs past its card or is cut'}`);
+console.log(missing ? `  entities (${ids.length} named): ${missing.length ? missing.length + ' not in ' + src + ': ' + missing.slice(0, 15).join(' ') + (missing.length > 15 ? ' …' : '') : 'all exist'}` : `  entities: not checked ${audit.err}`);
+console.log(`  links: ${deadNav.length || deadGo.length ? 'NOWHERE TO GO ' + [...deadNav.map((n) => '#' + n), ...deadGo].join(', ') : 'all resolve'}`);
+console.log(`  on-screen values: ${nonsense.length ? 'NONSENSE' + list(nonsense) : 'nothing odd'}`);
+console.log(`  icon buttons: ${nameless.size ? 'WITHOUT A NAME' + list([...nameless].map(([b, at]) => `${b} (${at})`)) : 'all named'}`);
+console.log(`  console errors and warnings: ${errList.length ? list([...new Set(errList)]) : 'none'}`);
+if (o.baseline) console.log(`  changed > ${o.threshold}% vs ${o.baseline}: ${changed.length ? list(changed) : 'none'}`);
+if (o.baseline && o.styles) {
+  console.log(`  styles: ${restyled.length ? `CHANGED on ${restyled.length} of ${shots.length} screens` + list(styles.groups(restyled)) : `the same on every element of ${shots.length} screens`}`);
+  if (resized.length) console.log(`  styles, measured sizes that differ on ${resized.length} screens (a real change, or only the mock's clocks and live values):` + list(styles.groups(resized, 12)));
+  if (unlike.length) console.log(`  styles, not compared (elements in one run only): ${unlike.slice(0, 8).join(', ')}${unlike.length > 8 ? ` … ${unlike.length - 8} more screens` : ''}`);
+}
+// ids HA doesn't have fail the run when the list they were checked against is the real one (a live run, or --entities FILE);
+// on the mock the list is the mock's own data, so a gap there is only printed
+const realIds = !!(o.entities || LIVE);
+process.exit(!views || unfit.length || layout.length || errList.length || nonsense.length || nameless.size || deadNav.length || deadGo.length || (realIds && missing && missing.length) ? 1 : 0);

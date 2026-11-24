@@ -39,12 +39,12 @@ export const reviewSensor = (id) => `sensor.${id}_review_status`;
 const N = H.nws;
 export const weatherView = { id: 'weather', title: 'Weather', icon: 'weather-partly-cloudy', sections: [
   { span: 1, panel: false, cards: [
-    { type: 'heading', title: 'Now' }, { type: 'wx-now', entity: N.entity, alerts: N.alerts, sun: 'sun.sun', lat: N.lat, lon: N.lon, ha: N.now, grow: true },
-    { type: 'heading', title: 'Next 7 days' }, { type: 'wx-days', entity: N.entity, days: 7, fallback: { lat: N.lat, lon: N.lon } },
+    { type: 'heading', title: 'Now' }, { type: 'wx-now', entity: N.entity, alerts: N.alerts, sun: 'sun.sun', ha: N.now, grow: true },
+    { type: 'heading', title: 'Next 7 days' }, { type: 'wx-days', entity: N.entity, days: 7, fallback: {} },
   ] },
   { span: 2, panel: false, cards: [
-    { type: 'heading', title: 'Radar' }, { type: 'radar', lat: N.lat, lon: N.lon, zoom: 7, height: 452, cartoKey: H.carto_key },
-    { type: 'heading', title: 'Next 24 hours' }, { type: 'wx-hours', entity: N.entity, hours: 24, height: 176, fallback: { lat: N.lat, lon: N.lon } },
+    { type: 'heading', title: 'Radar' }, { type: 'radar', zoom: 7, height: 452, cartoKey: H.carto_key },
+    { type: 'heading', title: 'Next 24 hours' }, { type: 'wx-hours', entity: N.entity, hours: 24, height: 176, fallback: {} },
   ] },
 ] };
 

@@ -3,8 +3,8 @@
 // { type: 'host', node: { name, icon, up, metrics, checks, updates, page },   // node = the health definition (core/assess.js)
 //   sub: () => 'text' (default: "Up 4 months" from node.up), badge: (assessment) => 'text' | { text, tone } (default: OK / Attention / Problem),
 //   meters: [{ entity, value: () => number (optional, instead of the entity's state), name, unit: '%', min: 0, max: 100, warn, crit, decimals, detail: () => '3.1 of 4 GB',
-//             tone: 'lamp' | (value) => tone (instead of the warn / crit colours) }],
-//   bars:   [{ name, entity (percent), detail: () => '68 of 816 GB', warn, crit, tone (instead of the warn / crit colours) }],
+//             tone: 'lamp' | (value) => tone (instead of the warn / crit colors), invert: true (lower is worse: warn > crit), watch: [ids the value or detail also follows] }],
+//   bars:   [{ name, entity (percent), detail: () => '68 of 816 GB', warn, crit, invert: true (lower is worse, e.g. a battery's charge), tone (instead of the warn / crit colors), watch: [ids the detail also follows] }],
 //   facts:  [{ label, icon, entities: [...], value: () => 'text' | { text, tone } }],
 //   controls: { power, restart, status, impact: 'what stops while it is off / restarting' } | { note: 'text' } (same row, no buttons)
 //           | { buttons: [{ icon, text (or () => text: redrawn every second, e.g. a countdown), on: entity (lit while 'on'; also the entity a function action gets), action (core/actions.js run),
@@ -21,7 +21,8 @@ import { user } from '../core/ha.js';
 import { assess, nodeIds, metricLevel, LEVEL_TONE, LEVEL_NAME, LEVEL_ICON } from '../core/assess.js';
 import { sparkline } from '../core/spark.js';
 import { openTrend } from '../core/trend.js';
-import { ago } from './health.js';
+import { ago } from '../core/time.js';
+import { unitTag } from '../core/format.js';
 
 export const panel = true;   // on a page: its own glass panel (core/layout.js)
 
@@ -29,17 +30,17 @@ const P = (p) => { const a = Math.PI * (1 - p); return [50 + 40 * Math.cos(a), 4
 const arc = (p0, p1) => { const [x0, y0] = P(p0), [x1, y1] = P(p1); return `M${x0.toFixed(1)},${y0.toFixed(1)}A40,40 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}`; };
 // tap -> the history pop-up (core/trend.js); spec() is built at tap time
 export function drill(el, spec) { el.classList.add('drill'); el.addEventListener('click', (ev) => { if (ev.target.closest('button')) return; ev.stopPropagation(); openTrend(spec()); }); }
-export const fmtNum = (v, d = 0) => (isNaN(v) ? '–' : (+v).toFixed(d));
+const fmtNum = (v, d = 0) => (isNaN(v) ? '–' : (+v).toFixed(d));
 
-// speedometer + trace, used by host panels and anything else that wants one
-export function meter(m) {
+// speedometer + trace
+function meter(m) {
   const min = m.min || 0, max = m.max == null ? 100 : m.max;
   const el = h(`<div class="meter"><div class="mtr-a"><div class="mtr-g"><svg viewBox="0 0 100 52"><path d="${arc(0, 1)}" class="mtr-t"/><path class="mtr-v"/></svg>
     <div class="mtr-n"></div></div><div class="mtr-l">${esc(m.name)}</div><div class="mtr-d"></div></div><div class="mtr-s"><span class="mtr-hi"></span></div></div>`);
   const val = el.querySelector('.mtr-v'), num = el.querySelector('.mtr-n'), det = el.querySelector('.mtr-d');
   const u0 = m.unit != null ? m.unit : '%', hi = el.querySelector('.mtr-hi');
   const sp = sparkline(m.spark || m.entity, { tone: 'sage', scale: m.scale, minRange: m.minRange != null ? m.minRange : u0 === '%' ? 20 : (max - min) / 5,
-    stats: (a) => setText(hi, `24 h  ${fmtNum(a.lo, m.decimals || 0)}–${fmtNum(a.hi, m.decimals || 0)}${u0 === '%' ? '%' : u0 ? ' ' + u0 : ''}${m.trend === false ? '' : '  ›'}`) });
+    stats: (a) => setText(hi, `24 h  ${fmtNum(a.lo, m.decimals || 0)}–${fmtNum(a.hi, m.decimals || 0)}${unitTag(u0, true)}${m.trend === false ? '' : '  ›'}`) });
   el.querySelector('.mtr-s').appendChild(sp);
   if (m.trend !== false) drill(el, () => ({ title: m.owner ? `${m.owner} · ${m.name}` : m.name, unit: u0, decimals: m.decimals, warn: m.warn, crit: m.crit, tone: 'sage',
     floor: u0 === '%' || !/°/.test(u0) ? 0 : undefined, ceil: u0 === '%' ? 100 : undefined, minSpan: m.minRange != null ? m.minRange : u0 === '%' ? 10 : (max - min) / 8,
@@ -50,7 +51,9 @@ export function meter(m) {
     el.style.setProperty('--t', `var(--${tone})`); sp.setTone(tone);
     const p = isNaN(v) ? 0 : Math.max(0, Math.min(1, (v - min) / (max - min || 1)));
     val.setAttribute('d', p > 0.005 ? arc(0, p) : '');
-    setHTML(num, isNaN(v) ? '–' : `${fmtNum(v, m.decimals || 0)}<small>${esc(u)}</small>`);
+    const fig = isNaN(v) ? '–' : fmtNum(v, m.decimals || 0);
+    num.classList.toggle('long', fig.length >= 5);   // too wide for the dial at the usual size (systems.css)
+    setHTML(num, isNaN(v) ? '–' : `${fig}<small>${esc(u)}</small>`);
     setText(det, m.detail ? m.detail() || '' : '');
   });
   return el;
@@ -70,13 +73,13 @@ export default function host(cfg) {
 
   const head = () => {
     const a = assess(n), b = cfg.badge ? cfg.badge(a) : LEVEL_NAME[a.level], bt = typeof b === 'object' ? b : { text: b };
-    // a badge { text, tone } with a warning tone colours the header without being a health problem (e.g. a weak 5G signal)
+    // a badge { text, tone } with a warning tone colors the header without being a health problem (e.g. a weak 5G signal)
     const tone = bt.tone || LEVEL_TONE[a.level], lv = bt.tone && bt.tone !== 'sage' ? Math.max(a.level, 1) : a.level;
     el.style.setProperty('--t', `var(--${tone})`); el.classList.toggle('warn', lv > 0);
     setHTML(badge, `${icon(LEVEL_ICON[lv])}<span>${esc(bt.text)}</span>`);
     if (why) why.classList.toggle('ok', !a.reasons.length); if (why) setText(why, a.reasons.length ? a.reasons.map((r) => r.text).join(' · ') : cfg.okText || 'No issues');
     const u = n.up && st(n.up);
-    setText(sub, cfg.sub ? cfg.sub() || '' : u && !isNaN(new Date(u.state)) ? 'Up ' + ago(u.state) : '');
+    setText(sub, cfg.sub ? cfg.sub() || '' : u && ago(u.state) ? 'Up ' + ago(u.state) : '');
   };
   watch([...nodeIds(n), ...(cfg.subWatch || [])], head); tick(() => { if (!cfg.sub || cfg.live) head(); });
 
@@ -85,8 +88,8 @@ export default function host(cfg) {
     warn: b.warn != null ? b.warn : 80, crit: b.crit != null ? b.crit : 92, tone: 'mist', series: [{ entity: b.entity, name: b.name }], ...(b.trend || {}) })); });
   (cfg.facts || []).forEach((f, i) => { if (f.trend) { drill(facts[i], () => ({ title: `${n.name || ''} · ${f.label}`, ...f.trend })); facts[i].querySelector('.fval').insertAdjacentHTML('afterend', '<span class="chev">›</span>'); } });
   (cfg.bars || []).forEach((b, i) => watch([b.entity, ...(b.watch || [])], () => {
-    const v = parseFloat((st(b.entity) || {}).state), lv = metricLevel({ warn: b.warn != null ? b.warn : 80, crit: b.crit != null ? b.crit : 92 }, v);
-    caps[i].style.setProperty('--t', `var(--${b.tone || LEVEL_TONE[lv]})`);
+    const v = parseFloat((st(b.entity) || {}).state), lv = metricLevel({ warn: b.warn != null ? b.warn : 80, crit: b.crit != null ? b.crit : 92, invert: b.invert }, v);
+    caps[i].style.setProperty('--t', `var(--${isNaN(v) ? 'stone' : b.tone || LEVEL_TONE[lv]})`);
     caps[i].querySelector('i').style.width = (isNaN(v) ? 0 : Math.min(100, v)) + '%';
     setText(caps[i].querySelector('.cdet'), b.detail ? b.detail() : isNaN(v) ? '–' : Math.round(v) + '%');
   }));
@@ -99,7 +102,6 @@ export default function host(cfg) {
     // a fact with no entities (a fixed value, e.g. the internet plan) is drawn once: watch([]) never fires
     if ((f.entities || []).length) watch(f.entities, show); else show();
   });
-  if (cfg.facts && cfg.facts.some((f) => f.tick)) tick(() => cfg.facts.forEach((f, i) => { if (f.tick) { const r = f.value(); setText(facts[i].querySelector('.fval'), typeof r === 'object' ? r.text : r); } }));
 
   const C = cfg.controls;
   if (C && C.buttons) {
@@ -127,6 +129,6 @@ export default function host(cfg) {
         confirm: { title: `Restart ${name}?`, text: (C.impact ? C.impact + ' ' : '') + 'It is back in about a minute.', ok: 'Restart', icon: 'restart' } }, { el: r, ev });
     });
   }
-  if (n.page && cfg.tap !== false) { el.classList.add('tappable'); el.addEventListener('click', (ev) => { if (!ev.target.closest('button')) window.dispatchEvent(new CustomEvent('dash:view', { detail: n.page })); }); }
+  if (n.page) { el.classList.add('tappable'); el.addEventListener('click', (ev) => { if (!ev.target.closest('button')) window.dispatchEvent(new CustomEvent('dash:view', { detail: n.page })); }); }
   return el;
 }

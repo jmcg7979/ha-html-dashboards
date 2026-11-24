@@ -5,14 +5,29 @@ import { h, esc, icon, toggle, setTone } from '../core/dom.js';
 import { st, watch } from '../core/store.js';
 import { run } from '../core/actions.js';
 
+const NOT_A_CHOICE = ['unknown', 'unavailable', 'none'];
+// the options to show: the config's own, or the entity's list as it is now (null: the entity gives no list at the moment)
+export function optionsOf(cfg, e) {
+  if (cfg.options) return cfg.options;
+  const list = e && e.attributes[cfg.optionsAttr || 'options'];
+  if (!Array.isArray(list)) return null;
+  return list.filter((v) => !(cfg.hide || []).includes(v) && !NOT_A_CHOICE.includes(String(v).toLowerCase()))
+    .map((v) => ({ value: v, label: (cfg.labels || {})[v] || String(v)[0].toUpperCase() + String(v).slice(1).replace(/_/g, ' ') }));
+}
+
 export default function segments(cfg) {
   const id = cfg.entity, dom = id.split('.')[0];
   const el = h('<div class="segments"></div>');
-  let opts = cfg.options;
+  let opts = [], drawn = '';
   const draw = () => {
-    const e = st(id);
-    if (!opts && e) { opts = (e.attributes[cfg.optionsAttr || 'options'] || []).filter((v) => !(cfg.hide || []).includes(v) && !['unknown', 'unavailable', 'none'].includes(String(v).toLowerCase())).map((v) => ({ value: v, label: (cfg.labels || {})[v] || v[0].toUpperCase() + v.slice(1).replace(/_/g, ' ') })); el.innerHTML = ''; }
-    if (!el.children.length && opts) el.innerHTML = opts.map((o, i) => `<button class="chip seg" data-i="${i}">${o.icon ? icon(o.icon) : ''}${o.label ? `<span class="seglbl">${esc(o.label)}</span>` : ''}</button>`).join('');
+    const e = st(id), next = optionsOf(cfg, e);
+    // The entity's list is read on every update: an entity that was unavailable at first, or whose list changes, gets
+    // its chips when it has them. The chips are rebuilt only when the list differs; with no list they stay as they were.
+    const key = next ? JSON.stringify(next.map((o) => [o.value, o.label, o.icon])) : drawn;
+    if (key !== drawn) {
+      drawn = key; opts = next;
+      el.innerHTML = opts.map((o, i) => `<button class="chip seg" data-i="${i}">${o.icon ? icon(o.icon) : ''}${o.label ? `<span class="seglbl">${esc(o.label)}</span>` : ''}</button>`).join('');
+    }
     [...el.children].forEach((b, i) => { setTone(b, opts[i].tone || cfg.tone || 'mist'); toggle(b, 'on', !!e && (cfg.attr ? e.attributes[cfg.attr] : e.state) === opts[i].value); toggle(b, 'pending', e && e.pending); });
   };
   watch([id], draw);

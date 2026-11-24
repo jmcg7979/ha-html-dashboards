@@ -1,6 +1,6 @@
 # Home Assistant HTML dashboards
 
-Fast, custom dashboards for Home Assistant in plain HTML, CSS and JavaScript, with no build step: wall panels, desktops and phones, cameras through Frigate, and a Systems view for your network, Proxmox and Docker.
+Fast, custom dashboards for Home Assistant in plain HTML, CSS and JavaScript, with no build step: wall panels, desktops, phones and TVs, cameras through Frigate, music through Music Assistant, and a Systems view for your network, Proxmox and Docker.
 
 This is a reference project, shared as-is with no support. You adapt it to your own hardware by editing JavaScript, and it's designed so an AI coding tool can do that for you: point one at this folder and it will start from `AGENTS.md`.
 
@@ -41,7 +41,7 @@ You'll be editing JavaScript, though mostly lists of entity ids.
 3. **Map your entities.** Put your ids in `sites/<yours>/dash/home.js`, block by block. `engine/docs/integrations.md` says what each block needs.
 4. **Remove what you don't have.** Delete that `home.js` block, then every card and pop-up that used it, and any link to them.
 5. **Check it on the mock.** Give each id a made-up state in `sites/<yours>/mock/states.mjs`, then run `engine/_dev/tools/mock.sh <yours>`.
-6. **Add the HA packages you need.** Copy them from `sites/<yours>/ha-config/packages/` to `/config/packages/`, set their secrets in `secrets.yaml`, and restart HA. `engine/docs/integrations.md` says which card needs which package.
+6. **Add the HA packages you need.** Copy them from `sites/<yours>/ha-config/packages/` to `/config/packages/`, set their secrets in `secrets.yaml`, and restart HA. `engine/docs/integrations.md` says which card needs which package. The Music page and the queue, lyrics and Party of Now playing also need the relay integration in `engine/ha/custom_components/ma_relay/` (same doc, Media).
 7. **Build it:** `engine/_dev/assemble.sh sites/<yours>/dash /tmp/dash`.
 8. **Copy `/tmp/dash/` to `/config/www/dash/`** on Home Assistant.
 9. **Open `http://<ha>:8123/local/dash/start.html?d=main`.** HA doesn't serve a bare folder URL, so include the file name.
@@ -61,26 +61,33 @@ Don't take this section's word for it: it's a map for checking, and the prompt a
 **Sign-in.** The dashboard uses HA's normal login, and no token goes in a file. The login is kept in the browser's local storage, as HA's own frontend does, so treat a signed-in wall panel like any other signed-in device.
 
 **Network.** There's no telemetry, and scripts and fonts are bundled, so nothing loads code from elsewhere. The browser fetches only from your HA, and from these services if you use the cards that need them:
-- Weather, sending your location: `api.weather.gov`, `api.open-meteo.com`
-- Radar and airport weather: `mesonet.agron.iastate.edu`
+- The forecast, sending your location, only while HA's own forecast is down: `api.weather.gov`
+- Radar: `mesonet.agron.iastate.edu`
+
+Current conditions come from Home Assistant: install `sites/example/ha-config/packages/weather_now.yaml` for the Weather view's Now card (it is HA, not the browser, that then asks the NWS, the Iowa Environmental Mesonet and Open-Meteo).
 - Map tiles: `basemaps.cartocdn.com`, `api.maptiler.com`, `tiles.stadiamaps.com`, `tile.thunderforest.com`
+- Artist photo behind Now playing, sending the name of the artist that is playing: `www.theaudiodb.com` and the image host it answers with (`engine/core/artistart.js`). With the relay below, Home Assistant asks instead and the browser doesn't
+- The Music page's Videos tab opens `www.youtube.com` (or the YouTube app on a TV) when you pick a video
 
 **HA packages are optional, and each one needs your review.** `dashboard_helpers.yaml` adds an `alarm_disarm` script that uses your alarm code from `secrets.yaml`, so any HA login that can run scripts can disarm the alarm without typing a code. Leave that script out if that's not what you want.
+
+**The Music Assistant relay is optional, and it is code that runs inside Home Assistant.** `engine/ha/custom_components/ma_relay/` is one Python file; read it before you install it. It gives every signed-in HA user the Music Assistant commands in its `ALLOWED` list (browse, search, queues, play) through HA's own connection to Music Assistant, so no screen needs a Music Assistant login. Two addresses answer without an HA login, because an `<img>` can't send one: `/api/ma_relay/image/…` and `/api/ma_relay/artist` serve pictures only, and only with a key that the relay makes once, keeps in HA's storage and gives to signed-in screens. From Home Assistant it asks `www.theaudiodb.com` for artist photos (sending the artist's name), and `api-v2.soundcloud.com` for likes, plays and playlists when you use SoundCloud, with the key SoundCloud's own web player uses, which it reads from `soundcloud.com`. `admin_token` is optional and is a Music Assistant admin's token: keep it in `secrets.yaml`.
 
 **TV launcher.** It keeps a long-lived HA token on the TV, so anyone with the remote has that user's rights: give the TVs their own non-admin user. It uses an accessibility service that sees only the stock home screen's window changes. Its settings can be changed only over adb.
 
 **Controls.** The dashboard can do whatever your HA login can, such as unlocking a door or opening the garage. Remove any control you don't want on a shared screen.
 
 ## Limits
-Text is English. °C and 24-hour time are one setting in `home.js` (`engine/docs/integrations.md`). The Weather view is US-only, but the `weather` card works anywhere. Live cameras need Frigate.
+Text is American English, on screen and in the comments and docs (the comments and docs were British until 2026-11-17: `colour`, `centre`, `behaviour` and the like are now `color`, `center`, `behavior`, so search for the American word). One name in the code changed with it: the `buttons` card's class `labelled` is now `labeled`. °C and 24-hour time are one setting in `home.js` (`engine/docs/integrations.md`). The Weather view is US-only, but the `weather` card works anywhere. Live cameras need Frigate.
 
-## Licence
-MIT: see `LICENSE`. Bundled fonts, icons and libraries keep their own licences: see `THIRD-PARTY-NOTICES.md`.
+## License
+MIT: see `LICENSE`. Bundled fonts, icons and libraries keep their own licenses: see `THIRD-PARTY-NOTICES.md`.
 
 ## Layout
 | Path | What |
 |---|---|
 | `engine/` | The engine: cards, core, pages, styles, tools |
-| `engine/docs/` | Integrations, design system |
+| `engine/docs/` | Integrations, design system, what a card must do |
+| `engine/ha/custom_components/` | Optional Home Assistant integration: the Music Assistant relay |
 | `sites/example/` | A complete made-up site, its mock data and HA packages |
 | `tv/launcher/` | Optional Android TV launcher for a `tv` dashboard |

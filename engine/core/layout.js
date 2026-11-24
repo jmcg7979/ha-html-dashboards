@@ -2,41 +2,60 @@
 // A card type is a module in /cards exporting `default (cfg, ctx) => HTMLElement`.
 //   view:    { columns: 'minmax(0, 1fr) 240px' } optional: the view's own column widths instead of --view-cols equal columns
 //            { zoom: 0.7, s: 1 } optional: draw the view smaller (CSS zoom) at its own --s, e.g. a wall-panel page reused on a TV
-//            { zoom: 0.7, s: 1 } optional: draw the view smaller (CSS zoom) at its own --s, e.g. a wall-panel page reused on a TV
 //            { colGap: 'calc(28px * var(--s))' } optional: the view's own space between columns
 //   section: { span: 1, cols: 12, panel: true, rows: 'auto minmax(0, 1fr)', cards: [...] }   span = view columns, cols = grid units inside
 //            rows: the grid's own row template for a multi-column section; it then fills its column's height like grow
 //   page / view: { fill: true } the page takes the full screen height, so its sections stretch to the bottom (the cards grow)
 //   card:    { type: 'tile', span: 6, show: {...}, class: 'glass', grow: true, ...options } span = grid units (default: full width); class goes on the cell
 //            wide: true = full row when a big-screen layout reflows on a phone, even if span is under a third (e.g. 4 cards in a row)
-//            grow: the card takes the height left in its column, so the column reaches the bottom of the screen like its neighbours
+//            grow: the card takes the height left in its column, so the column reaches the bottom of the screen like its neighbors
 //            (one-column sections only; the view's tallest column sets the height)
-//   show:    { entity, state | not | below | above } or { when: () => bool, entities: [ids] } or a list (all must hold): hides the card otherwise
+//   show:    { entity, state | not | below | above } or { when: () => bool, entities: [ids], every: ms } or a list (all must hold): hides the card otherwise
+import { capture, onDispose } from './scope.js';
 import { watch, st } from './store.js';
 import { resubscribeIfNeeded } from './ha.js';
 import { frameView } from './frame.js';
-import { icon } from './dom.js';
+import { icon, esc } from './dom.js';
 import { fitGuard } from './fit.js';
 
 // A card type can export `panel = true`: placed straight on a page (a section with panel: false), it sits in its own glass
 // panel without each config saying class: 'glass'. Inside a panel section or a pop-up it doesn't (no panel in a panel).
 // A config opts out with panel: false, or picks its own look with class.
 const loading = new Map(), modules = new Map(), panels = new Set();
+// A type that fails to load fails the view or pop-up that asked for it (core/router.js tells the user); it is forgotten,
+// so the next one that names it asks again (a file that didn't arrive over a bad link).
 function load(type) {
-  if (!loading.has(type)) loading.set(type, import(`../cards/${type}.js`).then((m) => { modules.set(type, m.default); if (m.panel) panels.add(type); }));
+  if (!loading.has(type)) loading.set(type, import(`../cards/${type}.js`).then((m) => { modules.set(type, m.default); if (m.panel) panels.add(type); },
+    (e) => { loading.delete(type); throw e; }));
   return loading.get(type);
 }
 function typesIn(cards, out = new Set()) { (cards || []).forEach((c) => { out.add(c.type); typesIn(c.cards, out); }); return out; }
 // Phone reflow of a big-screen page: one column, no screen-height filling, single-figure tiles (kpi) two to a row, everything
-// else (hosts, containers, charts, lists) full width. Mobile dashboards use it, and app.js applies it to a big-screen
+// else (hosts, containers, charts, lists) full width. Mobile dashboards use it, and core/profile.js applies it to a big-screen
 // dashboard opened on a phone, so a site without a Mobile dashboard reads the same.
 const reflow = (cards) => cards.map((c) => ({ ...c, grow: undefined, fit: c.type === 'chart' ? false : c.fit,
   span: c.type === 'kpi' ? 6 : 12, ...(c.cards ? { cards: reflow(c.cards) } : {}) }));
 export const phoneSections = (secs) => secs.map((sec) => ({ ...sec, span: 1, rows: undefined, cols: 12, cards: reflow(sec.cards) }));
+// A TV's copy of a view, page, section, card or pop-up: what is written next to each thing as `tv` is applied, at any depth.
+//   tv: false = not on a TV; tv: { ...options } = these options instead on a TV (an option set to undefined is dropped).
+// A site's TV dashboard builds its pages from the big-screen ones with this, so the choice sits with the card it is about.
+const NESTED = ['views', 'pages', 'sections', 'cards', 'facts'];
+export function tvCopy(cfg) {
+  if (!cfg || typeof cfg !== 'object') return cfg;
+  if (cfg.tv === false) return null;
+  const o = { ...cfg, ...(cfg.tv && typeof cfg.tv === 'object' ? cfg.tv : {}) }; delete o.tv;
+  for (const k of NESTED) if (Array.isArray(o[k])) o[k] = o[k].map(tvCopy).filter(Boolean);
+  return o;
+}
 export const phoneView = (view) => ({ ...view, pages: view.pages.map((pg) => ({ ...pg, fill: false, reflowed: true, sections: phoneSections(pg.sections) })) });
 
 export const preload = (cards) => Promise.all([...typesIn(cards)].map(load));
 
+/**
+ * @param {import('./shapes.js').View} view
+ * @param {Record<string, any>} home the site's home.js module
+ * @returns {Promise<import('./router.js').ViewElement>}
+ */
 export async function renderView(view, home) {
   const el = await renderView0(view, home);
   if (view.zoom) el.style.zoom = view.zoom;
@@ -52,8 +71,8 @@ async function renderView0(view, home) {
   if (view.columns) el.style.setProperty('--view-template', view.columns);
   if (view.colGap) el.style.columnGap = view.colGap;   // view option: space between columns (Cameras)
   if (view.fill) el.classList.add('fill');   // view option: the view takes the screen's height, its columns stretch to the bottom (Printer)
-  sections(el, view.sections, home);
-  fitGuard(el);   // fill only when the content fits (core/fit.js)
+  // everything its cards hook up is recorded, so the view can be unloaded (core/scope.js, core/router.js)
+  el.dispose = capture(() => { sections(el, view.sections, home); fitGuard(el); }).dispose;   // fitGuard: fill only when the content fits (core/fit.js)
   return el;
 }
 
@@ -73,13 +92,25 @@ function sections(el, list, home) {
 async function pagedView(view, home) {
   const el = document.createElement('div');
   el.className = 'pview view-' + view.id;
-  el.innerHTML = `<div class="vtabs">${view.pages.map((p, i) => `<button class="ptab" data-i="${i}">${p.icon ? icon(p.icon) : ''}<span>${p.title}</span></button>`).join('')}</div>`;
+  el.innerHTML = `<div class="vtabs">${view.pages.map((p, i) => `<button class="ptab" data-i="${i}" aria-label="${esc(p.title)}">${p.icon ? icon(p.icon) : ''}<span>${esc(p.title)}</span></button>`).join('')}</div>`;
   el.style.setProperty('--t', `var(--${view.tone || 'mist'})`);
   if (view.pages.length === 1) el.querySelector('.vtabs').hidden = true;   // one page: no tab row (it would only cost height)
-  const made = [], tabs = [...el.querySelectorAll('.vtabs .ptab')];
+  const made = [], making = [], disposers = [], tabs = [...el.querySelectorAll('.vtabs .ptab')];
+  let asked = 0, shown = -1;
+  el.dispose = () => disposers.forEach((d) => d && d());   // every tab built so far (core/scope.js)
+  // A page is built once, however often it is asked for while its card types load, and the page asked for last is the one shown.
+  const make = (i) => preload(view.pages[i].sections.flatMap((s) => s.cards)).then(() => {
+    const pg = document.createElement('div');
+    pg.className = 'view vpage view-' + view.id + '-' + view.pages[i].id + (view.pages[i].fill ? ' fill' : '') + (view.pages[i].reflowed ? ' reflowed' : '');
+    disposers[i] = capture(() => { sections(pg, view.pages[i].sections, home); fitGuard(pg); }).dispose;
+    el.appendChild(pg); made[i] = pg;
+  }).finally(() => { making[i] = null; });
   el.showPage = async (k) => {
     let i = view.pages.findIndex((p) => p.id === k); if (i < 0) i = typeof k === 'number' ? k : 0;
-    if (!made[i]) { await preload(view.pages[i].sections.flatMap((s) => s.cards)); const pg = document.createElement('div'); pg.className = 'view vpage view-' + view.id + '-' + view.pages[i].id + (view.pages[i].fill ? ' fill' : '') + (view.pages[i].reflowed ? ' reflowed' : ''); sections(pg, view.pages[i].sections, home); el.appendChild(pg); made[i] = pg; fitGuard(pg); }
+    const turn = ++asked;
+    if (!made[i]) { making[i] = making[i] || make(i); await making[i]; }
+    if (turn !== asked) { if (i !== shown && made[i]) made[i].hidden = true; return; }   // another page was asked for meanwhile
+    shown = i;
     made.forEach((m, j) => { if (m) m.hidden = j !== i; });
     tabs.forEach((t, j) => t.classList.toggle('on', j === i));
     el.current = view.pages[i].id;
@@ -110,7 +141,11 @@ export function grid(cards, cols, home, rows, opts = {}) {
     const ctx = { home, cell, grid: (c, n, hm, r, o) => grid(c, n, hm, r, o || opts), preload,   // a stack inside a page section is still on the page
       setVisible: (v) => { wants = !!v; apply(); } };
     try { cell.appendChild(factory(cfg, ctx)); } catch (e) { console.error(cfg, e); cell.textContent = 'Card error: ' + cfg.type; }
-    if (cfg.show) { const conds = [].concat(cfg.show); watch(conds.flatMap((c) => c.entities || [c.entity]), () => { shown = conds.every(test); apply(); }); }
+    // a show rule that throws (a config's own `when`) hides its card; it must not take the rest of the view with it
+    if (cfg.show) { const conds = [].concat(cfg.show), check = () => { try { shown = conds.every(test); } catch (e) { console.error(cfg, e); shown = false; } apply(); };
+      watch(conds.flatMap((c) => c.entities || [c.entity]), check);
+      // every: ms = a `when` that also depends on time (a value held a few seconds after its entity changed) is asked again
+      const ms = Math.min(...conds.map((c) => c.every || Infinity)); if (isFinite(ms)) { const t = setInterval(check, ms); onDispose(() => clearInterval(t)); } }
     g.appendChild(cell);
   }
   // rows: content height, the growing card(s) get the rest
@@ -120,7 +155,8 @@ export function grid(cards, cols, home, rows, opts = {}) {
   return g;
 }
 
-function test(c) {
+// one show rule against the states as they are now (exported for the tests)
+export function test(c) {
   if (c.when) return !!c.when();
   const e = st(c.entity); if (!e) return false;
   const v = parseFloat(e.state);

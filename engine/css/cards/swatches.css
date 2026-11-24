@@ -1,0 +1,5 @@
+@layer cards {
+/* ---------- swatches: colors to pick ---------- */
+.swatches { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.sw { width: calc(40px * var(--s)); height: calc(40px * var(--s)); border-radius: 50%; border: 2px solid var(--edge-strong); }
+}

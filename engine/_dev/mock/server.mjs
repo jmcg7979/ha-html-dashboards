@@ -1,71 +1,94 @@
-import http from 'node:http'; import fs from 'node:fs'; import { WebSocketServer } from 'ws';
-// Fake Home Assistant for the dashboards: serves an assembled site (MOCK_DASH) and plays that site's data (sites/<MOCK_SITE>/mock/states.mjs).
-const { S, user, onCall } = await import(new URL(`../../../sites/${process.env.MOCK_SITE || 'house'}/mock/states.mjs`, import.meta.url));
-// MOCK_DOWN=unavailable|unknown: every entity but people and the sun has that state, to check what a screen says when its sensors are gone
-if(process.env.MOCK_DOWN) for(const k in S) if(!/^(person|sun)\./.test(k)) S[k].s=process.env.MOCK_DOWN;
-const now=Date.now()/1000;
-const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==','base64');
-const DASH=process.env.MOCK_DASH;   // an assembled site (_dev/assemble.sh; tools/shot.sh and tools/mock.sh make one)
-if(!DASH) throw new Error('set MOCK_DASH to an assembled site: _dev/tools/mock.sh [site]');
-const MIME={js:'text/javascript',css:'text/css',html:'text/html',svg:'image/svg+xml',woff2:'font/woff2'};
-const srv=http.createServer((q,r)=>{ if(q.url.startsWith('/local/dash/')) { let f=q.url.split('?')[0].slice('/local/dash/'.length)||'index.html'; try{ const b=fs.readFileSync(DASH+'/'+f); r.setHeader('content-type',MIME[f.split('.').pop()]||'application/octet-stream'); r.end(b);}catch(e){r.statusCode=404;r.end();} }
- else if(q.url.startsWith('/local/portal')) { r.setHeader('content-type','text/html'); r.end(fs.readFileSync('../index.html')); }
- else if(q.url.startsWith('/api/calendars/')) { r.setHeader('content-type','application/json'); const d=new Date(); const mk=(h,dd,t)=>{const x=new Date(d); x.setDate(x.getDate()+dd); x.setHours(h,0,0,0); return {summary:t,start:{dateTime:x.toISOString()},end:{dateTime:new Date(+x+3600e3).toISOString()}}}; r.end(JSON.stringify([mk(23,0,'Book club'),mk(9,1,'Recycling pickup'),{summary:'Long weekend',start:{date:new Date(+d+2*864e5).toISOString().slice(0,10)},end:{date:new Date(+d+3*864e5).toISOString().slice(0,10)}},mk(16,2,'Dentist'),mk(18,4,'Dinner with friends')])); }
- else if(q.url.startsWith('/api/frigate/') && q.url.includes('/vod/')) { const f=q.url.split('?')[0].split('/').pop(); try{ const b=fs.readFileSync(new URL('hls/'+f, import.meta.url)); r.setHeader('content-type', f.endsWith('.m3u8')?'application/vnd.apple.mpegurl':'video/mp4'); r.end(b);}catch(e){r.statusCode=404;r.end();} }
- else if(q.url.startsWith('/api/frigate/') && /\/(clips|snapshot|thumbnail)\//.test(q.url)) { const n=[...q.url].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,0); r.setHeader('content-type','image/svg+xml'); r.end(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="hsl(${n%360},25%,30%)"/><circle cx="${n%320}" cy="${(n>>9)%180}" r="30" fill="hsl(${n%360},40%,60%)"/></svg>`); }
- else if(q.url.startsWith('/api/frigate/') && q.url.includes('/recording/')) { r.setHeader('content-type','video/mp4'); r.end(mp4); }
- else if(q.url.startsWith('/__tv/banner/')) { // the TV launcher serves real app banners here (core/tvhost.js); the mock draws a stand-in
-   const pkg=decodeURIComponent(q.url.slice(13).split('?')[0]), w=pkg.split('.').filter(x=>!['com','android','tv','google','apps','livingroom','ninja','stream'].includes(x)).pop()||pkg;
-   const hue=[...pkg].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
-   r.setHeader('content-type','image/svg+xml'); r.end(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="hsl(${hue},45%,28%)"/><text x="160" y="102" font-family="sans-serif" font-size="30" font-weight="700" fill="#fff" text-anchor="middle">${w.replace(/[<&]/g,'')}</text></svg>`); }
- else if(q.url.startsWith('/auth/token')) { r.setHeader('content-type','application/json'); r.end(JSON.stringify({access_token:'AT',expires_in:1800,refresh_token:'RT'})); }
- else if(q.url.startsWith('/pic')||q.url.startsWith('/api/camera_proxy')) { r.setHeader('content-type','image/png'); r.end(png); } else { r.statusCode=404; r.end(); } });
-// Frigate playback test files (hls/, VP9 because test Chromium has no H.264), make them once with:
-// ffmpeg -f lavfi -i testsrc=size=640x360:rate=15 -t 30 -c:v libvpx-vp9 -deadline realtime -b:v 400k -g 30 -f hls -hls_time 5 -hls_playlist_type vod -hls_segment_type fmp4 -hls_fmp4_init_filename init.mp4 -hls_segment_filename hls/seg%d.m4s hls/index.m3u8
-const wss=new WebSocketServer({noServer:true}); const cams=new WebSocketServer({noServer:true});
-srv.on('upgrade',(q,so,h)=>{ const w=q.url.startsWith('/api/frigate/')?cams:wss; if(q.url.startsWith('/api/frigate/')) fs.appendFileSync(new URL('calls.log', import.meta.url),'CAMWS '+q.url+'\n'); w.handleUpgrade(q,so,h,c=>w.emit('connection',c)); });
-const mp4=fs.existsSync(new URL('test.mp4', import.meta.url))?fs.readFileSync(new URL('test.mp4', import.meta.url)):Buffer.alloc(0);   // not in git: without it, camera tiles stay dark
-cams.on('connection',c=>{ c.on('message',d=>{ const m=JSON.parse(d); fs.appendFileSync(new URL('calls.log', import.meta.url),'MSEREQ '+m.value+'\n'); c.send(JSON.stringify({type:'mse',value:'video/mp4; codecs="vp09.00.10.08"'})); let o=0; const t=setInterval(()=>{ if(o>=mp4.length||c.readyState!==1){clearInterval(t);return;} c.send(mp4.subarray(o,o+20000)); o+=20000; },100); }); }); let subId=null, calls=[];
-wss.on('connection',ws=>{ ws.send(JSON.stringify({type:'auth_required'}));
- ws.on('message',d=>{ const m=JSON.parse(d);
-  if(m.type==='auth') ws.send(JSON.stringify({type:'auth_ok'}));
-  else if(m.type==='auth/current_user') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{id:process.env.MOCK_USER||'u1',name:process.env.MOCK_USER?'Wall Panel':user,is_admin:!process.env.MOCK_USER}}));
-  else if(m.type==='subscribe_entities'){ subId=m.id; ws.subId=m.id; ws.ids=new Set(m.entity_ids); ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:null})); const a={}; for(const k of m.entity_ids) if(S[k]) a[k]={s:S[k].s,a:S[k].a,lc:S[k].lc}; ws.send(JSON.stringify({id:m.id,type:'event',event:{a}})); }
-  else if(m.type==='ping') ws.send(JSON.stringify({id:m.id,type:'pong'}));
-  else if(m.type==='get_config') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{latitude:39.05,longitude:-95.68}}));
-  else if(m.type==='get_states') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:Object.keys(S).map(k=>({entity_id:k,state:S[k].s}))}));
-  else if(m.type==='logbook/get_events') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:[{when:Date.now()/1000-7200,state:'armed_away',entity_id:m.entity_ids[0],context_user_id:'u1'},{when:Date.now()/1000-3600,state:'disarmed',entity_id:m.entity_ids[0],context_user_id:'u2'}]}));
-  else if(m.type==='recorder/statistics_during_period') { const r={}, P=m.period==='day'?86400e3:3600e3, first=Date.now()-40*86400e3; let t=Math.max(Date.parse(m.start_time), first); t=Math.ceil(t/P)*P;
-    for(const id of m.statistic_ids){ const base=parseFloat((S[id]||{}).s); if(isNaN(base)||id.includes('adguard')) continue; const rows=[]; for(let x=t;x<Date.now()-P;x+=P){ const k=x/P, v=Math.max(0,base*(1+0.18*Math.sin(k/(P>3600e3?5:20)+id.length)+0.06*Math.sin(k*1.7))); rows.push({start:x,end:x+P,mean:v,min:v*0.9,max:v*1.12}); } r[id]=rows; }
-    ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:r})); }
-  else if(m.type==='history/history_during_period') { const r={}; const t0=Math.max(Date.parse(m.start_time)/1000||0, Date.now()/1000-10*86400); for(const id of m.entity_ids){ const base=parseFloat((S[id]||{}).s), num=!isNaN(base)&&!id.startsWith('climate.'); r[id]=Array.from({length:num?96:30},(_,i)=>({s: num? String(Math.max(0,base*(1+0.22*Math.sin(i/9+id.length)+0.05*Math.sin(i*1.3+id.length*3)))) : String(45+Math.sin(i/3)*5), a:{current_temperature:68+Math.sin(i/4)*2, target_temp_low:i<15?67:68, target_temp_high:74, hvac_action:(i%7<2?'heating':i%11===3?'cooling':'idle')}, lu:t0+i*(Date.now()/1000-t0)/(num?96:30)})); } ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:r})); }
-  else if(m.type==='frigate/reviews/get'){ fs.appendFileSync(new URL('calls.log', import.meta.url),'FRIGATE '+JSON.stringify(m)+'\n'); const cams=['front_doorbell','driveway','back_yard','porch','garage']; const objs=[['person'],['dog'],['person','dog'],['car']]; const t0=Date.now()/1000; let out=Array.from({length:40},(_,i)=>{ const st=t0-600-i*5400-(i%3)*700; return {id:`${st.toFixed(6)}-r${i}`,camera:cams[i%5],start_time:st,end_time:i===0&&!m.before?null:st+8+(i%7)*13,severity:i%3===2?'detection':'alert',thumb_path:'',has_been_reviewed:i>3,data:{detections:[`${st}-e${i}`],objects:objs[i%4],sub_labels:[],zones:i%2?['porch']:[],audio:[]}}; });
-    if(m.severity) out=out.filter(x=>x.severity===m.severity); if(m.cameras) out=out.filter(x=>m.cameras.includes(x.camera)); if(m.after) out=out.filter(x=>x.start_time>=m.after); if(m.before) out=out.filter(x=>x.start_time<m.before);
-    ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:JSON.stringify(out.slice(0,m.limit||50))})); }
-  else if(m.type==='frigate/reviews/viewed'){ fs.appendFileSync(new URL('calls.log', import.meta.url),'FRIGATE '+JSON.stringify(m)+'\n'); ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{success:true}})); }
-  else if(m.type==='frigate/recordings/summary'){ const days=[]; for(let d=0; d<4; d++){ const x=new Date(Date.now()-d*864e5); const key=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; const hn=d===0?x.getHours()+1:24; days.push({day:key,events:3,hours:Array.from({length:hn},(_,h)=>({hour:String(h).padStart(2,'0'),events:h%5===0?2:0,motion:1000+((h*7919)%9000),objects:0,duration:h===hn-1&&d===0?x.getMinutes()*60:(h===3&&d===1?1800:3600)})).reverse()}); }
-    ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:JSON.stringify(days)})); }
-  else if(m.type==='unsubscribe_events') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:null}));
-  else if(m.type==='auth/sign_path') ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{path:m.path+(m.path.includes('?')?'&':'?')+'authSig=abc'}}));
-  else if(m.type==='call_service' && m.return_response){ const hrs=Array.from({length:30},(_,i)=>({datetime:new Date(Date.now()+i*3600e3).toISOString(),temperature:62+8*Math.sin(i/5),precipitation_probability: i>12&&i<20?60:0,condition:'partlycloudy'})); const days=['sunny','partlycloudy','cloudy','rainy','lightning-rainy','sunny'].map((c,i)=>({datetime:new Date(Date.now()+i*864e5).toISOString(),temperature:72-i,templow:55+i,condition:c,precipitation_probability:c.includes('rain')?70:0})); const twice=[]; for(let i=0;i<14;i++){ const dt=new Date(Date.now()+Math.floor(i/2)*864e5); dt.setHours(i%2?18:6); twice.push({datetime:dt.toISOString(),is_daytime:!(i%2),temperature:i%2?50+i:70-i,condition:['sunny','partlycloudy','cloudy','rainy','lightning-rainy','sunny','partlycloudy'][Math.floor(i/2)],precipitation_probability:[0,10,20,70,60,0,10][Math.floor(i/2)],short_description:i%2?'Mostly clear':'Partly sunny',detailed_description:i%2?'Mostly clear, with a low around 50. North wind 3 to 7 mph.':'Partly sunny, with a high near 70. Light north wind.'}); }
-      const tid=[].concat((m.target||{}).entity_id||(m.service_data||{}).entity_id||[])[0]; if((S[tid]||{}).s==='unavailable'){ ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{response:{}}})); return; }   // like HA: unavailable entities are skipped
-      ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{response:{[tid]:{forecast: (m.service_data||{}).type==='hourly'?hrs:(m.service_data||{}).type==='twice_daily'?twice:days}}}})); }
-  else if(m.type==='call_service' && m.domain==='mock' && m.service==='fail') ws.send(JSON.stringify({id:m.id,type:'result',success:false,error:{code:'test',message:'refused for a test'}}));
-  else if(m.type==='call_service'){ calls.push(m); fs.appendFileSync(new URL('calls.log', import.meta.url),JSON.stringify(m)+'\n'); ws.send(JSON.stringify({id:m.id,type:'result',success:true,result:{}}));
-    setTimeout(()=>{ const ids=[].concat((m.target||{}).entity_id||[]); const c={};
-      for(const id of ids){ let p=null; if(m.service==='turn_on') p={s:'on',a:m.service_data.brightness_pct?{brightness:Math.round(m.service_data.brightness_pct*2.55)}:{}}; else if(m.service==='turn_off') p={s:'off'}; else if(m.service==='select_option') p={s:m.service_data.option}; else if(m.service==='lock') p={s:'locked'}; else if(m.service==='unlock') p={s:'unlocked'}; else if(m.service.startsWith('alarm_arm')) p={s:'arming'};
-        if(p) { c[id]={'+':Object.assign({lc:Date.now()/1000},p)}; S[id]=Object.assign(S[id]||{a:{}},{s:p.s,lc:Date.now()/1000},p.a?{a:Object.assign({},(S[id]||{}).a,p.a)}:{}); } }
-      // Proxmox VM power (button.proxmox_<vm>_restart|shut_down|start): the guest's sensor drops out, a new start time, the guest comes back
-      if(m.domain==='button'&&m.service==='press'){ const mm=(ids[0]||'').match(/^button\.proxmox_(haos|ubuntu)_(restart|shut_down|start)$/);
-        if(mm){ const vm=mm[1], act=mm[2], guest=vm==='haos'?'sensor.system_monitor_processor_use':'sensor.ubuntu_server_cpu_usage', stt=`sensor.proxmox_${vm}_status`, up=`sensor.proxmox_${vm}_uptime`;
-          const push=(id,v)=>{ S[id]=Object.assign(S[id]||{a:{}},{s:v}); ws.send(JSON.stringify({id:subId,type:'event',event:{c:{[id]:{'+':{s:v,lc:Date.now()/1000}}}}})); };
-          // Ubuntu also has the agent (online) + HA's OS state (packages/vm_os_state.yaml)
-          const os=(v,ag)=>{ if(vm!=='ubuntu') return; push('sensor.proxmox_ubuntu_os_state',v); if(ag) push('binary_sensor.ubuntu_agent_online',ag); };
-          if(act==='restart'){ setTimeout(()=>{ push(guest,'unavailable'); os('stopping','off'); },3000); setTimeout(()=>{ push(up,new Date().toISOString()); os('starting'); },9000); setTimeout(()=>{ push(guest,'12.5'); os('running','on'); },15000); }
-          if(act==='shut_down'){ setTimeout(()=>{ push(guest,'unavailable'); os('stopping','off'); },3000); setTimeout(()=>{ push(stt,'stopped'); os('stopped'); },8000); }
-          if(act==='start'){ setTimeout(()=>{ push(stt,'running'); push(up,new Date().toISOString()); os('starting'); },4000); setTimeout(()=>{ push(guest,'10'); os('running','on'); },10000); } } }
-      if(m.domain==='mock'&&m.service==='set') { const d=m.service_data; S[d.entity]=Object.assign(S[d.entity]||{a:{}},{s:d.state},d.attributes?{a:d.attributes}:{}); c[d.entity]={'+':Object.assign({s:d.state,lc:Date.now()/1000},d.attributes?{a:d.attributes}:{})}; }   // test hook: ha.call('mock.set', { entity, state, attributes? })
-      if(onCall) onCall(m,c);
-      for(const cl of wss.clients){ const cc=Object.fromEntries(Object.entries(c).filter(([k])=>cl.ids&&cl.ids.has(k))); if(cl.subId!=null&&Object.keys(cc).length) cl.send(JSON.stringify({id:cl.subId,type:'event',event:{c:cc}})); } },150); }   // as with HA: every connection hears a change to the entities it subscribed (a TV page and its launcher's watcher), and only those
- }); });
-srv.listen(8125,()=>console.log('mock on 8125'));
+// Fake Home Assistant for the dashboards: serves an assembled site and plays that site's data, so the browser checks
+// (tools/shot.sh, tools/regress.sh) and a person (tools/mock.sh) can run a dashboard without a real HA.
+//
+// The parts:
+//   server.mjs    this file: settings, the site's data, HTTP routes, websocket upgrades
+//   static.mjs    the assembled build under /local/dash/
+//   ha.mjs        Home Assistant's websocket API: sign-in, entity subscriptions, registries, service calls, test hooks
+//   history.mjs   made-up history, statistics, logbook, calendar and forecast answers
+//   music.mjs     Music Assistant behind the relay's websocket types (ma_relay/*): a library, a search, a queue per id
+//   media.mjs     camera pictures, Frigate (reviews, recordings, live stream), saved media, TV app banners
+//
+// Settings (environment):
+//   MOCK_DASH     the assembled site to serve (_dev/assemble.sh makes one; tools/shot.sh and tools/mock.sh do it for you)
+//   MOCK_SITE     whose data to play: sites/<MOCK_SITE>/mock/states.mjs (default house)
+//   MOCK_HOST     address to listen on (default 127.0.0.1: this machine only; 0.0.0.0 opens it to the network, for a TV)
+//   MOCK_PORT     port (default 8125; tools/shot.sh picks a free one so several checks can run at once)
+//   MOCK_LOG      the call log (default calls.log beside this file), one line per event, for checks to read:
+//                   {…}            a service call, as the page sent it (not the ones that ask for an answer)
+//                   ASK d.s        a service call that asks for an answer (return_response)
+//                   FRIGATE {…}    a Frigate review request          CAMWS url / MSEREQ codecs   a live camera stream
+//                   MOCK {…}       a fault switched on (below)       UNKNOWN type                a websocket type the mock has no answer for
+//                   MA {…}         a Music Assistant command, as the page sent it through the relay
+//   MOCK_DOWN     unavailable | unknown: every entity but people and the sun starts in that state
+//   MOCK_USER     sign in as this user id, not an admin (a wall panel's account)
+//   MOCK_MA       off: an HA without the Music Assistant relay (every screen then shows what HA alone gives)
+//   MOCK_PARTY    <entity>: the player Music Assistant's Party plays on from the start (none otherwise)
+//   MOCK_VARIANT, other MOCK_*   the site's own variants (see its mock/states.mjs)
+//
+// A site's mock/states.mjs exports:
+//   S             { entity id: { s: state, a: attributes, lc: last changed, seconds } }
+//                 swing: how far a number moves in the made-up history (1 = the usual ±22%; 0.1 = a tenth of that)
+//   user          the signed-in user's name
+//   onCall        optional (msg, changes, { S, push }): what a service call changes at this site. Add to `changes`
+//                 ({ id: { '+': { s, a } } }) or call push(id, state) later.
+//   responses     optional { 'domain.service': answer | (msg, S) => answer } for service calls that ask for an answer
+//   browse        optional (msg, S) => a media player's folder ({ title, children: [...] }, as HA's media_player/browse_media answers)
+//   registry      optional { devices: [...], entities: [...] }: HA's device registry and its entity list for display
+//                 (ei = entity id, di = device id, pl = platform, tk = translation key), what core/discover.js reads
+//   vms           optional { name: { buttons, status, uptime, guest, os?, agent? } }: Proxmox guests whose power buttons
+//                 (<buttons>restart | shut_down | start) the mock plays out over a few seconds
+//   noStatistics  optional RegExp: entity ids the recorder has no long-term statistics for
+//   frigate       optional { cameras: [...] }: the cameras Frigate's reviews come from
+//
+// Test hooks, as service calls from the page (ha.call('mock.set', { … })) or from a shell (node set.mjs …):
+//   mock.set  { entity, state, attributes? }   set an entity; every page that subscribed to it hears the change
+//   mock.fail                                  HA refuses this call (what a button does when its action fails)
+//   mock.drop { for: seconds }                 close every websocket and refuse new ones for that long (an HA restart);
+//                                              0 or nothing = the link drops and can come straight back
+//   mock.lag  { ms }                           delay every websocket answer and event by this much from now on; 0 = off
+//   mock.auth { invalid: true, times? }        the next sign-in (or the next `times`) is refused with auth_invalid
+//   mock.music { reset: true }                 HA's Music Assistant integration was reloaded: the relay ends every queue subscription
+import http from 'node:http';
+import fs from 'node:fs';
+import { WebSocketServer } from 'ws';
+import { serveDash } from './static.mjs';
+import { haSocket } from './ha.mjs';
+import { calendarEvents } from './history.mjs';
+import { mediaRoute, cameraSocket } from './media.mjs';
+
+const DASH = process.env.MOCK_DASH;
+if (!DASH) throw new Error('set MOCK_DASH to an assembled site: _dev/tools/mock.sh [site]');
+const HOST = process.env.MOCK_HOST || '127.0.0.1';
+const PORT = +process.env.MOCK_PORT || 8125;
+const LOG = process.env.MOCK_LOG || new URL('calls.log', import.meta.url);
+const log = (line) => fs.appendFileSync(LOG, line + '\n');
+
+const site = await import(new URL(`../../../sites/${process.env.MOCK_SITE || 'house'}/mock/states.mjs`, import.meta.url));
+const { S } = site;
+// every state has attributes and a time of last change, whatever the site's file left out
+for (const k in S) { S[k].a = S[k].a || {}; S[k].lc = S[k].lc || Date.now() / 1000 - 3600; }
+if (process.env.MOCK_DOWN) for (const k in S) if (!/^(person|sun)\./.test(k)) S[k].s = process.env.MOCK_DOWN;
+
+const json = (r, body) => { r.setHeader('content-type', 'application/json'); r.end(JSON.stringify(body)); };
+const srv = http.createServer((q, r) => {
+  if (q.url.startsWith('/local/dash/')) serveDash(DASH, q, r);
+  else if (q.url.startsWith('/api/calendars/')) json(r, calendarEvents());
+  else if (mediaRoute(q, r)) { /* answered */ }
+  else if (q.url.startsWith('/api/ma_relay/artist')) { r.statusCode = 204; r.end(); }   // the relay's artist photo: none on the mock (a check stands in for one: its own route)
+  else if (q.url.startsWith('/auth/token')) json(r, { access_token: 'AT', expires_in: 1800, refresh_token: 'RT' });
+  else { r.statusCode = 404; r.end(); }
+});
+
+const ha = haSocket({ site, S, log });
+const homeAssistant = new WebSocketServer({ noServer: true }), cameras = new WebSocketServer({ noServer: true });
+homeAssistant.on('connection', ha.connection);
+cameras.on('connection', (c) => cameraSocket(c, log));
+ha.clients = () => homeAssistant.clients;
+srv.on('upgrade', (q, socket, head) => {
+  if (q.url.startsWith('/api/frigate/')) { log('CAMWS ' + q.url); cameras.handleUpgrade(q, socket, head, (c) => cameras.emit('connection', c)); return; }
+  if (ha.down()) { socket.destroy(); return; }   // mock.drop: as an HA that is restarting
+  homeAssistant.handleUpgrade(q, socket, head, (c) => homeAssistant.emit('connection', c));
+});
+
+srv.listen(PORT, HOST, () => console.log(`mock on ${HOST}:${PORT}`));

@@ -88,8 +88,7 @@ const db = () => new Promise((res, rej) => { const r = indexedDB.open('dashGalle
 const put = async (k, v) => { const d = await db(); return new Promise((res, rej) => { const t = d.transaction('base', 'readwrite'); t.objectStore('base').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); };
 const get = async (k) => { const d = await db(); return new Promise((res, rej) => { const r = d.transaction('base').objectStore('base').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); };
 
-let targets = [];
-const say = (lines) => { targets = []; out.innerHTML = ''; lines.forEach((l) => { const d = document.createElement('div'); if (typeof l === 'string') d.textContent = l; else { d.textContent = l.text; d.className = 'row'; d.onclick = () => flash(l.el); } out.appendChild(d); }); };
+const say = (lines) => { out.innerHTML = ''; lines.forEach((l) => { const d = document.createElement('div'); if (typeof l === 'string') d.textContent = l; else { d.textContent = l.text; d.className = 'row'; d.onclick = () => flash(l.el); } out.appendChild(d); }); };
 function flash(el) { if (!el || !el.isConnected) return; el.scrollIntoView({ block: 'center' }); const o = el.style.outline; el.style.outline = '3px solid #ff5a36'; setTimeout(() => { el.style.outline = o; }, 2500); }
 
 // content cut off by a scrolling / clipping box inside the card is that box's job (a map, a scroller), not a layout overflow
@@ -135,7 +134,7 @@ $('#cmp').onclick = async () => {
     for (const k of Object.keys(base.m)) if (!now[k]) gone++;
     lines.push(`${id}: ${changed} changed, ${added} new, ${gone} removed (baseline ${new Date(base.at).toLocaleString()})`, ...rows);
   }
-  lines.push('', 'Live data can change some colours and sizes (a light turning on, a longer name). Click a row to find it.');
+  lines.push('', 'Live data can change some colors and sizes (a light turning on, a longer name). Click a row to find it.');
   say(lines);
 };
 // one check at a time; the buttons are disabled while it runs

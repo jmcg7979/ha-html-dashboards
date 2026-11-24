@@ -1,3 +1,20 @@
+@layer cards {
+/* ---------- Events list (cards/reviews.js): filters, days, a row per event ---------- */
+.reviews { display: flex; flex-direction: column; gap: var(--sp-8); min-height: 0; }
+.reviews .rvf { display: flex; gap: var(--sp-6); }
+.reviews .rvf .pick { margin-left: auto; max-width: 55%; }
+.reviews .rvlist { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--sp-6); margin-right: calc(-6px * var(--s)); padding-right: var(--sp-6); }
+.reviews .rvday { font-size: var(--fs-small); font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-top: var(--sp-6); }
+.reviews .rvempty { color: var(--text-2); font-size: var(--fs-sub); padding: var(--sp-20) 0; text-align: center; }
+.rvi { display: flex; gap: var(--sp-10); align-items: center; text-align: left; padding: var(--sp-6); border-radius: var(--r-14); background: var(--veil); box-shadow: inset 0 0 0 1px var(--edge); flex: none; position: relative; }
+.rvi .rvth { width: calc(104px * var(--s)); aspect-ratio: 16/9; border-radius: var(--r-10); overflow: hidden; background: rgb(var(--media-rgb)); flex: none; }
+.rvi .rvth img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rvi .rvth img:not([src]) { visibility: hidden; }
+.rvi .rvtx { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.rvi .rvtx b { font-size: var(--fs-sub); font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rvi .rvtx span { font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rvi.alert .rvth { box-shadow: 0 0 0 2px rgba(var(--ember), var(--a-80)); }
+.rvi.new::after { content: ""; position: absolute; right: var(--sp-10); top: 50%; width: calc(8px * var(--s)); height: calc(8px * var(--s)); margin-top: calc(-4px * var(--s)); border-radius: 50%; background: rgb(var(--mist)); }
 /* ---------- compact Events column (reviews compact): one quiet panel, slim rows ---------- */
 .reviews.compact { gap: var(--sp-4); }
 .reviews.compact .rvhead { display: flex; align-items: center; justify-content: space-between; flex: none; padding: 0 0 var(--sp-6) var(--sp-4); }
@@ -22,4 +39,6 @@
 .view .camera:not(.full) .mute, .cwall .camera:not(.full) .hist { display: none; }
 .cwall .camera.full .hist { display: flex; background: rgba(var(--glass-rgb), .85); box-shadow: inset 0 0 0 1px var(--popup-edge), 0 2px 10px rgba(0, 0, 0, .45); right: var(--sp-20); top: var(--sp-16); width: calc(52px * var(--s)); height: calc(52px * var(--s)); }
 .cwall .camera.full .hist svg { width: var(--icon); height: var(--icon); }
-
+/* a phone scrolls the page: the list is part of it (a scroll box of its own swallowed the page's scrolling) */
+:root[data-profile="phone"] .reviews .rvlist { overflow: visible; overscroll-behavior: auto; }
+}

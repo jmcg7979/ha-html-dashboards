@@ -3,7 +3,7 @@
 // forecast: the type the entity supports (default daily); fallback: see core/forecast.js.
 import { h, esc, setText, setHTML } from '../core/dom.js';
 import { st, watch } from '../core/store.js';
-import { forecast, byDay, TEXT, wxIcon, wxImg, compass } from '../core/forecast.js';
+import { forecast, byDay, todayOf, condText, wxIcon, wxImg, compass } from '../core/forecast.js';
 import { stripCell } from './strip.js';
 import wxHours from './wx-hours.js';
 
@@ -25,8 +25,8 @@ export default function weather(cfg) {
     const a = w.attributes, isNight = (st(cfg.sun || 'sun.sun') || {}).state === 'below_horizon';
     setHTML(q('.wicon'), wxImg(wxIcon(w.state, isNight)));
     setText(q('.wtemp'), r(a.temperature) + '°');
-    setText(q('.wcond'), TEXT[w.state] || w.state);
-    const today = days.find((d) => d.date.toDateString() === new Date().toDateString());
+    setText(q('.wcond'), condText(w.state));
+    const today = todayOf(days);
     setText(q('.whilo'), today ? [today.hi != null ? `High ${r(today.hi)}°` : '', today.lo != null ? `Low ${r(today.lo)}°` : ''].filter(Boolean).join(' · ') : '');
     // three figures whatever the source reports: not every source has a feels-like
     const facts = [a.apparent_temperature != null ? ['Feels like', r(a.apparent_temperature) + '°'] : a.dew_point != null ? ['Dew point', r(a.dew_point) + '°'] : null,

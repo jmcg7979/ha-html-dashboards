@@ -1,5 +1,6 @@
 // The example site's fake Home Assistant data for engine/_dev/mock/server.mjs. Every value is made up.
-// Exports: S = entity states { id: { s: state, a: attributes } }; user = the signed-in name; onCall (optional) = what a service call changes here.
+// Exports: S = entity states { id: { s: state, a: attributes } }; user = the signed-in name; vms = the Proxmox guests whose power
+// buttons the mock plays out. The mock's header (engine/_dev/mock/server.mjs) lists everything a site's file may export.
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
 const ahead = (min) => new Date(Date.now() + min * 60000).toISOString();
 const off = (...ids) => Object.fromEntries(ids.map((id) => [id, { s: 'off' }]));
@@ -89,7 +90,7 @@ export const S = {
   ...Object.assign({}, ...[1, 2, 3, 4].map((n) => ({ ...vals({ [`sensor.nas_drive_${n}_status`]: 'normal', [`sensor.nas_drive_${n}_temperature`]: 118 + n * 2 }),
     ...off(`binary_sensor.nas_drive_${n}_bad_sectors`, `binary_sensor.nas_drive_${n}_remaining_life`) }))),
 
-  // Systems: Proxmox (the mock's button.press handler plays a VM restart on these ids)
+  // Systems: Proxmox (the `vms` export below has the mock play a guest's restart, shut-down and start)
   ...prefix('sensor.proxmox_', { status: 'online', uptime: ago(60 * 24 * 21), cpu_usage: 14, memory_usage_percentage: 71, max_memory_usage: 64, disk_temperature: 104, disk_wearout: 3, disk_power_on_hours: 9120, agent_cpu_temperature: 118, agent_board_temperature: 102, agent_system_updates_count: 0,
     storage_local_storage_usage_percentage: 22, storage_local_used_storage: 21, storage_local_total_storage: 94, storage_local_lvm_storage_usage_percentage: 38, storage_local_lvm_used_storage: 180, storage_local_lvm_total_storage: 470,
     haos_status: 'running', haos_uptime: ago(60 * 24 * 7), haos_cpu_usage: 12, haos_memory_usage_percentage: 60, haos_max_memory_usage: 8,
@@ -122,3 +123,13 @@ const now = Date.now() / 1000;
 for (const k in S) { S[k].a = S[k].a || {}; S[k].lc = S[k].lc || now - 3600; }
 
 export const user = 'Alex';
+
+// the Proxmox guests whose power buttons the mock plays out: what each one's buttons change
+export const vms = {
+  haos: { buttons: 'button.proxmox_haos_', status: 'sensor.proxmox_haos_status', uptime: 'sensor.proxmox_haos_uptime', guest: 'sensor.system_monitor_processor_use' },
+  ubuntu: { buttons: 'button.proxmox_ubuntu_', status: 'sensor.proxmox_ubuntu_status', uptime: 'sensor.proxmox_ubuntu_uptime', guest: 'sensor.ubuntu_server_cpu_usage',
+    os: 'sensor.proxmox_ubuntu_os_state', agent: 'binary_sensor.ubuntu_agent_online' },
+};
+
+// the cameras Frigate records, as home.js names them
+export const frigate = { cameras: ['front_doorbell', 'back_yard', 'driveway'] };

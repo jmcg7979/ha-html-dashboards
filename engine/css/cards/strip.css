@@ -1,0 +1,13 @@
+@layer cards {
+/* strip (cards/strip.js, history pop-up): figures side by side in one well, hairlines between, label + detail over the value */
+.strip { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); row-gap: var(--sp-10); padding: var(--sp-10) 0; border-radius: var(--tile-radius);
+  background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); }
+.sti { display: flex; flex-direction: column; gap: 1px; padding: 0 var(--sp-14); border-left: 1px solid var(--hairline); min-width: 0; }
+.strip[style*="--n:3"] .sti:nth-child(3n + 1), .strip[style*="--n: 3"] .sti:nth-child(3n + 1), .strip[style*="--n:2"] .sti:nth-child(2n + 1), .strip[style*="--n: 2"] .sti:nth-child(2n + 1), .sti:first-child { border-left: 0; }
+.stl { display: flex; align-items: baseline; gap: 6px; font-size: var(--fs-small); color: var(--text-2); min-width: 0; white-space: nowrap; }
+.stl span { flex: none; }
+.stl em { font-style: normal; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; }
+.stl i { flex: none; align-self: center; width: 12px; height: 3px; border-radius: 2px; background: rgb(var(--t)); }
+.sti b { font: 600 var(--fs-figure)/1.2 var(--font-display); color: var(--text); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sti b small { font: 400 var(--fs-small) var(--font); color: var(--text-3); margin-left: 6px; letter-spacing: 0; }
+}

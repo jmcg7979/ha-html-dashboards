@@ -1,7 +1,7 @@
 // Thermostat: a dial (drag a set point along the arc), current temperature and humidity in the middle,
 // − / + per set point, HVAC mode and fan mode. Changes are sent 800 ms after the last touch.
 // { type: 'thermostat', entity, modes: ['off', 'heat', 'cool', 'heat_cool'], range: [55, 85] (default; [5, 30] for °C) }
-import { h, icon, setText, setHTML, toggle, setTone, cap } from '../core/dom.js';
+import { h, esc, icon, setText, setHTML, toggle, setTone, cap } from '../core/dom.js';
 import { st, watch, optimistic, dropOptimistic, tapStart } from '../core/store.js';
 import { call } from '../core/ha.js';
 import { deg, metric } from '../core/units.js';
@@ -10,6 +10,13 @@ const MODE = { off: ['power', 'Off', 'stone'], heat: ['fire', 'Heat', 'ember'], 
 const ACTION = { heating: ['fire', 'Heating', 'ember'], cooling: ['snowflake', 'Cooling', 'mist'], idle: ['pause-circle-outline', 'Idle', 'stone'], off: ['power', 'Off', 'stone'], fan: ['fan', 'Fan', 'mist'], drying: ['water-percent', 'Drying', 'lamp'] };
 const A0 = 135, SWEEP = 270, R = 100, C = 120;   // arc: starts bottom-left, 270° clockwise; viewBox 240x240
 
+// a value on the step grid, without the float noise of the multiplication (0.1 steps: 20.9, not 20.900000000000002)
+export const snap = (x, step) => { const d = (String(step).split('.')[1] || '').length; return +(Math.round(x / step) * step).toFixed(d); };
+// two set points count as the same when they differ by less than any step a thermostat has
+export const same = (a, b) => a === b || (typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 0.001);
+const GONE = ['unavailable', 'unknown'];
+// the line in place of the set points when there are none to show: off is a setting, not reporting is not
+export const noSetPoint = (state) => (GONE.includes(state) ? 'Thermostat is not reporting' : 'Thermostat is off');
 const GRAB = 36;   // how close a touch must be to a knob, in dial units (the dial is 240 across)
 const pol = (deg, r = R) => { const a = (deg * Math.PI) / 180; return [C + r * Math.cos(a), C + r * Math.sin(a)]; };
 const arc = (d0, d1, r = R) => { if (d1 - d0 < 0.5) return ''; const [x0, y0] = pol(d0, r), [x1, y1] = pol(d1, r); return `M${x0.toFixed(1)},${y0.toFixed(1)}A${r},${r} 0 ${d1 - d0 > 180 ? 1 : 0} 1 ${x1.toFixed(1)},${y1.toFixed(1)}`; };
@@ -34,10 +41,10 @@ export default function thermostat(cfg) {
   const stepOf = (a) => a.target_temp_step || (metric() ? 0.5 : 1);
 
   const draw = () => {
-    const e = st(id); if (!e) return;
+    const e = st(id) || { state: 'unavailable', attributes: {} };   // an entity HA doesn't have reads like one that is unavailable
     const a = e.attributes, s = e.state, step = stepOf(a), [mn, mx] = range(a), v = vals(a), ks = keys(e, v);
     const ang = (x) => A0 + (Math.max(mn, Math.min(mx, x)) - mn) / (mx - mn) * SWEEP;
-    const ac = ['unavailable', 'unknown'].includes(s) ? ['help-circle-outline', 'Unavailable', 'stone'] : ACTION[a.hvac_action] || ACTION[s] || ACTION.idle;
+    const ac = GONE.includes(s) ? ['help-circle-outline', 'Unavailable', 'stone'] : ACTION[a.hvac_action] || ACTION[s] || ACTION.idle;
     setTone(el, ac[2]); toggle(el, 'on', a.hvac_action === 'heating' || a.hvac_action === 'cooling');
     let g = `<defs><linearGradient id="tg-${id}" x1="0" x2="1"><stop offset="0" stop-color="rgb(var(--ember))"/><stop offset="1" stop-color="rgb(var(--mist))"/></linearGradient></defs>`;
     g += `<path d="${arc(A0, A0 + SWEEP)}" class="ttrack"/>`;
@@ -53,27 +60,27 @@ export default function thermostat(cfg) {
     setHTML(big, ks.length === 2 ? `<span style="color:rgb(var(--ember))">${f(v.lo, step)}</span><i>–</i><span style="color:rgb(var(--mist))">${f(v.hi, step)}</span>`
       : ks.length === 1 ? `<span style="color:rgb(var(--${toneOf('t', s)}))">${f(v.t, step)}°</span>` : `<span>${a.current_temperature != null ? deg(a.current_temperature) + '°' : '—'}</span>`);
     setText(now, ks.length ? `Now ${a.current_temperature != null ? deg(a.current_temperature) + '°' : '—'}${a.current_humidity != null ? ' · ' + Math.round(a.current_humidity) + '%' : ''}` : (a.current_humidity != null ? Math.round(a.current_humidity) + '% humidity' : ''));
-    const row = (k, label) => `<div class="tset" style="--t:var(--${toneOf(k, s)})"><button class="rbtn" data-k="${k}" data-d="-${step}">${icon('minus')}</button><div class="tsl"><span class="sub">${label}</span><span class="tval">${v[k] != null ? f(v[k], step) + '°' : '—'}</span></div><button class="rbtn" data-k="${k}" data-d="${step}">${icon('plus')}</button></div>`;
-    setHTML(sets, ks.length === 2 ? row('lo', 'Heat to') + row('hi', 'Cool to') : ks.length ? row('t', s === 'cool' ? 'Cool to' : 'Heat to') : '<div class="sub toff">Thermostat is off</div>');
+    const row = (k, label) => `<div class="tset" style="--t:var(--${toneOf(k, s)})"><button class="rbtn" data-k="${k}" data-d="-${step}" aria-label="Cooler">${icon('minus')}</button><div class="tsl"><span class="sub">${label}</span><span class="tval">${v[k] != null ? f(v[k], step) + '°' : '—'}</span></div><button class="rbtn" data-k="${k}" data-d="${step}" aria-label="Warmer">${icon('plus')}</button></div>`;
+    setHTML(sets, ks.length === 2 ? row('lo', 'Heat to') + row('hi', 'Cool to') : ks.length ? row('t', s === 'cool' ? 'Cool to' : 'Heat to') : `<div class="sub toff">${noSetPoint(s)}</div>`);
     segs.forEach((b) => { const m = b.dataset.m; setTone(b, MODE[m] ? MODE[m][2] : 'mist'); toggle(b, 'on', s === m); });
     const fm = a.fan_modes || [];
     fanRow.hidden = !fm.length;
-    if (fanSegs.children.length !== fm.length) fanSegs.innerHTML = fm.map((m) => `<button class="chip seg" data-f="${m}">${icon(m === 'on' ? 'fan' : m === 'auto' ? 'fan-auto' : 'fan')}${cap(m)}</button>`).join('');
+    if (fanSegs.children.length !== fm.length) fanSegs.innerHTML = fm.map((m) => `<button class="chip seg" data-f="${esc(m)}">${icon(m === 'on' ? 'fan' : m === 'auto' ? 'fan-auto' : 'fan')}${esc(cap(m))}</button>`).join('');
     [...fanSegs.children].forEach((b) => { setTone(b, 'mist'); toggle(b, 'on', a.fan_mode === b.dataset.f); });
   };
   watch([id], draw);
 
-  const begin = (ev) => { clearTimeout(sendT); const a = st(id).attributes; if (!local) { local = { lo: a.target_temp_low, hi: a.target_temp_high, t: a.temperature }; t0 = tapStart(ev); } };
+  const begin = (ev) => { clearTimeout(sendT); const a = (st(id) || { attributes: {} }).attributes; if (!local) { local = { lo: a.target_temp_low, hi: a.target_temp_high, t: a.temperature }; t0 = tapStart(ev); } };
   const clamp = (e) => { const a = e.attributes, [mn, mx] = range(a);
     ['lo', 'hi', 't'].forEach((k) => { if (local[k] != null) local[k] = Math.max(mn, Math.min(mx, local[k])); });
     if (local.lo != null && local.hi != null) { const gap = 2; if (drag && drag.k === 'lo' && local.lo > local.hi - gap) local.lo = local.hi - gap; if ((!drag || drag.k === 'hi') && local.hi < local.lo + gap) local.hi = local.lo + gap; if (local.lo > local.hi - gap) local.lo = local.hi - gap; } };
   const send = () => {
     clearTimeout(sendT);
     sendT = setTimeout(() => {
-      const e = st(id), v = local; local = null; if (!v) return;
+      const e = st(id), v = local; local = null; if (!v || !e) return;
       const data = v.lo != null && v.hi != null && e.state === 'heat_cool' ? { target_temp_low: v.lo, target_temp_high: v.hi } : { temperature: v.t };
-      if (Object.keys(data).every((x) => e.attributes[x] === data[x])) return;   // touched, not moved
-      if (call('climate.set_temperature', data, id, () => dropOptimistic(id))) optimistic(id, null, data, (r) => Object.keys(data).every((x) => r.attributes[x] === data[x]), t0);
+      if (Object.keys(data).every((x) => same(e.attributes[x], data[x]))) return;   // touched, not moved
+      if (call('climate.set_temperature', data, id, () => dropOptimistic(id))) optimistic(id, null, data, (r) => Object.keys(data).every((x) => same(r.attributes[x], data[x])), t0);
     }, 800);
   };
 
@@ -95,7 +102,7 @@ export default function thermostat(cfg) {
   const move = (ev) => {
     if (!drag || ev.pointerId !== drag.pid) return;
     const e = st(id), a = e.attributes, [mn, mx] = range(a), step = stepOf(a), { rel } = angleTo(ev);
-    local[drag.k] = Math.round((mn + (Math.max(0, Math.min(SWEEP, rel)) / SWEEP) * (mx - mn)) / step) * step; clamp(e); draw();
+    local[drag.k] = snap(mn + (Math.max(0, Math.min(SWEEP, rel)) / SWEEP) * (mx - mn), step); clamp(e); draw();
   };
   svg.addEventListener('pointermove', move);
   const end = (ev) => { if (!drag || ev.pointerId !== drag.pid) return; drag = null; draw(); send(); };

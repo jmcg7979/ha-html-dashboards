@@ -8,13 +8,13 @@
 //   PX.storage, a VM's guest.disk, net_in / net_out, procs. PX.vms can be one VM.
 // Entities come from HA's built-in Proxmox VE integration, the LNXlink agents (host + Ubuntu VM), packages/proxmox_disks.yaml,
 // with the same ids at every site (engine/docs/integrations.md, "Proxmox").
-import { st, num } from '../core/store.js';
+import { num } from '../core/store.js';
 import { cap } from '../core/dom.js';
-import { ago } from '../cards/health.js';
-import { call } from '../core/ha.js';
-import { n0, whole, pct, of, rate, s, okState, upFor, gb, pxTime, mbit, mbps, degOf, tempTrend, meterOf, host, fact } from './common.js';
+import { since } from '../core/time.js';
+import { send, connected } from '../core/ha.js';
+import { whole, pct, of, s, known, okState, upFor, gb, gbDec, pxTime, mbit, mbps, degOf, tempTrend, meterOf, host, fact } from './common.js';
 import { metric } from '../core/units.js';
-
+import { LEVEL_NAME } from '../core/assess.js';
 
 // health definitions (core/assess.js): the Overview map, the attention list and these cards all use them
 export function proxmoxNodes(PX, HA) {
@@ -28,21 +28,21 @@ export function proxmoxNodes(PX, HA) {
   const proxmox = { name: 'Proxmox', icon: 'server', page: 'systems/proxmox', up: PX.up,
     metrics: [{ name: 'CPU', label: 'Server CPU', entity: PX.cpu, warn: 75, crit: 90 }, { name: 'Memory', label: 'Server memory', entity: PX.mem, warn: 85, crit: 95 },
       ...(PX.storage || []).map((x) => ({ name: x.name, entity: x.pct, warn: 80, crit: 92 })), ...temps],
-    checks: [{ ...okState(PX.status, 'online'), label: 'Server' },
-      ...(PX.drive && PX.drive.health ? [{ entity: PX.drive.health, ok: ['off'], text: () => 'SSD health problem' }] : []),
+    checks: [{ ...okState(PX.status, 'online'), label: 'Server', name: 'status' },
+      ...(PX.drive && PX.drive.health ? [{ entity: PX.drive.health, name: 'SSD health', ok: ['off'], text: () => 'SSD health problem' }] : []),
       // the host's agent: offline while Proxmox answers = no temperatures / packages (MQTT, or the agent itself)
-      ...(PX.agent ? [{ entity: PX.agent, ok: (e) => e.state === 'on' || s(PX.status) !== 'online', level: 'warn', text: () => 'Server agent not reporting' }] : []),
-      ...(PX.restart ? [{ entity: PX.restart, ok: (e) => e.state !== 'on', level: 'warn', text: () => 'Server needs a restart' }] : [])],
+      ...(PX.agent ? [{ entity: PX.agent, name: 'agent', ok: (e) => e.state === 'on' || s(PX.status) !== 'online', level: 'warn', text: () => 'Server agent not reporting' }] : []),
+      ...(PX.restart ? [{ entity: PX.restart, name: 'restart check', ok: (e) => e.state !== 'on', level: 'warn', text: () => 'Server needs a restart' }] : [])],
     watch: [PX.status] };
   const vms = PX.vms.map((v) => ({ name: v.name, icon: v.icon, page: 'systems/proxmox', up: v.up,
     metrics: [{ name: 'CPU', label: v.name + ' CPU', entity: v.guest.cpu || v.cpu, warn: 80, crit: 95 }, { name: 'Memory', label: v.name + ' memory', entity: v.guest.mem || v.mem, warn: 85, crit: 95 },
       ...(v.guest.disk ? [{ name: 'Disk', label: v.name + ' disk', entity: v.guest.disk, warn: 80, crit: 92 }] : [])],
-    checks: [{ ...okState(v.status, 'running'), label: v.name },
+    checks: [{ ...okState(v.status, 'running'), label: v.name, name: 'status' },
       // the OS inside (packages/vm_os_state.yaml: Proxmox says running, the agent has been silent for minutes)
-      ...(v.os ? [{ entity: v.os, ok: (e) => e.state !== 'not_responding', text: () => v.name + ': OS not responding' }] : []),
+      ...(v.os ? [{ entity: v.os, name: 'OS state', ok: (e) => e.state !== 'not_responding', text: () => v.name + ': OS not responding' }] : []),
       // package status from the VM's agent, when the site has it
-      ...(v.guest.reboot ? [{ entity: v.guest.reboot, ok: (e) => e.state !== 'on', level: 'warn', text: () => v.name + ' needs a restart' }] : [])],
-    updates: v.p === 'haos' ? HA.updates.map(([label, entity]) => ({ entity, label })) : [] }));
+      ...(v.guest.reboot ? [{ entity: v.guest.reboot, name: 'restart check', ok: (e) => e.state !== 'on', level: 'warn', text: () => v.name + ' needs a restart' }] : [])],
+    updates: v.self ? HA.updates.map(([label, entity]) => ({ entity, label })) : [] }));
   return { proxmox, vms, temps };
 }
 
@@ -55,12 +55,15 @@ export function proxmoxNodes(PX, HA) {
 const OS_TEXT = { stopping: 'OS down · shutting down or restarting', starting: 'Booting · services starting', not_responding: 'OS not responding' };
 const OS_OP = { restart: { stopping: 'Restarting · OS down', starting: 'Restarting · booting' }, shut_down: { stopping: 'Shutting down', starting: 'Booting · services starting' }, start: { stopping: 'Starting', starting: 'Booting · services starting' } };
 const OS_BADGE = { stopping: 'OS down', starting: 'Starting' };
-const ops = new Map();   // vm key -> { kind, t0, moved, done, text }
+const ops = new Map();   // vm key -> { kind, t0, moved, done, text, timer: the one pending poll }
 const POLL = 10e3, GIVE_UP = 6 * 60e3, SHOW_DONE = 90e3;
+// a sub line from a status entity and an uptime: "Running · up 3 days"; "Not reporting" while the status has no state to show
+const statusLine = (id, good, word, up) => { const v = known(id); return v == null ? 'Not reporting' : `${v === good ? word : cap(v)} · up ${upFor(up)}`; };
 const dur = (ms) => { const t = Math.round(ms / 1000); return t < 60 ? `${t} s` : `${Math.floor(t / 60)} min ${t % 60} s`; };
 const osOf = (v) => (v.os ? s(v.os) : null);
 function startOp(v, kind) {
   const key = v.p, op = { kind, t0: Date.now(), text: { restart: 'Restart sent', shut_down: 'Shutdown sent', start: 'Start sent' }[kind] };
+  if (ops.has(key)) clearTimeout(ops.get(key).timer);
   ops.set(key, op);
   const end = (text, ms, failed) => { op.done = true; op.text = text; op.failed = failed; setTimeout(() => { if (ops.get(key) === op) ops.delete(key); }, ms); };
   const step = () => {
@@ -73,10 +76,12 @@ function startOp(v, kind) {
     if (kind === 'shut_down' && !running) return end(`Shut down · took ${dur(t)}`, SHOW_DONE);
     if (kind === 'start' && op.moved && up) return end(`Started · took ${dur(t)}`, SHOW_DONE);
     if (t > GIVE_UP) return end('No change after 6 min: check Proxmox', 10 * 60e3, true);
-    call('homeassistant.update_entity', {}, [v.status, v.up]);
-    setTimeout(step, POLL);
+    // ask HA for Proxmox's figures now (nothing to ask while the link is down: restarting the VM that runs HA drops it)
+    if (connected()) send({ type: 'call_service', domain: 'homeassistant', service: 'update_entity', service_data: {}, target: { entity_id: [v.status, v.up].filter(Boolean) } });
+    // one poll chain per operation, however often the OS watcher below steps in between
+    clearTimeout(op.timer); op.timer = setTimeout(step, POLL);
   };
-  setTimeout(step, 1500);
+  op.timer = setTimeout(step, 1500);
   if (v.os) watchOs(v, op, step);
 }
 // react to the OS state at once (it changes within seconds; the poll is for Proxmox's own figures)
@@ -88,7 +93,7 @@ const vmSub = (v) => { const op = ops.get(v.p), os = osOf(v);
   if (op && (op.done || !op.moved)) return op.text;
   if (op && OS_OP[op.kind][os]) return OS_OP[op.kind][os];
   if (OS_TEXT[os]) return OS_TEXT[os];
-  return `${s(v.status) === 'running' ? 'Running' : cap(s(v.status) || 'Unknown')} · up ${upFor(v.up)}`; };
+  return statusLine(v.status, 'running', 'Running', v.up); };
 const opBadge = (v) => { const op = ops.get(v.p), os = osOf(v);
   if (op && op.failed) return 'Check Proxmox';
   if (op && op.done) return op.kind === 'shut_down' ? 'Off' : 'Back up';
@@ -116,16 +121,16 @@ export function proxmoxPage(PX, HA, nodes) {
   const T = Object.fromEntries(nodes.temps.map((m) => [m.entity, m]));
   const D = PX.drive || {}, TP = PX.temps || {};
   const hostCard = host(nodes.proxmox, {
-    sub: () => `${s(PX.status) === 'online' ? 'Online' : cap(s(PX.status) || 'Offline')} · up ${upFor(PX.up)}`, subWatch: [PX.status, PX.up],
+    sub: () => statusLine(PX.status, 'online', 'Online', PX.up), subWatch: [PX.status, PX.up],
     // one rule on every Systems card: gauges + 24 h trace for what moves (CPU, memory, temperature), bars for capacity
     meters: [meterOf(nodes.proxmox.metrics[0]), meterOf(nodes.proxmox.metrics[1], { detail: () => { const t = num(PX.mem_total); return t ? `of ${t.toFixed(1)} GB` : ''; } }),
       ...(T[TP.cpu] ? [meterOf(T[TP.cpu], metric() ? { min: 15, max: 105, unit: '°C' } : { min: 60, max: 220, unit: '°F' })] : [])],
     bars: (PX.storage || []).map((x) => ({ name: x.name, entity: x.pct, warn: 80, crit: 92, watch: [x.used, x.total], detail: () => `${of(x.used, gb)} of ${of(x.total, gb)}` })),
     facts: [
       fact('Last backup', 'backup-restore', [PX.backup || PX.status], () => { if (!PX.backup) return { text: 'Not set up', tone: 'lamp' };
-        const t = pxTime(s(PX.backup)); return isNaN(t) ? '–' : Date.now() - t > 26 * 3600e3 ? { text: ago(t) + ' ago', tone: 'lamp' } : ago(t) + ' ago'; }),
+        const t = pxTime(s(PX.backup)); return isNaN(t) ? '–' : Date.now() - t > 26 * 3600e3 ? { text: since(t), tone: 'lamp' } : since(t); }),
       ...(PX.backup_store ? [fact(PX.backup_store.name, 'folder-network', [PX.backup_store.size, PX.backup_store.count], () => { const g = num(PX.backup_store.size), n = num(PX.backup_store.count);
-        return g == null ? '–' : `${g >= 1000 ? (g / 1000).toFixed(2) + ' TB' : Math.round(g) + ' GB'}${n == null ? '' : ` · ${n} backup${n === 1 ? '' : 's'}`}`; })] : []),
+        return g == null ? '–' : `${gbDec(g)}${n == null ? '' : ` · ${n} backup${n === 1 ? '' : 's'}`}`; })] : []),
       ...(D.health ? [fact('SSD', 'harddisk', [D.health, D.wear], () => (s(D.health) === 'on' ? { text: 'Health problem', tone: 'ember' }
         : s(D.health) !== 'off' ? '–' : `Healthy · ${pct(D.wear)} worn`))] : []),
       ...(T[TP.disk] ? [fact('SSD temp', 'thermometer', [TP.disk], () => degOf(T[TP.disk]), { trend: tempTrend(T[TP.disk]) })] : []),
@@ -139,15 +144,17 @@ export function proxmoxPage(PX, HA, nodes) {
 
   const vmCard = (v, i, nIn = v.guest.net_in || [], nOut = v.guest.net_out || []) => host(nodes.vms[i], {
     sub: () => vmSub(v), subWatch: [v.status, v.up, v.os].filter(Boolean), live: true,
-    badge: (a) => opBadge(v) || ['OK', 'Attention', 'Problem'][a.level],
+    badge: (a) => opBadge(v) || LEVEL_NAME[a.level],
     meters: [meterOf(nodes.vms[i].metrics[0]), meterOf(nodes.vms[i].metrics[1], { detail: () => { const r = num(v.ram); return r ? `of ${r.toFixed(0)} GB` : ''; } })],
     bars: v.guest.disk ? [{ name: 'Disk', entity: v.guest.disk, warn: 80, crit: 92, watch: [v.guest.disk_used, v.guest.disk_size, v.guest.disk_free].filter(Boolean),
       detail: () => { const u = num(v.guest.disk_used), t = v.guest.disk_size ? num(v.guest.disk_size) : u != null && num(v.guest.disk_free) != null ? u + num(v.guest.disk_free) : null;
         return u != null && t ? `${gb(u)} of ${gb(t)}` : `${pct(v.guest.disk)}`; } }] : [],
     facts: [...(nIn.length + nOut.length ? [fact('Network', 'swap-vertical', [...nIn, ...nOut], () => `↓ ${mbit(mbps(nIn))}  ↑ ${mbit(mbps(nOut))}`)] : []),
-      ...(v.p === 'haos'
-        ? [fact('Last backup', 'backup-restore', [HA.backup_last], () => { const t = s(HA.backup_last); return t && !isNaN(new Date(t)) ? ago(t) + ' ago' : '–'; }),
-          fact('Updates', 'update', HA.updates.map((u) => u[1]), () => { const n = HA.updates.filter((u) => s(u[1]) === 'on').map((u) => u[0]); return n.length ? { text: n.length === 1 ? n[0] : `${n.length} available`, tone: 'lamp' } : 'Up to date'; })]
+      ...(v.self
+        ? [fact('Last backup', 'backup-restore', [HA.backup_last], () => { const t = s(HA.backup_last); return t && !isNaN(new Date(t)) ? since(t) : '–'; }),
+          // "Up to date" only when every update entity says so
+          fact('Updates', 'update', HA.updates.map((u) => u[1]), () => { const n = HA.updates.filter((u) => s(u[1]) === 'on').map((u) => u[0]);
+            return n.length ? { text: n.length === 1 ? n[0] : `${n.length} available`, tone: 'lamp' } : HA.updates.every((u) => s(u[1]) === 'off') ? 'Up to date' : '–'; })]
         : [...(v.guest.procs ? [fact('Processes', 'format-list-bulleted', [v.guest.procs], () => whole(v.guest.procs))] : []),
           ...(v.guest.updates ? [fact('Packages', 'update', [v.guest.updates, v.guest.reboot], () => {
             const n = num(v.guest.updates), rb = s(v.guest.reboot) === 'on';

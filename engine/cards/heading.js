@@ -3,9 +3,10 @@
 //   pill: { count: [ids], tone: 'lamp', zero: 'All off' }          "4 on" / "All off"
 //      or { weather: 'weather.home', label: 'Outside' }               "Outside 68°" with condition icon
 //      or { value: () => ({ text, tone, on }) | 'text' | null, entities: [ids], tick: true }   any short live text (null = hidden)
-//   buttons: [{ icon: 'lightbulb-group-off', action: {...} }]
-//            icon may be (entity) => name with entity: id (e.g. a camera on / off switch); on: (entity) => bool lights it,
-//            show: (entity) => bool hides it otherwise (e.g. while its switch is unavailable) }
+//   buttons: [{ icon: 'lightbulb-group-off', label: 'All off', action: {...} }]
+//            label: what the button is called (it shows no words: core/tips.js says it beside the button)
+//            icon and label may be (entity) => text with entity: id (e.g. a camera on / off switch); on: (entity) => bool
+//            lights it, show: (entity) => bool hides it otherwise (e.g. while its switch is unavailable) }
 import { h, esc, icon, setTone, setHTML, toggle } from '../core/dom.js';
 import { st, watch, tick } from '../core/store.js';
 import { run } from '../core/actions.js';
@@ -13,10 +14,11 @@ import { run } from '../core/actions.js';
 const WX = { 'clear-night': 'weather-night', sunny: 'weather-sunny', partlycloudy: 'weather-partly-cloudy', cloudy: 'weather-cloudy', rainy: 'weather-rainy', pouring: 'weather-pouring', snowy: 'weather-snowy', 'snowy-rainy': 'weather-snowy-rainy', fog: 'weather-fog', hail: 'weather-hail', lightning: 'weather-lightning', 'lightning-rainy': 'weather-lightning-rainy', windy: 'weather-windy', 'windy-variant': 'weather-windy-variant', exceptional: 'alert-circle-outline' };
 
 export default function heading(cfg) {
-  const el = h(`<div class="heading"><div class="htitle">${esc(cfg.title)}</div><span class="pill" hidden></span>${(cfg.buttons || []).map((b, i) => `<button class="rbtn" data-i="${i}">${icon(typeof b.icon === 'function' ? 'help-circle-outline' : b.icon)}</button>`).join('')}</div>`);
+  const el = h(`<div class="heading"><div class="htitle">${esc(cfg.title)}</div><span class="pill" hidden></span>${(cfg.buttons || []).map((b, i) => `<button class="rbtn" data-i="${i}"${typeof b.label === 'string' ? ` aria-label="${esc(b.label)}"` : ''}>${icon(typeof b.icon === 'function' ? 'help-circle-outline' : b.icon)}</button>`).join('')}</div>`);
   const rb = [...el.querySelectorAll('.rbtn')];
-  (cfg.buttons || []).forEach((b, i) => { if (b.entity && (typeof b.icon === 'function' || b.on || b.show)) watch([b.entity], () => {
-    const e = st(b.entity); if (b.show) rb[i].hidden = !b.show(e); if (typeof b.icon === 'function') setHTML(rb[i], icon(b.icon(e))); if (b.on) { setTone(rb[i], b.tone || 'mist'); toggle(rb[i], 'on', !!b.on(e)); }
+  (cfg.buttons || []).forEach((b, i) => { if (b.entity && (typeof b.icon === 'function' || typeof b.label === 'function' || b.on || b.show)) watch([b.entity], () => {
+    const e = st(b.entity); if (b.show) rb[i].hidden = !b.show(e); if (typeof b.icon === 'function') setHTML(rb[i], icon(b.icon(e)));
+    if (typeof b.label === 'function') rb[i].setAttribute('aria-label', b.label(e)); if (b.on) { setTone(rb[i], b.tone || 'mist'); toggle(rb[i], 'on', !!b.on(e)); }
   }); });
   el.addEventListener('click', (ev) => {
     const b = ev.target.closest('.rbtn'); if (!b) return;

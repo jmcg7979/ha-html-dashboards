@@ -1,7 +1,14 @@
-/* Design tokens: every size, colour and font comes from here.
-   Theme "Hearth": a kitchen wall panel whose backdrop follows the real sky (see core/ambient.js),
+/* Design tokens: every size, color and font comes from here.
+   Theme "Hearth": a kitchen wall panel,
    warm lamp-light for lights, cool mist for air and water, quiet everywhere else.
    --s scales the whole UI; a profile (data-profile on <html>) overrides any token for a display type. */
+/* The cascade layers, weakest first. A rule in a later layer wins over one in an earlier layer whatever their
+   selectors; a rule in no layer wins over all of them (the files not yet moved into a layer).
+   reset: element defaults · vendor: a library's own stylesheet (Leaflet) · parts: the shared building blocks (.ic .name .sub .pill .chip, bars) · shell: page, rail, tab
+   bar, layout grid, pop-up chrome, toast · cards: one file per card · context: a card inside something else (a pop-up, a
+   camera wall, an alert) · profile: what one kind of screen does differently (phone, tv, the remote) · state: on,
+   pressed, working, asking to be tapped again. */
+@layer reset, vendor, parts, shell, cards, context, profile, state;
 @font-face { font-family: "Bricolage"; src: url("../assets/fonts/bricolage.woff2") format("woff2-variations"); font-weight: 200 800; font-display: swap; }
 @font-face { font-family: "Figtree"; src: url("../assets/fonts/figtree.woff2") format("woff2-variations"); font-weight: 300 900; font-display: swap; }
 
@@ -11,12 +18,12 @@
   /* base palette */
   --ink: #0d1017;            /* page */
   --raised: #1a1e27;         /* pop-ups: a step lighter than the page, same hue */
-  --veil: rgba(255, 255, 255, 0.08);    /* tiles (raised 2026-10-22: .045 vanished on dim screens) */
+  --veil: rgba(255, 255, 255, 0.08);    /* tiles (.045 vanished on dim screens) */
   --veil-2: rgba(255, 255, 255, 0.11);  /* buttons, chips */
   --hairline: rgba(255, 255, 255, 0.10);
   --edge: rgba(255, 255, 255, 0.085);   /* 1 px inner outline on every tile so idle tiles keep their shape */
   --popup-edge: rgba(255, 255, 255, 0.16);
-  /* the main page's material, shared by pop-ups (2026-11-03): page -> glass panel -> darker wells inside it */
+  /* the main page's material, shared by pop-ups: page -> glass panel -> darker wells inside it */
   --glass: linear-gradient(160deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .03));
   --pit: rgba(0, 0, 0, .2);   /* wells inside a panel or pop-up: meters, charts, read-outs */
   /* one section heading everywhere (page headings, pop-up sections, chart titles), one range-chip size, one chart-axis size */
@@ -28,7 +35,7 @@
   --text-2: #adb3c0;         /* quiet text */
   --text-3: #7a8091;
 
-  /* meaning colours (r,g,b so components apply their own alpha) */
+  /* meaning colors (r,g,b so components apply their own alpha) */
   --lamp: 242, 179, 94;      /* lights on */
   --mist: 127, 178, 229;     /* air, water, fans, climate */
   --sage: 140, 203, 159;     /* safe, home, ok */
@@ -49,15 +56,10 @@
   --a-50: 0.5;
   --a-80: 0.8;
   --a-90: 0.9;
-  --tint-bg: var(--a-16);
   --tint-icon: var(--a-16);
   --tint-pill: var(--a-16);
   --tint-fill: var(--a-30);
 
-  /* sky backdrop (core/ambient.js updates these from sun.sun + weather) */
-  --sky-a: 52, 64, 110;      /* upper glow */
-  --sky-b: 120, 84, 60;      /* horizon glow */
-  --sky-strength: 0.6;
 
   /* type: Bricolage for the voice (greeting, clock, numbers, titles), Figtree for everything you read */
   --font: "Figtree", system-ui, sans-serif;
@@ -72,7 +74,6 @@
   --fs-small: calc(11.5px * var(--s));
   --fs-micro: calc(10.5px * var(--s));   /* forecast %, month bars, overflow counts */
   --fw-strong: 600;
-  --fw-normal: 400;
 
   /* layout */
   --rail-w: calc(84px * var(--s));
@@ -86,10 +87,6 @@
   --gap: calc(8px * var(--s));
   --panel-bg: transparent;
   --well: var(--veil);
-  --well-2: var(--veil-2);
-  --divider: var(--hairline);
-  --overlay: rgba(10, 12, 18, 0.6);
-  --bg: var(--ink);
 
   /* components */
   --tile-h: calc(58px * var(--s));
@@ -107,7 +104,6 @@
   --focus-w: calc(3px * var(--s));      /* TV remote highlight ring (css/cards/remote.css) */
   --focus-gap: calc(3px * var(--s));
   --stat-h-lg: calc(80px * var(--s));   /* the status row along the top */
-  --photo: calc(44px * var(--s));
   --ring-w: calc(2.5px * var(--s));
   --iconbar-h: calc(52px * var(--s));
   --popup-w: calc(760px * var(--s));
@@ -116,9 +112,9 @@
   --popup-blur: 18px;        /* frosts the dashboard behind an open pop-up; 0px turns it off (Portal holds 60 fps at 20px) */
   --popup-dim: 0.58;         /* how much the dashboard darkens behind a pop-up */
 
-  /* ---- design scales (2026-11-03): every size and overlay in css/cards comes from here; no literal px / rgba in card CSS ---- */
+  /* ---- design scales: every size and overlay in css/cards comes from here; no literal px / rgba in card CSS ---- */
   /* type: body steps (--fs-micro … --fs-name above) + titles + figures (readings) + named heroes */
-  /* text roles (2026-11-03): every page uses the same three for its content, so Systems reads like Home */
+  /* text roles: every page uses the same three for its content, so Systems reads like Home */
   --fs-item: var(--fs-name);     /* the name of a thing / a row's label and value: tile names, facts, list rows, meter labels */
   --fs-detail: var(--fs-sub);    /* the line under or beside it: tile state, host sub, device sub */
   --fs-meta: var(--fs-small);    /* captions: 24 h range, times, tags */
@@ -152,13 +148,13 @@
   --icon-art: calc(64px * var(--s));      /* artwork placeholder */
   /* overlays on the dark page (white) beyond --veil / --veil-2 / --hairline / --edge */
   --veil-faint: rgba(255, 255, 255, 0.04);   /* hover wash, faint top light */
-  --edge-strong: rgba(255, 255, 255, 0.16);  /* emphasised outline, tracks on media */
+  --edge-strong: rgba(255, 255, 255, 0.16);  /* emphasized outline, tracks on media */
   --grid-line: rgba(255, 255, 255, 0.08);    /* chart grid */
   /* progress bars (host capacity, printer job, health): one template in base.css */
   --bar-h: calc(8px * var(--s));
   --bar-track: var(--veil);
 
-  /* ---- scales (2026-10-25). Use these instead of literal calc(Npx * var(--s)). Names are the size at --s: 1. ---- */
+  /* ---- scales. Use these instead of literal calc(Npx * var(--s)). Names are the size at --s: 1. ---- */
   /* spacing: padding, margin, gap, offsets */
   --sp-2: calc(2px * var(--s));
   --sp-4: calc(4px * var(--s));
@@ -184,7 +180,7 @@
   --r-20: calc(20px * var(--s));
   --r-22: calc(22px * var(--s));
   --r-pill: 999px;
-  /* colour channels for rgba(var(--x), alpha) */
+  /* color channels for rgba(var(--x), alpha) */
   --ink-rgb: 13, 16, 23;     /* = --ink */
   --text-rgb: 238, 233, 225; /* = --text */
   --media-rgb: 5, 7, 11;     /* behind camera video */
@@ -210,7 +206,6 @@
 :root[data-profile="tv"] {
   --s: 0.9;
   --rail-w: calc(68px * var(--s));       /* the rail closed: icons in the left safe area */
-  --rail-open: calc(220px * var(--s));   /* open (focused): icons + labels over the page */
   --page-pad: calc(32px * var(--s));     /* margin like Google TV's own (current TVs don't overscan) */
   --page-pad-y: calc(24px * var(--s));
   --view-gap: calc(22px * var(--s));     /* between the status line, the apps and the glance row */

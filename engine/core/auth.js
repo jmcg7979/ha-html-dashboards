@@ -8,6 +8,7 @@
 const ORIGIN = location.origin;
 const CLIENT = ORIGIN + '/';
 const KEY = 'dashAuth', STATE_KEY = 'dashAuthState';
+const FETCH_WAIT = 10000;   // a token request that gets no answer is given up, so the connection can try again
 
 let auth = load();
 let noBorrow = false;
@@ -42,7 +43,7 @@ export async function completeLogin() {
   history.replaceState(null, '', backUrl() + location.hash);
   if (!want || state !== want) return;
   try {
-    const r = await fetch(`${ORIGIN}/auth/token`, { method: 'POST', body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: CLIENT }) });
+    const r = await fetch(`${ORIGIN}/auth/token`, { method: 'POST', body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: CLIENT }), signal: AbortSignal.timeout(FETCH_WAIT) });
     const j = await r.json();
     if (j.refresh_token) { auth = { refresh_token: j.refresh_token, access_token: j.access_token, expires: Date.now() + (j.expires_in || 1800) * 1000, clientId: CLIENT }; save(); }
   } catch (e) { /* show login again */ }
@@ -87,7 +88,7 @@ export async function token(force = false) {
   if (!auth) throw 'login';
   if (!force && auth.access_token && auth.expires - 60000 > Date.now()) return auth.access_token;
   let r;
-  try { r = await fetch(`${ORIGIN}/auth/token`, { method: 'POST', body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: auth.refresh_token, client_id: auth.clientId }) }); }
+  try { r = await fetch(`${ORIGIN}/auth/token`, { method: 'POST', body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: auth.refresh_token, client_id: auth.clientId }), signal: AbortSignal.timeout(FETCH_WAIT) }); }
   catch (e) { throw 'net'; }
   if ([400, 401, 403].includes(r.status)) { if (auth.borrowed) noBorrow = true; auth = null; save(); throw 'login'; }
   if (!r.ok) throw 'net';

@@ -1,3 +1,4 @@
+@layer cards {
 /* TV apps (cards/apps.js): banner tiles, 16:9, in rows of --cols. The highlight is css/cards/remote.css. */
 .apps { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: var(--sp-14); }
 .apps .app { position: relative; aspect-ratio: 16 / 9; border-radius: var(--tile-radius); overflow: hidden; background: var(--veil); border: 1px solid var(--edge); padding: 0; }
@@ -18,3 +19,4 @@
 /* the padding is room for the highlight (scaled tile + ring), which the row would otherwise clip */
 .apps.row { display: flex; overflow: hidden; padding: var(--sp-16); margin: calc(var(--sp-16) * -1); }
 .apps.row .app { flex: 0 0 calc((100% - (var(--cols) - 1) * var(--sp-14)) / var(--cols)); }
+}

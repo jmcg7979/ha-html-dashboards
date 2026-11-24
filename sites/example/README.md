@@ -23,4 +23,6 @@ cd engine/_dev/mock && npm i
 | `mock/states.mjs` | The fake states |
 | `ha-config/packages/` | Generic HA packages (`engine/docs/integrations.md`) |
 
+The example doesn't show every card. The types it leaves out are listed in `engine/_dev/tools/used-elsewhere.txt` (the author's own dashboards use them); the comment at the top of each `engine/cards/<type>.js` says what the card takes. The Music page (the `music` card) isn't in the example either: it and Now playing's queue need Music Assistant and its relay (`engine/docs/integrations.md`, Media); the mock plays a made-up one.
+
 The history pop-up (`trend` card) has no gallery frame of its own: tap any figure or chart. Without `test.mp4` in `engine/_dev/mock` the camera tiles stay dark. Radar and person maps need a CARTO key (`engine/docs/integrations.md`, Maps); weather uses US sources.

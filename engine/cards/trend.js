@@ -9,6 +9,10 @@ import { connected, onReady } from '../core/ha.js';
 import { sel, RANGES, load, spans } from '../core/trend.js';
 import { stripCell } from './strip.js';
 import { timeOpts, hourShort } from '../core/units.js';
+import { lengthWord } from '../core/time.js';
+import { padRange, limitRange, gridRange, timeTicks } from '../core/plot.js';
+import { readout } from '../core/readout.js';
+import { unitTag } from '../core/format.js';
 
 const css = (tone) => `rgb(var(--${tone}))`;
 let rangeKey = '24h';   // remembered between pop-ups
@@ -21,7 +25,7 @@ const dateShort = (d) => `${MON(d)} ${d.getDate()}`;
 
 export default function trend() {
   const el = h(`<div class="trend">
-    <div class="tr-bar"><span class="cranges">${RANGES.map((r) => `<button class="crange" data-k="${r.key}">${r.key}</button>`).join('')}</span><span class="tr-zoom"><span>Y</span><button class="crange" data-z="y-" title="Larger Y range">−</button><button class="crange" data-z="y+" title="Smaller Y range">+</button><span>X</span><button class="crange" data-z="x-" title="Zoom time out">−</button><button class="crange" data-z="x+" title="Zoom time in">+</button><button class="crange" data-z="reset" hidden>Reset</button></span><span class="tr-src"></span></div>
+    <div class="tr-bar"><span class="cranges">${RANGES.map((r) => `<button class="crange" data-k="${r.key}">${r.key}</button>`).join('')}</span><span class="tr-zoom"><span>Y</span><button class="crange" data-z="y-" aria-label="Show a wider range of values">−</button><button class="crange" data-z="y+" aria-label="Show a narrower range of values">+</button><span>X</span><button class="crange" data-z="x-" aria-label="Show more time">−</button><button class="crange" data-z="x+" aria-label="Show less time">+</button><button class="crange" data-z="reset" hidden>Reset</button></span><span class="tr-src"></span></div>
     <div class="strip tr-stats"></div>
     <div class="tr-plot"><svg class="csvg"></svg><div class="ctip" hidden></div></div>
     <div class="tr-note"></div><div class="tr-ev" hidden></div></div>`);
@@ -39,7 +43,7 @@ export default function trend() {
   const unit = () => spec.unit || '';
   // '%' and degrees go on every number; any other unit gets a space in values and one caption above the axis
   const tag = () => (unit() === '%' ? '%' : /^°/.test(unit()) ? '°' : '');
-  const fmt = (v, d = dec()) => (v == null || isNaN(v) ? '–' : (+v).toFixed(d) + (tag() || (unit() ? ' ' + unit() : '')));
+  const fmt = (v, d = dec()) => (v == null || isNaN(v) ? '–' : (+v).toFixed(d) + unitTag(unit()));
   const range = () => RANGES.find((r) => r.key === rangeKey) || RANGES[1];
   const nowOf = (s) => { let t = 0; for (const id of [].concat(s.entity)) { const v = parseFloat((st(id) || {}).state); if (isNaN(v)) return null; t += v; } return t * (s.scale || 1); };
 
@@ -61,12 +65,12 @@ export default function trend() {
     el.querySelectorAll('.crange').forEach((b) => b.classList.toggle('on', b.dataset.k === rangeKey));
     const n = Math.max(60, Math.min(360, Math.round((plot.clientWidth || 720) / 3)));
     load(spec, range(), n).then((d) => { if (my !== seq) return; data = d; plot.classList.remove('loading'); summary(); draw(); })
-      .catch(() => { if (my !== seq) return; plot.classList.remove('loading'); data = null; svg.innerHTML = ''; setText(note, 'Could not load the history.'); });
+      .catch(() => { if (my !== seq) return; plot.classList.remove('loading'); data = null; geo = null; svg.innerHTML = ''; statsEl.innerHTML = ''; setText(srcEl, ''); setText(note, 'Could not load the history.'); });
   };
 
   // the events list: what history still has, plus the site's own log for older ones (overlapping = the same event: history's, it has the true start), newest first
   const when = (t) => { const d = new Date(t); return `${dateShort(d)}, ${tm(d)}`; };
-  const length = (ms) => { const m = Math.round(ms / 60e3), hh = Math.floor(m / 60); return !m ? 'under 1 min' : hh ? `${hh} h ${m % 60} min` : `${m} min`; };
+  const length = (ms) => lengthWord(ms / 60e3, 'under 1 min');
   const events = () => {
     const ev = spec.events; evEl.hidden = !ev; if (!ev) return; const my = seq;
     spans(ev.entity, 10 * DAY).then((rows) => { if (my !== seq) return;
@@ -75,19 +79,19 @@ export default function trend() {
       const all = [...old, ...rows].sort((a, b) => b.start - a.start), row = (a, b, c) => `<span>${esc(a)}</span><span>${esc(b)}</span><span>${esc(c)}</span>`;
       evEl.innerHTML = `<div class="label">${esc(ev.title)}</div>` + (all.length ? `<div class="tr-evs"><div class="tr-evr head">${row('Started', 'Ended', 'Length')}</div>${all.map((x) =>
         `<div class="tr-evr">${row(when(x.start), x.end ? when(x.end) : 'Still going', length((x.end || Date.now()) - x.start))}</div>`).join('')}</div>` : '<div class="sub">None recorded</div>');
-    }).catch(() => { evEl.innerHTML = '<div class="sub">Could not load the list.</div>'; });
+    }).catch(() => { if (my !== seq) return; evEl.innerHTML = '<div class="sub">Could not load the list.</div>'; });
   };
 
   // Now / Low / Average / High for one series; a legend with now + average for several
   const summary = () => {
-    const r = range(), src = data.fallback ? 'raw' : data.src;
+    const r = range(), src = data.src;
     setText(srcEl, src === 'raw' ? (r.ms <= DAY ? 'Every reading' : 'Recorded readings') : src === 'hour' ? 'Hourly average · band: hourly low–high' : 'Daily average · band: daily low–high');
     const notes = [];
     if (data.fallback) notes.push('This sensor has no long-term statistics, so only the last 10 days of readings are kept.');
     if (data.first && data.first - data.start > r.ms * 0.04) notes.push(`History starts ${new Date(data.first).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}.`);
     setText(note, notes.join(' '));
     // one strip under the range chips: Low · Average · High for the range (several series: each one's now + average)
-    const cell = (k, label, sub, v, key = '', aside = '') => stripCell(label, sub, fmt(v), key, aside).replace('class="sti"', `class="sti" data-k="${k}"`);
+    const cell = (label, sub, v, key = '', aside = '') => stripCell(label, sub, fmt(v), key, aside);
     if (spec.series.length === 1) {
       const b = data.series[0].filter((x) => x.mean != null);
       if (!b.length) { statsEl.innerHTML = ''; return; }
@@ -98,11 +102,11 @@ export default function trend() {
       const nv = nowOf(spec.series[0]); let lv = lo.lo != null ? lo.lo : lo.mean, hv = hi.hi != null ? hi.hi : hi.mean, lw = when(lo), hw = when(hi);
       if (nv != null && nv < lv) { lv = nv; lw = 'now'; } if (nv != null && nv > hv) { hv = nv; hw = 'now'; }
       statsEl.style.setProperty('--n', 3);
-      statsEl.innerHTML = cell('lo', 'Low', lw, lv) + cell('avg', 'Average', r.key, avg) + cell('hi', 'High', hw, hv);
+      statsEl.innerHTML = cell('Low', lw, lv) + cell('Average', r.key, avg) + cell('High', hw, hv);
     } else {
       statsEl.style.setProperty('--n', Math.min(3, spec.series.length));
       statsEl.innerHTML = spec.series.map((s, i) => { const b = data.series[i].filter((x) => x.mean != null), avg = b.length ? b.reduce((a, x) => a + x.mean, 0) / b.length : null;
-        return cell('s' + i, s.name, '', nowOf(s), `<i style="--t:var(--${s.tone || 'mist'})"></i>`, 'avg ' + fmt(avg)).replace('class="sti"', `class="sti leg" data-i="${i}"`); }).join('');
+        return cell(s.name, '', nowOf(s), `<i style="--t:var(--${s.tone || 'mist'})"></i>`, 'avg ' + fmt(avg)).replace('class="sti"', `class="sti leg" data-i="${i}"`); }).join('');
     }
   };
   const live = () => {
@@ -121,20 +125,16 @@ export default function trend() {
     const vals = (inView.some((b) => b.mean != null) ? inView : data.series.flat()).flatMap((b) => [b.mean, b.lo, b.hi]).filter((v) => v != null);
     if (!vals.length) { svg.setAttribute('viewBox', `0 0 ${W} ${Hp}`); svg.innerHTML = `<text x="${W / 2}" y="${Hp / 2}" class="cnone">No history in this period</text>`; geo = null; return; }
     let lo = Math.min(...vals), hi = Math.max(...vals);
-    // Y zoom centres on the average in view, where the line lives, so one spike doesn't push it off the chart
+    // Y zoom centers on the average in view, where the line lives, so one spike doesn't push it off the chart
     const means = (inView.some((b) => b.mean != null) ? inView : data.series.flat()).map((b) => b.mean).filter((v) => v != null), dataMid = means.reduce((x, v) => x + v, 0) / means.length;
     // thresholds are always on the chart: the axis stretches to show them, either way (higher or lower can be the bad side)
     const lines = [['warn', 'lamp'], ['crit', 'ember']].filter(([k]) => spec[k] != null).map(([k, t]) => [spec[k], t]);
-    lines.forEach(([v]) => { lo = Math.min(lo, v); hi = Math.max(hi, v); });
-    const span = Math.max(hi - lo, spec.minSpan || 1), mid = (hi + lo) / 2;
-    lo = mid - span / 2 - span * 0.08; hi = mid + span / 2 + span * 0.08;
-    const limit = () => { if (spec.floor != null && lo < spec.floor) { hi += spec.floor - lo; lo = spec.floor; }
-      if (spec.ceil != null && hi > spec.ceil) { lo = Math.max(spec.floor != null ? spec.floor : -Infinity, lo - (hi - spec.ceil)); hi = spec.ceil; } };
+    [lo, hi] = padRange(lo, hi, { lines: lines.map(([v]) => v), minSpan: spec.minSpan || 1 });
+    const limit = () => { [lo, hi] = limitRange(lo, hi, spec.floor, spec.ceil); };
     limit();
     // Y zoom: around the data, not the thresholds (a line outside the new range leaves the chart)
     if (zy !== 1) { const half = (hi - lo) / 2 / zy; lo = dataMid - half; hi = dataMid + half; limit(); }
-    const step = niceStep((hi - lo) / 5); lo = Math.floor(lo / step + 1e-9) * step; hi = Math.ceil(hi / step - 1e-9) * step;
-    const sd = Math.min(3, (String(+step.toPrecision(6)).split('.')[1] || '').length);   // 2.5 -> 1 decimal, 0.25 -> 2
+    const grid = gridRange(lo, hi, 5), step = grid.step, sd = grid.decimals; lo = grid.lo; hi = grid.hi;
     const yl = (v) => (+v.toFixed(sd)).toLocaleString([], { minimumFractionDigits: sd, maximumFractionDigits: sd }) + tag();
     const labW = Math.max(...[lo, hi].map((v) => yl(v).length)) * 7.4 + 12;   // --fs-axis digits
     const P = { l: Math.max(30, labW), r: 14, t: tag() || !unit() ? 10 : 22, b: 26 };
@@ -146,7 +146,7 @@ export default function trend() {
     for (let v = lo; v <= hi + step / 2; v += step) { const y = Y(v).toFixed(1); out += `<line x1="${x0}" x2="${x1}" y1="${y}" y2="${y}" class="cgrid"/><text x="${x0 - 7}" y="${y}" class="cy">${yl(v)}</text>`; }
     if (!tag() && unit()) out += `<text x="${x0 - 7}" y="8" class="cy cunit">${esc(unit())}</text>`;
     // time axis
-    xTicks(start, end, x1 - x0).forEach(({ t, label, major }) => { const x = X(t); if (x < x0 + 16 || x > x1 - 16) return;
+    timeTicks(start, end, x1 - x0).forEach(({ t, label, major }) => { const x = X(t); if (x < x0 + 16 || x > x1 - 16) return;
       out += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y0}" y2="${y1}" class="cgrid v${major ? ' major' : ''}"/><text x="${x.toFixed(1)}" y="${Hp - 7}" class="cx${major ? ' major' : ''}">${label}</text>`; });
     out += '<g clip-path="url(#trc)">';
     // where the data starts, when that's inside the range
@@ -167,8 +167,8 @@ export default function trend() {
       });
     });
     out += '</g>';
-    // warn / crit lines over the data, labelled at the right end
-    lines.filter(([v]) => v >= lo && v <= hi).forEach(([v, t]) => { const y = Y(v).toFixed(1), lab = fmt(v, 0), w = lab.length * 6.2 + 8;
+    // warn / crit lines over the data, labeled at the right end
+    lines.filter(([v]) => v >= lo && v <= hi).forEach(([v, t]) => { const y = Y(v).toFixed(1), lab = fmt(v, Number.isInteger(+v) ? 0 : 1), w = lab.length * 6.2 + 8;
       out += `<line x1="${x0}" x2="${x1}" y1="${y}" y2="${y}" stroke="${css(t)}" class="tr-th"/><rect x="${(x1 - w).toFixed(1)}" y="${(Y(v) - 8).toFixed(1)}" width="${w.toFixed(1)}" height="16" rx="8" class="tr-thb" stroke="${css(t)}"/><text x="${(x1 - w / 2).toFixed(1)}" y="${y}" class="tr-thl">${esc(lab)}</text>`; });
     out += '<line class="ccur" hidden/>' + data.series.map((_, i) => `<circle class="tr-dot" data-i="${i}" r="4" hidden/>`).join('');
     svg.setAttribute('viewBox', `0 0 ${W} ${Hp}`); svg.setAttribute('width', W); svg.setAttribute('height', Hp);
@@ -188,7 +188,7 @@ export default function trend() {
     ['x1', 'x2'].forEach((a) => line.setAttribute(a, x)); line.setAttribute('y1', geo.y0); line.setAttribute('y2', geo.y1);
     svg.querySelectorAll('.tr-dot').forEach((d) => { const b = near[+d.dataset.i]; if (!b) return d.setAttribute('hidden', ''); d.removeAttribute('hidden');
       d.setAttribute('cx', geo.X(b.t)); d.setAttribute('cy', geo.Y(b.mean)); d.setAttribute('fill', css(spec.series[+d.dataset.i].tone || spec.tone || 'mist')); });
-    const d = new Date(ref.t), src = data.fallback ? 'raw' : data.src;
+    const d = new Date(ref.t), src = data.src;
     const head = src === 'day' ? `${dayName(d)} ${dateShort(d)}` : src === 'hour' ? `${dayName(d)} ${dateShort(d)}, ${hr(new Date(ref.t - HOUR / 2))}–${hr(new Date(ref.t + HOUR / 2))}` : `${dayName(d)} ${dateShort(d)}, ${tm(d)}`;
     tip.innerHTML = `<b>${esc(head)}</b>` + spec.series.map((s, i) => { const b = near[i]; if (!b) return '';
       const band = b.lo != null && b.hi != null && b.hi - b.lo > 1e-9 ? `<em>${esc(fmt(b.lo))} – ${esc(fmt(b.hi))}</em>` : '';
@@ -197,43 +197,21 @@ export default function trend() {
     const w = tip.offsetWidth; tip.style.left = (x + 12 + w > r.width ? x - 12 - w : x + 12) + 'px';
   };
   const hideTip = () => { tip.hidden = true; svg.querySelectorAll('.ccur, .tr-dot').forEach((x) => x.setAttribute('hidden', '')); };
-  plot.addEventListener('pointerdown', inspect); plot.addEventListener('pointermove', (ev) => { if (ev.pointerType === 'mouse' || ev.buttons) inspect(ev); });
-  plot.addEventListener('pointerleave', hideTip); plot.addEventListener('pointerup', (ev) => { if (ev.pointerType !== 'mouse') setTimeout(hideTip, 2500); });
+  readout(plot, inspect, hideTip);   // touch / hover, and the moment it stays after a touch (core/readout.js)
 
   plot.addEventListener('wheel', (ev) => { ev.preventDefault(); zoom((ev.shiftKey ? 'x' : 'y') + ((ev.deltaY || ev.deltaX) < 0 ? '+' : '-')); }, { passive: false });
   el.addEventListener('click', (ev) => { const b = ev.target.closest('.crange'); if (!b) return;
     if (b.dataset.z) zoom(b.dataset.z); else if (b.dataset.k !== rangeKey) { rangeKey = b.dataset.k; unzoom(); fetch(); } });
   const select = () => { spec = sel.spec; if (!spec) return; data = null; svg.innerHTML = ''; statsEl.innerHTML = ''; setText(note, ''); setText(srcEl, ''); evEl.hidden = true; evEl.innerHTML = ''; hideTip(); unzoom(); header();
-    const go = () => { fetch(); events(); }; connected() ? go() : onReady(go); };
+    // not connected: loaded once the connection is there. One listener for the card, however many selections are made
+    // while offline, and it loads only what is selected then.
+    const go = () => { fetch(); events(); }; if (connected()) go(); else waiting = true; };
+  let waiting = false;
+  onReady(() => { if (waiting && spec) { waiting = false; fetch(); events(); } });
   window.addEventListener('trend:sel', select);
   new ResizeObserver(draw).observe(plot);
   new IntersectionObserver((e) => { if (e[0].isIntersecting && spec) { header(); if (Date.now() - loadedAt > 60e3) fetch(); } }).observe(el);
   tick(live);
   if (sel.spec) setTimeout(select);   // the pop-up was opened before this card existed
   return el;
-}
-
-// time labels: hours for a day or less, days for a week, dates for a month, months for longer; the first of a bigger unit is bolder
-function xTicks(start, end, width) {
-  const span = end - start, want = Math.max(3, Math.floor(width / 80)), raw = span / want;
-  const steps = [[HOUR, 'h'], [2 * HOUR, 'h'], [3 * HOUR, 'h'], [6 * HOUR, 'h'], [12 * HOUR, 'h'], [DAY, 'd'], [2 * DAY, 'd'], [7 * DAY, 'w'], [14 * DAY, 'w'], [1, 'm'], [2, 'm'], [3, 'm']];
-  const [n, kind] = steps.find(([s, k]) => (k === 'm' ? s * 30.4 * DAY : s) >= raw * 0.7) || steps[steps.length - 1];
-  const out = [], d = new Date(start);
-  if (kind === 'h') { d.setMinutes(0, 0, 0); const k = n / HOUR; while (+d < start || d.getHours() % k) d.setHours(d.getHours() + 1); }
-  else if (kind === 'd' || kind === 'w') { d.setHours(0, 0, 0, 0); if (+d < start) d.setDate(d.getDate() + 1); if (kind === 'w') while (d.getDay() !== 1) d.setDate(d.getDate() + 1); }
-  else { d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() + 1); while (d.getMonth() % n) d.setMonth(d.getMonth() + 1); }
-  for (let guard = 0; +d <= end && guard < 60; guard++) {
-    const t = new Date(d);
-    if (kind === 'h') out.push(t.getHours() === 0 ? { t: +t, label: dayName(t), major: true } : { t: +t, label: hr(t) });
-    else if (kind === 'd') out.push(span <= 8 * DAY ? { t: +t, label: `${dayName(t)} ${t.getDate()}`, major: t.getDay() === 1 } : { t: +t, label: dateShort(t), major: t.getDate() === 1 });
-    else if (kind === 'w') out.push({ t: +t, label: dateShort(t) });
-    else out.push(t.getMonth() === 0 ? { t: +t, label: String(t.getFullYear()), major: true } : { t: +t, label: MON(t) });
-    if (kind === 'h') d.setHours(d.getHours() + n / HOUR); else if (kind === 'd') d.setDate(d.getDate() + n / DAY); else if (kind === 'w') d.setDate(d.getDate() + n / DAY); else d.setMonth(d.getMonth() + n);
-  }
-  return out;
-}
-
-function niceStep(raw) {
-  const p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p;
-  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;   // no 2.5: whole numbers read better (112.5° vs 112°)
 }

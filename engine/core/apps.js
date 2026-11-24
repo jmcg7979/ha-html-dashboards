@@ -1,5 +1,5 @@
 // Apps a TV runs: the names HA gives them (Cast app_name, Android TV Remote package), and a look for when the app publishes no art.
-// Hulu, Netflix and Prime Video tell Cast nothing but "playing", so the logo and colour are what the Playing card and pop-up have to show.
+// Hulu, Netflix and Prime Video tell Cast nothing but "playing", so the logo and color are what the Playing card and pop-up have to show.
 //   color  'r, g, b', light enough to read on a dark tile     logo  an icon name (icons.js) or an SVG path (MDI has no such logo); neither = the name as a wordmark
 //   follows  the app reports the account's session, not this TV's: core/players.js ignores it unless the TV is really in that app
 //   idle   the Chromecast is awake but nothing is playing, and the TV may be off: not listed under Playing
@@ -23,6 +23,7 @@ export const APPS = [
   { name: 'SoundCloud', color: '255, 85, 0', logo: 'soundcloud' },
   { name: 'Home screen', pkg: 'com.google.android.apps.tv.launcherx', idle: true },
   { name: 'Screensaver', pkg: 'com.google.android.apps.tv.dreamx', idle: true },
+  { name: 'Home screen', pkg: 'dash.tv', idle: true },   // the TV launcher that shows this dashboard (tv/launcher)
 ];
 
 export const appFor = (s) => (s && APPS.find((a) => a.name === s || a.pkg === s)) || null;

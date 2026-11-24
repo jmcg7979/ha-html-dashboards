@@ -1,12 +1,16 @@
 {
   "name": "dash-dev",
   "private": true,
-  "description": "Tools for the dashboard (not deployed). Run: npm install && node build-icons.mjs",
+  "description": "Tools for the dashboard (not deployed). One-time setup: npm ci (README.md, Checks). Icons: node build-icons.mjs",
   "devDependencies": {
-    "@mdi/js": "7.4.47",
     "@bybas/weather-icons": "2.0.0",
+    "@eslint/js": "9.39.5",
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
     "@fontsource-variable/figtree": "5.3.0",
-    "leaflet": "1.9.4"
+    "@mdi/js": "7.4.47",
+    "eslint": "9.39.5",
+    "globals": "17.14.0",
+    "leaflet": "1.9.4",
+    "typescript": "5.9.3"
   }
 }

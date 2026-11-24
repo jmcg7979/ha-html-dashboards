@@ -8,16 +8,17 @@
 // Leaflet (vendor/) and every frame's tiles load once the card is on screen; the loop runs only while it is visible.
 import { where } from '../core/location.js';
 import { keyOf } from '../core/mapkey.js';
-import { h, esc, icon, toggle } from '../core/dom.js';
+import { h, icon, toggle } from '../core/dom.js';
 import { loadLeaflet } from './map.js';
+import { onDispose } from '../core/scope.js';
 import { timeOpts } from '../core/units.js';
 
 const IEM = 'https://mesonet.agron.iastate.edu';
 const NOW = (t) => `${IEM}/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png?_=${t}`;
 const HRRR = (f, run) => `${IEM}/cache/tile.py/1.0.0/hrrr::REFD-F${String(f).padStart(4, '0')}-${run}/{z}/{x}/{y}.png`;
-const MIN = 60e3, STEP = 15 * MIN;
+const MIN = 60e3, STEP = 15 * MIN, REFRESH = 10 * MIN;   // a new radar mosaic / model run is worth a rebuild every ten minutes
 const clock = (t) => new Date(t).toLocaleTimeString([], timeOpts({ hour: 'numeric', minute: '2-digit' }));
-const ahead = (ms) => { const m = Math.round(ms / MIN); return m < 60 ? `+${m} min` : `+${+(m / 60).toFixed(1).replace(/\.0$/, '')} h`; };
+export const ahead = (ms) => { const m = Math.round(ms / MIN); return m < 60 ? `+${m} min` : `+${+(m / 60).toFixed(1).replace(/\.0$/, '')} h`; };
 
 // the HRRR run the IEM has finished; if its status file can't be read, assume the usual delay
 let runCache = null;
@@ -29,6 +30,17 @@ function latestRun() {
     .then((init) => { if (!(init > 0)) init = guess(); runCache = { at: Date.now(), init }; return init; });
 }
 const runId = (init) => new Date(init).toISOString().replace(/[-:T]/g, '').slice(0, 12);   // YYYYMMDDHHMM
+// The loop's frames: the radar now, then one forecast frame per step (minutes) out to `hours`, each the model minute (a
+// multiple of 15, up to 18 h after the run started at `init`) nearest to that time. Times the run doesn't cover are left out.
+export function frameList(now, init, hours, step) {
+  const list = [{ now: true, t: now, url: NOW(Math.floor(now / (5 * MIN))) }];
+  for (let k = 1; k * step <= hours * 60; k++) {
+    const f = Math.round((now + k * step * MIN - init) / STEP) * 15;
+    if (f < 0 || f > 1080) continue;
+    list.push({ t: init + f * MIN, ahead: k * step * MIN, url: HRRR(f, runId(init)) });
+  }
+  return list;
+}
 
 export default function radar(cfg) {
   const tileKey = keyOf(cfg.cartoKey);
@@ -36,17 +48,21 @@ export default function radar(cfg) {
   let ri = cfg.range != null ? cfg.range : 1;
   const el = h(`<div class="radar" style="height:calc(${cfg.height || 450}px * var(--s))">
     <div class="rmap"></div>
-    <div class="rtop"><span class="rbadge"></span><span class="rsrc">NEXRAD · HRRR forecast · IEM</span></div>
-    <div class="rbar"><button class="rbtn rplay">${icon('pause')}</button>
+    <div class="rtop"><span class="rbadge"></span><span class="rsrc">NEXRAD · HRRR forecast · IEM · © CARTO © OpenStreetMap</span></div>
+    <div class="rbar"><button class="rbtn rplay" aria-label="Play or pause">${icon('pause')}</button>
       <div class="rtl"><div class="rlbl"><b></b><span class="sub"></span></div><div class="rticks"></div></div>
       <div class="rrng">${ranges.map((r, i) => `<button class="chip" data-i="${i}">${r[0]} h</button>`).join('')}</div></div></div>`);
   el.style.setProperty('--t', 'var(--mist)');
   const mapEl = el.querySelector('.rmap'), ticks = el.querySelector('.rticks'), playBtn = el.querySelector('.rplay');
-  let L = null, map = null, frames = [], cur = 0, playing = true, timer = 0, visible = false, built = 0, refreshT = 0;
+  let L = null, map = null, frames = [], cur = 0, playing = true, timer = 0, visible = false, built = 0, builtAt = 0, refreshT = 0, gone = false, starting = false;
+  onDispose(() => { gone = true; built++; clearTimeout(timer); clearTimeout(refreshT); frames = []; if (map) { map.remove(); map = null; } });   // its view unloaded
 
   const show = (i) => {
     cur = (i + frames.length) % frames.length;
-    frames.forEach((f, j) => f.layer.setOpacity(j === cur ? 0.72 : 0));
+    // only the frame on screen and the next one (ready for its turn) are drawn at all: a see-through frame still costs a GPU
+    // layer per tile, and there are a dozen frames
+    frames.forEach((f, j) => { f.layer.setOpacity(j === cur ? 0.72 : 0); const c = f.layer.getContainer();
+      if (c) c.style.visibility = j === cur || j === (cur + 1) % frames.length ? '' : 'hidden'; });
     const f = frames[cur];
     el.querySelector('.rlbl b').textContent = f.now ? 'Now' : ahead(f.ahead);
     el.querySelector('.rlbl .sub').textContent = clock(f.t);
@@ -64,12 +80,7 @@ export default function radar(cfg) {
     const [hrs, step] = ranges[ri], gen = ++built;
     [...el.querySelectorAll('.rrng .chip')].forEach((c, i) => toggle(c, 'on', i === ri));
     const init = await latestRun(); if (gen !== built) return;
-    const now = Date.now(), list = [{ now: true, t: now, url: NOW(Math.floor(now / (5 * MIN))) }];
-    for (let k = 1; k * step <= hrs * 60; k++) {
-      const f = Math.round((now + k * step * MIN - init) / STEP) * 15;   // forecast minute nearest to now + k steps
-      if (f < 0 || f > 1080) continue;
-      list.push({ t: init + f * MIN, ahead: k * step * MIN, url: HRRR(f, runId(init)) });
-    }
+    const list = frameList(Date.now(), init, hrs, step); builtAt = Date.now();
     frames.forEach((f) => map.removeLayer(f.layer));
     frames = list.map((f) => { const fr = { ...f, fails: 0 };
       fr.layer = L.tileLayer(f.url, { opacity: 0, maxNativeZoom: 10, maxZoom: 12, pane: 'radar', crossOrigin: false, updateWhenIdle: true })
@@ -77,13 +88,23 @@ export default function radar(cfg) {
       return fr; });
     ticks.innerHTML = frames.map((f, i) => `<button class="rtick${f.now ? ' now' : ''}" data-i="${i}"></button>`).join('');
     show(0); loop();
-    clearTimeout(refreshT); refreshT = setTimeout(() => { if (visible && !document.hidden) build(); }, 10 * MIN);   // new radar mosaic / new model run; a hidden radar rebuilds when it comes back
+    clearTimeout(refreshT); refreshT = setTimeout(catchUp, REFRESH);
+  }
+
+  // Brings the radar up to date whenever it can be seen: starts it (again, after a start that failed), and rebuilds the
+  // frames when they are ten minutes old. Asked by the refresh timer and whenever the card or the page comes back into
+  // view, so a refresh that fell due while it was hidden is made up then: "Now" is never an old mosaic.
+  function catchUp() {
+    if (gone || !visible || document.hidden) return;
+    if (!map) { if (!starting) { starting = true; start(); } return; }
+    if (frames.length && Date.now() - builtAt >= REFRESH) build();
   }
 
   function start() {
     Promise.all([loadLeaflet(), where(cfg), tileKey]).then(([lf, at, key]) => {
       if (!at) throw new Error('no location');
-      L = lf;
+      if (gone) return;
+      L = lf; mapEl.textContent = '';
       map = L.map(mapEl, { zoomControl: false, attributionControl: false, zoomSnap: 0.5 }).setView([at.lat, at.lon], cfg.zoom || 7);
       map.createPane('radar').style.zIndex = 350; map.createPane('labels').style.zIndex = 450; map.getPane('labels').style.pointerEvents = 'none';
       const carto = (style) => `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}.png?key=${encodeURIComponent(key)}`;
@@ -91,7 +112,12 @@ export default function radar(cfg) {
       L.tileLayer(carto('dark_only_labels'), { maxZoom: 12, pane: 'labels' }).addTo(map);
       L.circleMarker([at.lat, at.lon], { radius: 6, color: '#0d1017', weight: 2, fillColor: '#f2b35e', fillOpacity: 1, interactive: false, pane: 'labels' }).addTo(map);
       build();
-    }).catch(() => { mapEl.innerHTML = `<div class="rerr">${esc('Radar unavailable')}</div>`; });
+    }).catch(() => {   // no Leaflet, no location or no key: said on the card, and tried again when it next comes into view
+      starting = false; if (gone) return;
+      if (map) { map.remove(); map = null; }
+      mapEl.innerHTML = '<div class="rerr">Radar unavailable</div>';
+      clearTimeout(refreshT); refreshT = setTimeout(catchUp, REFRESH);   // and again in ten minutes if it stays in view
+    });
   }
 
   el.addEventListener('click', (ev) => {
@@ -101,10 +127,11 @@ export default function radar(cfg) {
   });
   new IntersectionObserver((en) => {
     visible = en[en.length - 1].isIntersecting;
-    if (visible && !map) start();
-    if (visible && map) { map.invalidateSize(); if (frames.length && Date.now() - frames[0].t > 10 * MIN) build(); }
-    loop();
+    if (gone) return;
+    if (visible && map) map.invalidateSize();
+    catchUp(); loop();
   }).observe(el);
-  document.addEventListener('visibilitychange', loop);
+  document.addEventListener('visibilitychange', () => { catchUp(); loop(); });
+  window.addEventListener('tv:resume', () => { catchUp(); loop(); });
   return el;
 }

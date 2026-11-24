@@ -1,7 +1,22 @@
+@layer cards {
 /* ---------- camera alert popup: above other pop-ups, sized to the video ---------- */
 .camalert { z-index: 40; }
 .camalert .popup { width: min(96vw, calc((100vh - 2 * var(--page-pad) - 96px * var(--s)) * var(--cam-ratio, 1.523))); width: min(96vw, calc((100dvh - 2 * var(--page-pad) - 96px * var(--s)) * var(--cam-ratio, 1.523))); box-shadow: 0 0 0 3px rgb(var(--ember)), 0 28px 80px rgba(0, 0, 0, .7); border-color: transparent; }
 .camalert .phead .ic { animation: pulse 1.2s ease-in-out infinite; }
 .camalert .pbody { padding: 0 var(--sp-12) var(--sp-12); }
 .camalert .camera { border-radius: var(--r-14); }
-
+/* corner (alerts.cameras.corner, a TV): a small picture top right, over what is being watched; nothing dimmed, no buttons (Back dismisses).
+   Nothing is drawn outside the ember line: no shadow, and the wrapper is exactly the picture's box (its TV padding goes in css/cards/remote.css,
+   whose layer comes after this one). Over a video app a TV showed that padding as a dimmed band with a yellow line around it (seen 2026-11-16). */
+.camalert.corner.pwrap { inset: var(--page-pad) var(--page-pad) auto auto; padding: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none; animation: none; }
+.camalert.corner .popup { width: 34vw; box-shadow: 0 0 0 2px rgb(var(--ember)); animation: none; }
+.camalert.corner .popup.single { width: 28vw; }
+.camalert.corner .phead { display: none; }   /* each camera carries its own name; the close button is still pressed by Back (core/remote.js) */
+.camalert.corner .pbody { padding: var(--sp-6); overflow: hidden; }
+.camalert.corner .camera { border-radius: var(--r-10); }
+/* how to close it, bottom right in the picture, on the line of the camera's name (one camera) or of the bottom row's names */
+.camalert.corner .popup { position: relative; }
+.camalert.corner .chint { position: absolute; right: calc(var(--sp-6) + var(--sp-12)); bottom: calc(var(--sp-6) + var(--sp-12)); font-size: var(--fs-micro); font-weight: var(--fw-strong); color: rgba(var(--text-rgb), .85); text-shadow: 0 1px 3px rgba(var(--media-rgb), .9); pointer-events: none; }
+/* several cameras: their names fill the pictures' bottom lines, so it is a line of its own under them */
+.camalert.corner .popup:not(.single) .chint { position: static; flex: none; padding: 0 var(--sp-12) var(--sp-6); text-align: right; }
+}

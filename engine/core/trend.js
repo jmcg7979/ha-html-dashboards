@@ -47,7 +47,7 @@ async function raw(ids, start, end) {
   return ids.map((id) => (res[id] || []).map((r) => { const v = parseFloat(r.s); return [Math.max((r.lu || r.lc) * 1000, start), isNaN(v) ? null : v]; }));
 }
 // several entities summed, as events (a sum only while every one has a value)
-function sumRaw(lists) {
+export function sumRaw(lists) {
   if (lists.length === 1) return lists[0];
   const ev = []; lists.forEach((l, k) => l.forEach(([t, v]) => ev.push([t, k, v]))); ev.sort((a, b) => a[0] - b[0]);
   const cur = lists.map(() => undefined), out = [];
@@ -55,7 +55,7 @@ function sumRaw(lists) {
   return out;
 }
 // step-wise readings -> n buckets of { t, mean, lo, hi } (time-weighted mean; a state holds until the next one); null = no value
-function bucket(pts, start, end, n) {
+export function bucket(pts, start, end, n) {
   const w = (end - start) / n, out = [];
   let i = 0, cur = null;
   while (i < pts.length && pts[i][0] <= start) cur = pts[i++][1];

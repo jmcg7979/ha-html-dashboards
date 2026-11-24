@@ -9,11 +9,11 @@ const home = {
   id: 'home', title: 'Home', icon: 'home-variant',
   sections: [
     { span: 3, panel: false, cards: [
-      { type: 'people', span: 4, compact: true, style: 'portrait', round: true, people: [{ ...H.people.alex, tap: { nav: '#alex' } }, { ...H.people.sam, tap: { nav: '#sam' } }] },
+      { type: 'people', span: 4, round: true, people: [{ ...H.people.alex, tap: { nav: '#alex' } }, { ...H.people.sam, tap: { nav: '#sam' } }] },
       ...top.map((s) => ({ type: 'stat', span: 2, size: 'lg', ...s })),
     ] },
     { span: 1, panel: false, cards: [
-      { type: 'heading', title: 'Cameras', buttons: [{ icon: 'view-grid-outline', action: { view: 'cameras' } }] },
+      { type: 'heading', title: 'Cameras', buttons: [{ icon: 'view-grid-outline', label: 'All cameras', action: { view: 'cameras' } }] },
       { type: 'camera', ...H.cameras[0] },
       { type: 'heading', title: 'Vacuum' },
       vacuum,
@@ -27,10 +27,10 @@ const home = {
       { type: 'media', title: 'Playing', players: H.players },
     ] },
     { span: 1, panel: false, cards: [
-      { type: 'heading', title: 'Weather', buttons: [{ icon: 'radar', action: { view: 'weather' } }] },
+      { type: 'heading', title: 'Weather', buttons: [{ icon: 'radar', label: 'Radar and forecast', action: { view: 'weather' } }] },
       { type: 'weather', entity: H.weather, sun: 'sun.sun' },
-      { type: 'heading', title: 'Calendar', buttons: [{ icon: 'calendar-month', action: { nav: '#calendar' } }] },
-      { type: 'agenda', calendars: H.calendars, days: 7, limit: 3, follow: true, compact: true },
+      { type: 'heading', title: 'Calendar', buttons: [{ icon: 'calendar-month', label: 'Full calendar', action: { nav: '#calendar' } }] },
+      { type: 'agenda', calendars: H.calendars, days: 7, limit: 2, follow: true, compact: true },   // two: three events on three days (three day names) run 4 px past a 1280×800 panel
     ] },
   ],
 };
@@ -41,7 +41,7 @@ const cameras = {
   sections: [
     { span: 1, panel: false, cards: [
       { type: 'camera-wall', cameras: H.cameras, history: H.cameras.map((c) => c.entity), review: reviewSensor },
-      { type: 'drawer', id: 'events', tab: false, title: 'Events', width: 420, cards: [{ type: 'reviews', cameras: H.cameras, grow: true }] },
+      { type: 'drawer', id: 'events', title: 'Events', width: 420, cards: [{ type: 'reviews', cameras: H.cameras, grow: true }] },
     ] },
     { span: 1, panel: false, cards: [{ type: 'reviews', cameras: H.cameras, compact: { title: 'Alerts', more: { drawer: 'events' } }, grow: true }] },
   ],
@@ -50,7 +50,6 @@ const cameras = {
 export default {
   title: 'Home',
   profile: 'portal',
-  settings: { perf: false },
   links: [{ title: 'HA', icon: 'home-assistant', url: '/lovelace' }],
   popups,
   // screen takeovers (core/alerts.js): the timer alarm. cameras: { … } adds Frigate alerts; see engine/docs/integrations.md

@@ -1,0 +1,26 @@
+# The list of photos for the TV launcher's screensaver (tv/launcher/README.md, Screensaver).
+# Put the photos in /media/screensaver on Home Assistant (at screen size: 1920 px wide is plenty) with whatever copies
+# them there, and have it fire the event screensaver_photos with {v: <any version text>, photos: [file names]} whenever the
+# set changes (Developer tools > Events fires one by hand). This sensor keeps that list: a trigger-based template keeps its
+# state and attributes over a restart. The launcher reads it with the TV's token and loads each photo from
+# /media/local/screensaver/<file>: HA's media folder is served only with a token, so the photos are not public.
+# State: the number of photos. Attributes: photos, version, updated. Reload: template.reload.
+template:
+  - triggers:
+      - trigger: event
+        event_type: screensaver_photos
+    sensor:
+      - name: Screensaver Photos
+        unique_id: screensaver_photos
+        icon: mdi:image-multiple
+        state: "{{ (trigger.event.data.photos | default([])) | count }}"
+        attributes:
+          photos: "{{ trigger.event.data.photos | default([]) }}"
+          version: "{{ trigger.event.data.v | default('') }}"
+          updated: "{{ now().isoformat() }}"
+
+# the list can be long (a thousand photos: ~20 kB); nobody needs its history
+recorder:
+  exclude:
+    entities:
+      - sensor.screensaver_photos

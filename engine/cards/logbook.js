@@ -16,7 +16,10 @@ export default function logbook(cfg) {
     if (!e || ['unknown', 'unavailable', ''].includes(e.state)) return '<div class="sub">Nothing in this period</div>';
     return `<div class="lrow"><span class="name">${esc(cfg.format ? cfg.format({ state: e.state }) : cap(e.state))}</span><span class="sub">no changes in ${Math.round((cfg.hours || 168) / 24)} days</span></div>`;
   };
-  const load = () => {
+  let loaded = 0, shown = false, seen = false;
+  // again: a refresh of a list that is up; if it fails the list stays as it is
+  const load = (again) => {
+    loaded = Date.now();
     const start = new Date(Date.now() - (cfg.hours || 168) * 3600e3).toISOString();
     request({ type: 'logbook/get_events', start_time: start, entity_ids: cfg.entities })
       .then((rows) => {
@@ -24,9 +27,13 @@ export default function logbook(cfg) {
         setHTML(el, list.length ? list.map((r) => {
           const by = who(r);
           return `<div class="lrow"><span class="name">${esc(cfg.format ? cfg.format(r) : cap(r.state))}</span><span class="sub">${esc(hm(r.when, true))}${by ? ' · ' + esc(by) : ''}</span></div>`;
-        }).join('') : quiet());
-      }).catch(() => setHTML(el, '<div class="sub">Couldn’t load activity</div>'));
+        }).join('') : quiet()); shown = true;
+      }).catch(() => { if (!(again && shown)) setHTML(el, '<div class="sub">Couldn’t load activity</div>'); });
   };
-  if (connected()) load(); else onReady(load);
+  if (connected()) load(); else onReady(() => { if (!shown) load(); });
+  // kept current while it is on screen: asked again every 5 minutes, and when it is shown again after longer than that
+  const due = () => seen && !document.hidden && connected() && Date.now() - loaded > 5 * 60e3;
+  new IntersectionObserver((e) => { seen = e[e.length - 1].isIntersecting; if (due()) load(shown); }).observe(el);
+  setInterval(() => { if (due()) load(shown); }, 30e3);
   return el;
 }

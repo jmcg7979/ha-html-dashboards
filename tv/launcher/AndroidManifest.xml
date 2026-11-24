@@ -5,12 +5,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dash.tv">
 
+    <!-- The same levels build.sh gives aapt2; written here too so tools that read only the manifest (lint) know them. -->
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34" />
+
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- no Java code asks for it: the WebView does, to tell the page whether there is a network (navigator.onLine) -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />   <!-- show(): out of the screensaver when music starts on this TV -->
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" />   <!-- Android 13+: a wake lock may only turn the screen on with this app-op (README.md, Set up a TV, allows it) -->
     <!-- installed apps for the Apps row (Android 11+ package visibility) -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <!-- Continue watching: what apps publish to Android TV's Watch Next list (granted over adb: README.md) -->
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- voice in the page's search (Ear.java, tvhost.listen): Android's speech recognizer needs the caller to hold it.
+         Granted over adb (README.md); without it the page shows no mic. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- Wireless debugging kept on (AdbKeep.java). Apps don't get this one by asking: it is granted over adb (README.md),
+         and without the grant nothing here uses it. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
@@ -41,6 +54,21 @@
             </intent-filter>
         </activity>
 
+        <!-- dashtv://launch/<package>: open an installed app from outside the TV, e.g. from Home Assistant (Launch.java) -->
+        <activity
+            android:name=".Launch"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dashtv" android:host="launch" />
+            </intent-filter>
+        </activity>
+
         <!-- Brings HomeActivity up whenever the stock home screen shows (HomeGuard.java); switched on over adb. -->
         <service
             android:name=".HomeGuard"
@@ -51,6 +79,19 @@
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/home_guard" />
+        </service>
+
+        <!-- The screensaver: the house's photos with the clock and a line or two from HA, else a clock on black (Saver.java); chosen over adb (README.md). -->
+        <service
+            android:name=".Saver"
+            android:process=":saver"
+            android:label="@string/saver_name"
+            android:exported="true"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </service>
 
         <!-- Set-up from adb only (README.md): the sender must hold DUMP, which the adb shell has and apps can't get. -->

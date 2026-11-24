@@ -1,5 +1,5 @@
 // Declarative tap actions used by every card config:
-//   'toggle'                                   toggle the card's entity
+//   'toggle'                                   toggle the card's entity (on / off; a cover opens or closes)
 //   { call: 'vacuum.start' }                   service call on the card's entity
 //   { call: 'script.turn_on', target: 'script.x', data: {...} }
 //   { ..., confirm: true }                     a second tap on the same action, 0.3 to 3 s later, required
@@ -19,13 +19,20 @@ import { toast } from './toast.js';
 import { needConfirm } from './dom.js';
 import { ask } from './ask.js';
 import { settings } from './settings.js';
+import { close as closePopup } from './popup.js';
+
+// 'toggle' for a domain that isn't on / off: the two states it moves between, which of them counts as on, and the action for each
+const TOGGLES = {
+  cover: { on: 'open', off: 'closed', isOn: (s) => s === 'open' || s === 'opening', call: { open: 'cover.open_cover', closed: 'cover.close_cover' } },
+};
 
 export function run(action, ctx) {
   if (typeof action === 'function') action = action(st(ctx.entity));
   if (!action || action === 'none') return;
   const a = action === 'toggle' ? { toggle: true } : action;
   // what the dialog promised is what happens, even if the state moves while it is open
-  const to = a.toggle && (a.to || ((st(a.entity || ctx.entity) || {}).state === 'on' ? 'off' : 'on'));
+  const kind = a.toggle && TOGGLES[String(a.entity || ctx.entity).split('.')[0]], cur = a.toggle && (st(a.entity || ctx.entity) || {}).state;
+  const to = a.toggle && (a.to || (kind ? (kind.isOn(cur) ? kind.off : kind.on) : cur === 'on' ? 'off' : 'on'));
   if (a.confirm && typeof a.confirm === 'object') { ask(a.confirm).then((ok) => { if (ok) run({ ...a, confirm: false, to }, ctx); }); return; }
   if (a.confirm && ctx.el && needConfirm(ctx.el, JSON.stringify([a.call, a.toggle && to, a.target === undefined ? ctx.entity : a.target, a.data]))) return;
   if ((a.toggle || a.call) && !connected()) { toast('Not connected. Nothing was sent.'); return; }
@@ -34,6 +41,7 @@ export function run(action, ctx) {
   if (a.toggle) {
     const id = a.entity || ctx.entity, on = to === 'off', dom = id.split('.')[0];
     optimistic(id, to, null, (r) => r.state === to, t0);
+    if (kind) { call(kind.call[to], {}, id, () => dropOptimistic(id)); return; }
     const data = dom === 'light' && on && settings.instantLightOff ? { transition: 0 } : {};
     call(`${['light', 'switch', 'fan', 'input_boolean'].includes(dom) ? dom : 'homeassistant'}.turn_${to}`, data, id, () => dropOptimistic(id));
     return;
@@ -54,10 +62,6 @@ export function run(action, ctx) {
   if (a.close) closePopup();
   if (a.drawer) window.dispatchEvent(new CustomEvent('dash:drawer', { detail: a.drawer }));
   if (a.view) window.dispatchEvent(new CustomEvent('dash:view', { detail: a.view }));
-}
-function closePopup() {
-  history.replaceState(null, '', location.pathname + location.search);
-  window.dispatchEvent(new HashChangeEvent('hashchange'));
 }
 
 function expect(x, target, t0) {

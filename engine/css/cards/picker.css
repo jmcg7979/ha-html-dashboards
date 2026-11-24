@@ -1,0 +1,29 @@
+@layer cards {
+/* Where music plays: the one picker (core/where.js) of the Music page's sheet and Party and of a player's Rooms:
+   Speaker groups, then each floor; a tile per player with what's on it; in a player's Rooms each tile over its volume strip. */
+.mpick { display: flex; flex-direction: column; gap: var(--sp-14); min-width: 0; }
+.mpsec { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+.mpgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-8); }
+.mpk { position: relative; min-width: 0; display: flex; align-items: center; gap: var(--sp-10); padding: var(--sp-8) var(--sp-12) var(--sp-8) var(--sp-8); border-radius: var(--r-14); background: var(--veil); border: 1px solid var(--edge); text-align: left; color: var(--text); }
+.mpki { flex: none; width: calc(36px * var(--s)); height: calc(36px * var(--s)); border-radius: var(--r-10); background: var(--veil-2); display: flex; align-items: center; justify-content: center; color: var(--text-2); }
+.mpki svg { width: 58%; height: 58%; }
+.mpk .mtx b { font-size: var(--fs-sub); }
+.mpk small { font-size: var(--fs-meta); }
+.mpk.off small { color: var(--text-3); }
+.mpk.live small { color: rgb(var(--plum)); }
+.mpk.on { background: rgba(var(--sage), var(--a-16)); border-color: rgba(var(--sage), var(--a-50)); }
+.mpk.on .mpki { background: rgba(var(--sage), var(--a-30)); color: rgb(var(--sage)); }
+.mpkc { position: absolute; top: var(--sp-4); right: var(--sp-4); display: none; color: rgb(var(--sage)); }
+.mpkc svg { width: var(--icon-inline); height: var(--icon-inline); }
+.mpk.on .mpkc { display: flex; }
+.mpk.solo { opacity: .5; }   /* can't play in sync with the rooms picked: a tap switches to it alone */
+/* a player's Rooms: each tile over its volume strip, shown while the room plays */
+.mpkw { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+.vrow { display: flex; align-items: center; gap: var(--sp-8); min-width: 0; }
+.vrow .rbtn { --rbtn: var(--ic-s); background: var(--veil-2); color: var(--text); }
+.vrow .mvbar { flex: 1; height: var(--sp-4); background: var(--veil-2); cursor: pointer; touch-action: pan-y; }
+.vrow .mvtxt { min-width: calc(34px * var(--s)); font-size: var(--fs-meta); }
+.mpkv { display: none; padding: 0 var(--sp-4); }
+.mpk.on + .mpkv { display: flex; }
+:root[data-profile="phone"] .mpgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

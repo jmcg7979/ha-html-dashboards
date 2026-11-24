@@ -49,7 +49,6 @@ const home = { id: 'home', title: 'Home', icon: 'home-variant', sections: [
 export default {
   title: 'Home',
   profile: 'tv',
-  settings: { perf: false },
   remote: true,
   alerts: main.alerts,   // the timer take-over; the launcher also shows it over a playing app
   links: [{ title: 'Settings', icon: 'cog', url: 'intent:#Intent;action=android.settings.SETTINGS;end' }],

@@ -1,0 +1,45 @@
+@layer cards {
+/* ---------- pick: a chip that opens its choices (core/pick.js) ---------- */
+/* the chip: what it chooses (quiet), what is chosen, a chevron. Tinted while it narrows something. Its shape is its host's
+   (.chip, or a card's own chip) */
+.pick { gap: var(--sp-6); flex: none; }
+.pick .pk-l { color: var(--text-3); font-weight: 500; }
+.pick .pk-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.pick .pk-chev { flex: none; display: flex; margin: 0 calc(var(--sp-4) * -1) 0 calc(var(--sp-2) * -1); color: var(--text-3); transition: transform .15s; }
+.pick .pk-chev svg { width: var(--icon-sm); height: var(--icon-sm); }
+.pick[aria-expanded="true"] .pk-chev { transform: rotate(180deg); }
+.pick.set { background: rgba(var(--t), var(--a-20)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-50)); }
+.pick.set .pk-l { color: var(--text-2); }
+.chip.pick { padding: 0 var(--sp-14); }
+.pick[hidden] { display: none; }
+
+/* the menu: over the page (a tap beside it closes it), a raised panel under its chip */
+.pickwrap { position: fixed; inset: 0; z-index: 40; --t: var(--mist); }
+.pickmenu { position: absolute; left: var(--pk-x, 0); top: var(--pk-y, 0); min-width: max(var(--pk-w, 0px), calc(200px * var(--s))); max-width: min(calc(380px * var(--s)), calc(100vw - var(--sp-16))); max-height: var(--pk-h, 60vh);
+  display: flex; flex-direction: column; padding: var(--sp-6); border-radius: var(--r-18); background: var(--glass), var(--raised); border: 1px solid var(--popup-edge);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 var(--sp-18) var(--sp-32) rgba(0, 0, 0, .6), inset 0 1px 0 var(--veil); animation: pk-in .14s cubic-bezier(.2, .8, .2, 1); transform-origin: top; }
+.pickwrap.up .pickmenu { top: auto; bottom: var(--pk-y, 0); transform-origin: bottom; }
+@keyframes pk-in { from { opacity: 0; transform: scale(.97); } }
+.pk-title { display: none; }
+.pk-list { display: flex; flex-direction: column; gap: var(--sp-2); min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.pk-list::-webkit-scrollbar { display: none; }
+.pk-o { flex: none; display: flex; align-items: center; gap: var(--sp-10); min-height: calc(42px * var(--s)); padding: 0 var(--sp-12); border-radius: var(--r-12); color: var(--text-2); font: 500 var(--fs-item)/1.2 var(--font); text-align: left; white-space: nowrap; }
+.pk-o > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pk-o svg { flex: none; width: var(--icon-sm); height: var(--icon-sm); }
+.pk-o i { flex: none; display: flex; }
+.pk-o:hover { background: var(--veil); }
+.pk-o.on { color: var(--text); font-weight: var(--fw-strong); }
+.pk-o .pk-c { margin-left: var(--sp-12); color: rgb(var(--t)); visibility: hidden; }
+.pk-o.on .pk-c { visibility: visible; }
+.pk-o .pk-box { color: var(--text-3); }
+.pk-o.on .pk-box { color: rgb(var(--t)); }
+.pk-sep { flex: none; height: 1px; margin: var(--sp-4) var(--sp-10); background: var(--hairline); }
+
+/* Phone: a sheet from the bottom, the page dimmed behind it, the chip's name as its title */
+:root[data-profile="phone"] .pickwrap { background: rgba(var(--scrim-rgb), var(--popup-dim)); animation: fade .16s ease-out; }
+:root[data-profile="phone"] .pickmenu, :root[data-profile="phone"] .pickwrap.up .pickmenu { left: 0; right: 0; top: auto; bottom: 0; min-width: 0; max-width: none; max-height: 70vh; max-height: 70dvh;
+  padding: var(--sp-8) var(--sp-12) calc(var(--sp-12) + var(--safe-bottom)); border-radius: var(--popup-radius) var(--popup-radius) 0 0; border-width: 1px 0 0; animation: pk-up .2s cubic-bezier(.2, .8, .2, 1); }
+@keyframes pk-up { from { transform: translateY(24px); opacity: 0; } }
+:root[data-profile="phone"] .pk-title { display: block; padding: var(--sp-10) var(--sp-12) var(--sp-8); font: var(--section-font); color: var(--text-2); }
+:root[data-profile="phone"] .pk-o { min-height: calc(50px * var(--s)); }
+}

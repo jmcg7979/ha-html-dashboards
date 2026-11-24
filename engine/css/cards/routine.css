@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- routine (schedule card: name, big time, status; tap = its pop-up) ---------- */
 .routine { position: relative; width: 100%; min-height: calc(76px * var(--s)); padding: var(--sp-12) var(--sp-14); border-radius: var(--r-18); overflow: hidden;
   background: var(--veil); box-shadow: inset 0 0 0 1px var(--edge); text-align: left; color: var(--text);
@@ -22,6 +23,7 @@
 /* tall (Main, the cards share the column's height): name on top, the time large, the status under it */
 .routine.tall { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto auto; grid-template-areas: "ic name go" ". . ." "time time time" "stat stat stat";
   row-gap: var(--sp-4); align-items: center; padding: var(--sp-14) var(--sp-16, var(--sp-16)) var(--sp-16, var(--sp-16)); }
+.cell.grow > .routine.tall { min-height: 0; }   /* in a growing cell the other columns set the height */
 .routine.tall .rname { align-self: center; }
 .routine.tall .rtime b { font-size: var(--fs-hero); }
 .routine.tall .rtime small { font-size: var(--fs-name); }
@@ -34,3 +36,4 @@
 .timecard.big .tclock { font-size: var(--fs-display-s); }
 .timecard.big .sb { width: calc(52px * var(--s)); height: calc(52px * var(--s)); }
 .timecard.big .sb svg { width: var(--icon); height: var(--icon); }
+}

@@ -3,7 +3,8 @@
 import * as H from './home.js';
 import { cap } from './core/dom.js';
 import { st } from './core/store.js';
-import { now as mediaNow, idsOf } from './core/players.js';
+import { idsOf, byMa, popupByMa, mediaPopupId } from './core/players.js';
+import { session } from './core/session.js';
 import { nasHealth } from './dashboards/parts.js';
 
 const S = H.security, V = H.vacuum, L = H.lights;
@@ -34,6 +35,9 @@ const person = (p) => ({ title: p.name, entity: p.entity, icon: 'account', width
   ] },
 ] });
 
+// Play on: the pop-up of the player the music moved to (its MA entity), so it follows the music; a group has none (the pop-up closes)
+const playerFor = byMa(H.players), followTo = popupByMa(H.players);
+
 export default {
   alarm: { title: 'Alarm', entity: S.alarm, icon: 'shield-home', tone: 'sage', width: 'wide', state: (e) => (e ? ALARM_TEXT[e.state] || cap(e.state) : ''), cards: [
     { type: 'alarm', span: 6, entity: S.alarm, battery: S.siren_battery, doors: S.entry_doors, windows: S.open_windows, garage: S.garage, household: S.household, disarm: S.disarm },
@@ -62,7 +66,7 @@ export default {
     { type: 'swatches', entity: L.accent.entity },
   ] },
 
-  timers: { title: 'Timers', icon: 'timer-outline', tone: 'lamp', cards: [{ type: 'timer-list', ...H.timers, start: 'script.voice_timer_start' }] },
+  timers: { title: 'Timers', icon: 'timer-outline', tone: 'lamp', cards: [{ type: 'timer-list', count: H.timers.count, prefix: H.timers.prefix, last: H.timers.last, start: 'script.voice_timer_start' }] },
 
   vacuum: { title: 'Vacuum', entity: V.entity, icon: 'robot-vacuum', width: 'wide', state: (e) => (e ? cap(e.state) : ''), pages: [
     { title: 'Clean', icon: 'play', cards: [
@@ -107,8 +111,9 @@ export default {
   sam: person(H.people.sam),
 
   // one per player: #media-<object id>, opened by tapping its row in the Playing card
-  ...Object.fromEntries(H.players.map((p) => [`media-${p.entity.split('.')[1]}`, {
+  ...Object.fromEntries(H.players.map((p) => [mediaPopupId(p), {
     title: p.name, icon: p.power ? 'television-play' : 'music', tone: 'plum', width: 'max', entity: p.entity, deps: idsOf(p),
-    state: () => { const n = mediaNow(p); return n ? (n.state === 'playing' ? 'Playing' : n.state === 'paused' ? 'Paused' : 'On') : 'Off'; },
-    cards: [{ type: 'media-detail', player: p, targets: H.playTargets, apps: H.tvApps }] }])),
+    state: () => { const v = session(p).snap, n = v.n;   // as the card shows it: smoothed through song changes, a stopped queue as paused (core/session.js)
+      return n ? (n.state === 'playing' ? 'Playing' : n.state === 'paused' ? 'Paused' : 'On') : v.stopped ? 'Stopped' : 'Off'; },
+    cards: [{ type: 'media-detail', player: p, targets: H.playTargets, apps: H.tvApps, follow: followTo, playerFor }] }])),
 };

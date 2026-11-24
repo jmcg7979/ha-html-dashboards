@@ -6,7 +6,7 @@ import * as home from '../home.js';
 const U = () => home.units || {};
 export const metric = () => U().temperature === 'C';
 export const degUnit = () => (metric() ? '°C' : '°F');
-export const h24 = () => U().clock === '24h';
+const h24 = () => U().clock === '24h';
 // a temperature as text, no ° sign: whole degrees in °F, tenths in °C ("19.5", "20")
 export const deg = (v) => String(metric() ? Math.round(v * 10) / 10 : Math.round(v));
 // options for toLocaleTimeString: what the site asks for, or the browser's own format

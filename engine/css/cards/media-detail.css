@@ -1,42 +1,32 @@
-/* ---------- media pop-up (cards/media-detail.js) ----------
-   The pop-up gets .amb (and .amb-art once the art's colours are read: core/artcolor.js sets --amb-a/--amb-b/--t on it). */
-.popup.amb { background: radial-gradient(70% 45% at 6% -12%, rgba(var(--plum), var(--a-16)), transparent 70%), var(--raised); transition: background .4s; }
-.popup.amb.amb-art { background: radial-gradient(55% 65% at 16% 32%, rgba(var(--amb-a), .95), transparent 72%), radial-gradient(50% 60% at 85% 95%, rgba(var(--amb-a), .45), transparent 70%), linear-gradient(160deg, rgb(var(--amb-a)) 0%, rgb(var(--amb-b)) 70%); }
-.popup.amb .phead .ic { background: var(--veil-2); color: var(--text); }
-.popup.amb .phead .sub { color: rgba(var(--text-rgb), .75); }
-.popup.amb .pclose { background: var(--veil-2); color: var(--text); }
-
-.mdet { display: grid; grid-template-columns: minmax(0, 1fr) calc(300px * var(--s)); gap: var(--sp-24); align-items: stretch; }
-.mmain { display: flex; gap: var(--sp-28); align-items: center; min-width: 0; }
-.mart { width: calc(320px * var(--s)); aspect-ratio: 1; border-radius: var(--r-16); overflow: hidden; flex: none; background: var(--hairline); display: flex; flex-direction: column; gap: var(--sp-10); align-items: center; justify-content: center; color: var(--text-2); box-shadow: 0 24px 56px rgba(0, 0, 0, .5); }
-.mart img { width: 100%; height: 100%; object-fit: cover; }
-.mart svg { width: var(--icon-art); height: var(--icon-art); }
-.mart span { font: 600 var(--fs-title) var(--font-display); color: var(--text); }
-.mart.branded { background: rgba(8, 8, 12, .42); color: rgb(var(--app)); box-shadow: inset 0 0 0 1px var(--grid-line); }
-.mart.branded svg { width: 46%; height: 46%; }
-.mart .wordmark { font-size: var(--fs-big); }
+@layer cards {
+/* ---------- the player (cards/media-detail.js): a TV's Now playing page and every media pop-up ----------
+   One look on large screens (.wide: art and song on the left, one panel on the right, controls along the bottom), stacked on
+   phones. Its other sheets: media-detail-backdrop.css (what is behind it), media-detail-remote.css (a TV's Remote),
+   media-detail-overlays.css (Rooms, and the queue and lyrics as layers or as the panel); the queue and lyrics themselves
+   are player-parts.css, the rooms' tiles picker.css. */
+/* ---- shared pieces ---- */
+.mdet { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-24); --t: var(--lamp); --pt: var(--t); }
+.mmain { display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-18); min-width: 0; }
+.mdet .mart { aspect-ratio: 1; overflow: hidden; flex: none; background: var(--veil); display: flex; flex-direction: column; gap: var(--sp-10); align-items: center; justify-content: center; color: var(--text-2); }
+.mdet .mart img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mdet .mart svg { width: var(--icon-art); height: var(--icon-art); }
+.mdet .mart span { font: 600 var(--fs-title) var(--font-display); color: var(--text); }
+.mdet .mart.branded { background: rgba(8, 8, 12, .42); color: rgb(var(--app)); box-shadow: inset 0 0 0 1px var(--grid-line); }
+.mdet .mart.branded svg { width: 46%; height: 46%; }
+.mdet .mart .wordmark { font-size: var(--fs-big); }
 .mcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-22); }
-.mmeta { display: flex; flex-direction: column; gap: var(--sp-4); }
-.mapp { font-size: var(--fs-small); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--t)); }
-.mdet .mtrack { font: 600 var(--fs-big)/1.1 var(--font-display); letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.mdet .martist { font-size: var(--fs-name); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mdet .malbum { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mprog { display: flex; flex-direction: column; gap: var(--sp-6); }
+.mmeta { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.mapp { font-size: var(--fs-small); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.mdet .mtrack { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mdet .martist, .mdet .malbum { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mbar, .mvbar { height: calc(6px * var(--s)); border-radius: var(--r-pill); background: var(--edge-strong); position: relative; }
 .mbar i, .mvbar i { position: absolute; inset: 0 auto 0 0; background: var(--text); border-radius: inherit; }
 .mbar b { position: absolute; top: 50%; width: calc(14px * var(--s)); height: calc(14px * var(--s)); margin: calc(-7px * var(--s)) 0 0 calc(-7px * var(--s)); border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
-.mbar:not(.seek) b { display: none; }
+.mbar:not(.seek) b, html.remote .mbar b { display: none; }
 .mbar.seek { cursor: pointer; }
 .mbar.seek::after, .mvbar::after { content: ""; position: absolute; inset: calc(-14px * var(--s)) 0; }
-.mtimes { display: flex; justify-content: space-between; font-size: var(--fs-small); color: rgba(var(--text-rgb), .72); }
-.mctl { display: flex; justify-content: space-between; align-items: center; }
-.mctl .rbtn { --rbtn: calc(46px * var(--s)); color: var(--text); background: transparent; }
-.mctl .rbtn svg { width: var(--icon-btn); height: var(--icon-btn); }
-.mctl [data-a="shuffle"], .mctl [data-a="repeat"] { background: var(--hairline); }
-.mctl [data-a="shuffle"] svg, .mctl [data-a="repeat"] svg { width: var(--icon); height: var(--icon); }
-.mctl .rbtn.on { color: rgb(var(--t)); background: rgba(var(--t), var(--a-20)); }
-.mctl .mplay { --rbtn: calc(80px * var(--s)); background: var(--text); color: #15121a; box-shadow: 0 12px 30px rgba(0, 0, 0, .35); }
-.mctl .mplay svg { width: var(--icon-hero); height: var(--icon-hero); }
+.mctl { display: flex; align-items: center; }
+.mctl .rbtn[disabled] { opacity: .3; }   /* shuffle / repeat in a dynamic queue */
 .mvol { display: flex; align-items: center; gap: var(--sp-10); }
 .mvol .rbtn { color: var(--text); background: var(--hairline); }
 .mvol .rbtn.on { color: rgb(var(--ember)); }
@@ -45,53 +35,189 @@
 .mfoot { display: flex; gap: var(--gap); }
 .mdet .chip { background: var(--veil-2); color: var(--text); }
 .mdet .chip.on { background: rgba(var(--t), var(--a-26)); color: rgb(var(--t)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-45)); }
+.mpill { display: flex; align-items: center; justify-content: center; gap: var(--sp-8); white-space: nowrap; }
+.mpill[hidden], .mdet .mqrow:not(:has(.mpill:not([hidden]))) { display: none; }
+.mpill svg { width: var(--icon-sm); height: var(--icon-sm); }
+.msrc { display: contents; }
+.pqi.up.jump { cursor: pointer; }
 
-/* right column: tabs + panes on a dark glass */
-.mside { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-14); border-radius: var(--r-20); background: rgba(8, 8, 12, .3); box-shadow: inset 0 0 0 1px var(--grid-line); min-width: 0; min-height: calc(440px * var(--s)); }
-.mtabs { display: flex; gap: 4px; padding: 4px; border-radius: var(--r-22); background: var(--veil); }
-.mtab { flex: 1; height: calc(36px * var(--s)); border-radius: var(--r-pill); display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; color: rgba(var(--text-rgb), .7); }
-.mtab svg { width: var(--icon-xs); height: var(--icon-xs); }
-.mtab.on { background: var(--edge-strong); color: var(--text); }
-.mpane { display: flex; flex-direction: column; gap: var(--sp-10); flex: 1; min-height: 0; }
-.mnote { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); line-height: 1.45; padding: 0 var(--sp-4); }
-.mq { display: flex; flex-direction: column; gap: var(--sp-10); }
+/* nothing playing; a stopped queue (where it stopped, Resume, the queue); a TV that's on keeps its Remote beside it */
+.midle { display: none; flex-direction: column; align-items: center; gap: var(--sp-12); color: var(--text-2); padding: calc(40px * var(--s)) 0; grid-column: 1 / -1; }
+.midle > svg { width: var(--icon-empty); height: var(--icon-empty); }
+.midle .chip { flex: none; padding: 0 var(--sp-18); }
+.midle .chip svg { width: var(--icon-sm); height: var(--icon-sm); }
+.mdet.mdet.idle > *:not(.midle) { display: none; }   /* (.mdet twice: over the large layout's display: contents) */
+.mdet.idle .midle { display: flex; }
 .mqi { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-10); border-radius: var(--r-14); background: var(--veil); }
 .mqa { width: calc(56px * var(--s)); height: calc(56px * var(--s)); border-radius: var(--r-8); overflow: hidden; flex: none; background: var(--hairline); display: flex; align-items: center; justify-content: center; color: var(--text-2); }
 .mqa img { width: 100%; height: 100%; object-fit: cover; }
 .mqt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .mqt small { font-size: var(--fs-small); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--t)); }
 .mqt b, .mqt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mqt b { font-size: var(--fs-name); font-weight: 600; }
+.mqt b { font-size: var(--fs-name); font-weight: 600; color: var(--text); }
 .mqt span { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); }
-.mqi em { font-style: normal; font-size: var(--fs-small); color: rgba(var(--text-rgb), .6); }
-.mqcount { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); padding: 0 var(--sp-4); }
-.mqopen { flex: none; margin-top: auto; }
-.mtargets { display: flex; flex-direction: column; gap: var(--sp-4); overflow-y: auto; max-height: calc(360px * var(--s)); }
-.mtarget { display: flex; align-items: center; gap: var(--sp-12); height: calc(44px * var(--s)); padding: 0 var(--sp-10); border-radius: var(--r-12); text-align: left; color: var(--text); flex: none; }
-.mtarget svg { width: var(--icon-sm); height: var(--icon-sm); color: rgba(var(--text-rgb), .7); }
-.mtarget .mtn { flex: 1; font-size: var(--fs-sub); font-weight: 600; }
-.mtarget .mts { font-size: var(--fs-small); color: rgba(var(--text-rgb), .6); }
-.mtarget:not(:disabled):active, .mtarget.on { background: var(--hairline); }
-.mtarget.on svg, .mtarget.on .mts { color: rgb(var(--t)); }
-.mtarget:disabled:not(.on) { opacity: .45; }
-.mdpad { position: relative; width: calc(200px * var(--s)); height: calc(200px * var(--s)); margin: var(--sp-4) auto 0; border-radius: 50%; background: radial-gradient(circle at 50% 40%, var(--edge-strong), var(--veil)); box-shadow: inset 0 0 0 1px var(--hairline); }
-.mdpad .dk { position: absolute; width: calc(56px * var(--s)); height: calc(56px * var(--s)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text); }
-.mdpad .dk svg { width: var(--icon-btn); height: var(--icon-btn); }
-.mdpad .dk:active { background: var(--veil-2); }
-.mdpad .up { left: calc(72px * var(--s)); top: var(--sp-6); }
-.mdpad .down { left: calc(72px * var(--s)); bottom: var(--sp-6); }
-.mdpad .left { left: var(--sp-6); top: calc(72px * var(--s)); }
-.mdpad .right { right: var(--sp-6); top: calc(72px * var(--s)); }
-.mdpad .ok { left: calc(58px * var(--s)); top: calc(58px * var(--s)); width: calc(84px * var(--s)); height: calc(84px * var(--s)); background: var(--edge-strong); font-weight: 700; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
-.mkeys { display: flex; justify-content: space-between; }
-.mkeys .rbtn { --rbtn: calc(44px * var(--s)); color: var(--text); background: var(--hairline); }
-.mapps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-6); }
-.mapps .chip { height: calc(40px * var(--s)); font-size: var(--fs-small); }
-.midle { display: none; flex-direction: column; align-items: center; gap: var(--sp-12); color: var(--text-2); padding: calc(40px * var(--s)) 0; grid-column: 1 / -1; }
-.midle svg { width: var(--icon-empty); height: var(--icon-empty); }
-.midle .chip { flex: none; padding: 0 var(--sp-18); }
-.mdet.idle > *:not(.midle) { display: none; }
-.mdet.idle .midle { display: flex; }
+.mqbig { display: flex; align-items: center; justify-content: center; gap: var(--sp-8); padding: var(--sp-14) var(--sp-16); border-radius: var(--r-pill); background: rgb(var(--t)); color: rgb(var(--ink-rgb)); font: 700 var(--fs-name)/1 var(--font); }
+.mqbig svg { width: var(--icon-sm); height: var(--icon-sm); }
+.mresume { display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-10); width: min(100%, calc(420px * var(--s))); margin-top: var(--sp-8); }
+.mresume[hidden] { display: none; }
+.mresume .chip { align-self: center; }
+.mdet.idle.tvon .midle { grid-column: 1; }
 
-/* phone: one column, art on top (the pop-up is a bottom sheet there) */
+/* music on its way here (core/wake.js pending): the step and what's coming, in place of the player */
+.mpend { display: none; flex-direction: column; align-items: center; gap: var(--sp-10); padding: calc(48px * var(--s)) var(--sp-16); grid-column: 1 / -1; text-align: center; }
+.mpend .tspin { width: calc(44px * var(--s)); height: calc(44px * var(--s)); border-radius: 50%; border: 4px solid rgba(var(--t), var(--a-30)); border-top-color: rgb(var(--t)); animation: spin .8s linear infinite; }
+.mpend b { font: 600 var(--fs-title)/1.25 var(--font-display); color: var(--text); }
+.mpend small { font-size: var(--fs-sub); color: var(--text-2); }
+.mdet.mdet.pending > *:not(.mpend) { display: none; }
+.mdet.pending .mpend { display: flex; }
 
+/* song changes: the new song fades in (art, details, backdrop); the whole change reads as one transition, the art dimmed and
+   soft while it's under way, back to full over a second */
+@keyframes mfade { from { opacity: 0; } }   /* a plain cross-fade: nothing shifts while the song changes */
+.mdet .fadein { animation: mfade .9s ease-out .12s backwards; }   /* (a beat after the old song starts to go) */
+.mdet .mart, .mdet .mmeta { transition: opacity .9s ease, filter .9s ease; }
+.mdet.changing .mart { opacity: .45; filter: saturate(.6) blur(1px); transition-duration: .4s; }   /* the art dims; the song's name stays readable */
+.mstarting { display: flex; align-items: center; gap: var(--sp-8); color: rgb(var(--t)); font: 600 var(--fs-sub)/1 var(--font); }
+.mstarting[hidden] { display: none; }
+.mstarting .tspin { width: calc(18px * var(--s)); height: calc(18px * var(--s)); border-radius: 50%; border: 2px solid rgba(var(--t), var(--a-30)); border-top-color: rgb(var(--t)); animation: spin .8s linear infinite; }
+
+/* ================= stacked (phones, a narrow window): art on top, the controls under it, the Remote last ================= */
+.mdet:not(.wide) .mart { width: min(calc(280px * var(--s)), 78vw); align-self: center; border-radius: var(--r-10); box-shadow: 0 24px 56px rgba(0, 0, 0, .5); }
+:root[data-profile="phone"] .mdet:not(.wide) .mart { width: 100%; max-width: calc(440px * var(--s)); }
+.mdet:not(.wide) .mbot, .mdet:not(.wide) .mbotl, .mdet:not(.wide) .mrowb, .mdet:not(.wide) .mrowc { display: contents; }
+.mdet:not(.wide) .mapp { color: rgb(var(--t)); }
+.mdet:not(.wide) .mtrack { font: 600 var(--fs-figure-m)/1.1 var(--font-display); letter-spacing: -0.01em; }
+.mdet:not(.wide) .martist { font-size: var(--fs-name); font-weight: 500; }
+.mdet:not(.wide) .malbum { font-size: var(--fs-sub); color: rgba(var(--text-rgb), .7); }
+.mdet:not(.wide) .mprog { display: flex; flex-direction: column; gap: var(--sp-6); }
+.mdet:not(.wide) .mprog:not([hidden]), .mdet:not(.wide) .mstarting:not([hidden]) { animation: mfade .35s ease-out; }
+.mdet:not(.wide) .mtimes { display: flex; justify-content: space-between; font-size: var(--fs-small); color: rgba(var(--text-rgb), .72); }
+.mdet:not(.wide) .mctl { justify-content: space-between; }
+.mdet:not(.wide) .mctl .rbtn { --rbtn: calc(46px * var(--s)); color: var(--text); background: transparent; }
+.mdet:not(.wide) .mctl .rbtn svg { width: var(--icon-btn); height: var(--icon-btn); }
+.mdet:not(.wide) .mctl [data-a="shuffle"], .mdet:not(.wide) .mctl [data-a="repeat"], .mdet:not(.wide) .mctl [data-a="like"] { background: var(--hairline); }
+.mdet:not(.wide) .mctl [data-a="shuffle"] svg, .mdet:not(.wide) .mctl [data-a="repeat"] svg, .mdet:not(.wide) .mctl [data-a="like"] svg { width: var(--icon); height: var(--icon); }
+.mdet:not(.wide) .mctl .rbtn.on { color: rgb(var(--t)); background: rgba(var(--t), var(--a-20)); }
+.mdet:not(.wide) .mctl .mplay { --rbtn: calc(80px * var(--s)); background: var(--text); color: #15121a; box-shadow: 0 12px 30px rgba(0, 0, 0, .35); }
+.mdet:not(.wide) .mctl .mplay svg { width: var(--icon-hero); height: var(--icon-hero); }
+/* Queue across, Lyrics and Play on under it */
+.mdet:not(.wide) .mqrow { display: flex; flex-wrap: wrap; gap: var(--sp-10); margin-top: var(--sp-4); }
+.mdet:not(.wide) .mpill { flex: 1 1 0; min-width: 0; padding: var(--sp-14) var(--sp-10); border-radius: var(--r-pill); background: var(--veil-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--edge); font: 700 var(--fs-name)/1 var(--font); }
+.mdet:not(.wide) [data-a="queue-open"].mpill { flex-basis: 100%; background: rgb(var(--t)); color: rgb(var(--ink-rgb)); box-shadow: none; }
+.mdet:not(.wide) .msw, .mdet:not(.wide) [data-a="pane-next"] { display: none; }
+
+/* ================= large screens (.wide): the TV's Now playing, the panel's and a computer's pop-up ================= */
+.mdet.wide { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: auto auto auto auto auto; gap: 0 var(--sp-24); }   /* rows 1 and 4 are the slack above and below the art and song */
+.mdet.wide.page { grid-template-rows: 1fr auto auto 1fr auto; }
+.mdet.wide .mmain, .mdet.wide .mcol { display: contents; }
+.mdet.wide .mstarting { display: none; }
+.mdet.wide .mart { grid-column: 1; grid-row: 2; width: calc(220px * var(--s)); height: calc(220px * var(--s)); border-radius: var(--r-22); box-shadow: 0 var(--sp-20) var(--sp-32) rgba(0, 0, 0, .55); }
+.mdet.wide .mmeta { grid-column: 1; grid-row: 3; gap: var(--sp-6); margin-top: var(--sp-14); }
+.mdet.wide .mapp { color: var(--text-2); font-size: var(--fs-meta); letter-spacing: .08em; }
+.mdet.wide .mtrack { font: 700 var(--fs-title)/1.1 var(--font-display); color: var(--text); }
+.mdet.wide .martist { font: 600 var(--fs-name)/1.2 var(--font); color: var(--text); }
+.mdet.wide .malbum { font-size: var(--fs-item); color: var(--text-2); }
+/* nothing beside it (an app with no queue and no Remote): bigger art, the song beside it */
+.mdet.wide.noside { grid-template-columns: auto minmax(0, 1fr); gap: 0 var(--sp-32); }
+.mdet.wide.noside .mart { grid-row: 2 / 4; width: calc(300px * var(--s)); height: calc(300px * var(--s)); }
+.mdet.wide.noside .mmeta { grid-column: 2; grid-row: 2 / 4; align-self: center; margin-top: 0; }
+.mdet.wide.noside .mtrack { font-size: var(--fs-display-s); }
+.mdet.wide.noside .martist { font-size: var(--fs-title); }
+.mdet.wide .midle, .mdet.wide .mpend { grid-row: 1 / -1; align-self: center; }
+.mdet.wide.idle.tvon .midle { grid-column: 1; }
+/* along the bottom: progress; transport and the panel / Play on / switches; a pop-up's volume and power */
+.mdet.wide .mbot { grid-column: 1 / -1; grid-row: 5; display: flex; align-items: flex-end; gap: var(--sp-20); margin-top: var(--sp-16); min-width: 0; }
+.mdet.wide .mbotl { flex: 1; display: flex; flex-direction: column; gap: var(--sp-10); min-width: 0; }
+/* the party's code (cfg.party) at the right end of the bar, as tall as the bar's rows and a little more: guests scan it off the screen */
+.mjoin { display: none; }
+.mdet.wide .mjoin:not([hidden]) { flex: none; display: flex; align-items: flex-end; gap: var(--sp-10); padding: var(--sp-4); margin: calc(-1 * var(--sp-4)); border-radius: var(--r-10); cursor: pointer; }
+.mjtx { display: flex; flex-direction: column; gap: var(--sp-2); text-align: right; padding-bottom: var(--sp-2); }
+.mjtx b { font: 600 var(--fs-sub)/1.2 var(--font); color: var(--text); }
+.mjtx small { font-size: var(--fs-meta); color: var(--text-2); white-space: nowrap; }
+.mjqr { width: calc(96px * var(--s)); aspect-ratio: 1; }
+.mdet.wide:not(.page) .mjqr, .mdet.wide.page.grouped .mjqr { width: calc(116px * var(--s)); }   /* a pop-up's bar has a third row (volume, power), and so has a page's while it plays in several rooms */
+.mjqr svg { display: block; width: 100%; height: 100%; border-radius: var(--r-8); }
+.mdet.wide .mprog { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-12); font-size: var(--fs-meta); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.mdet.wide .mprog[hidden] { display: none; }
+.mdet.wide .mtimes { display: contents; }
+.mdet.wide .mpos { order: 1; }
+.mdet.wide .mbar { order: 2; height: var(--sp-4); background: var(--veil-2); }
+.mdet.wide .mdur { order: 3; }
+.mdet.wide .mbar i { transition: width .5s linear; }
+/* a TV pays for every frame it draws (a bar gliding all through a song kept a Google TV at 170% of its four cores): the bar steps twice a second */
+:root[data-profile="tv"] .mdet.wide .mbar i { transition: none; }
+.mdet.wide .mprog.starting .mpos { color: rgb(var(--lamp)); font-weight: 600; }
+.mdet.wide .mprog.starting .mbar i { transition: none; }
+.mdet.wide .mrowb { display: flex; align-items: center; gap: var(--sp-16); min-width: 0; }
+.mdet.wide .mctl { gap: var(--sp-16); flex: none; }
+.mdet.wide .mctl .rbtn { --rbtn: var(--ic-l); width: var(--ic-l); height: var(--ic-l); background: var(--veil-2); color: var(--text); }
+.mdet.wide .mctl .rbtn svg { width: var(--icon-lg); height: var(--icon-lg); }
+.mdet.wide .mctl .mplay { --rbtn: var(--ic-xl); width: var(--ic-xl); height: var(--ic-xl); background: var(--text); color: var(--ink); }
+.mdet.wide .mctl [data-a="shuffle"], .mdet.wide .mctl [data-a="repeat"], .mdet.wide .mctl [data-a="like"], .mdet.wide .mctl .msw { --rbtn: var(--ic-s); width: var(--ic-s); height: var(--ic-s); background: transparent; color: var(--text-2); }
+.mdet.wide .mctl [data-a="shuffle"] svg, .mdet.wide .mctl [data-a="repeat"] svg, .mdet.wide .mctl [data-a="like"] svg, .mdet.wide .mctl .msw svg { width: var(--icon); height: var(--icon); }
+.mdet.wide .mctl [data-a="shuffle"].on, .mdet.wide .mctl [data-a="repeat"].on, .mdet.wide .mctl [data-a="like"].on, .mdet.wide .mctl .msw.on { color: rgb(var(--lamp)); }
+.mdet.wide .mqrow { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-8) var(--sp-12); min-width: 0; }
+.mdet.wide .mpill { flex: none; gap: var(--sp-6); padding: var(--sp-6) var(--sp-14); border-radius: var(--r-pill); background: var(--veil); border: 1px solid var(--edge); color: var(--text-2); font: 600 var(--fs-meta)/1 var(--font); }
+/* Autoplay and Crossfade: two small switches after the transport, a step apart from it */
+.mdet.wide .mctl [data-a="autoplay"] { margin-left: var(--sp-8); }
+.mdet.wide .mctl .msw + .msw { margin-left: calc(-1 * var(--sp-8)); }
+.mdet.wide .mpill.on { background: rgba(var(--lamp), var(--a-16)); border-color: rgba(var(--lamp), var(--a-45)); color: rgb(var(--lamp)); }
+.mdet.wide .mrowc { display: flex; align-items: center; gap: var(--sp-24); min-width: 0; }
+.mdet.wide .mrowc:not(:has(.mvol:not([hidden]), .mfoot > :not([hidden]))) { display: none; }
+.mdet.wide .mvol { flex: 0 1 calc(420px * var(--s)); }
+.mdet.wide .mvol[hidden] { display: none; }
+.mdet.wide .mvol .rbtn { --rbtn: var(--ic-s); width: var(--ic-s); height: var(--ic-s); background: var(--veil-2); }
+.mdet.wide .mvbar { height: var(--sp-4); background: var(--veil-2); }
+.mdet.wide .mfoot { margin-left: auto; gap: var(--sp-8); }
+.mdet.wide .mfoot .chip { flex: none; height: auto; padding: var(--sp-6) var(--sp-14); background: var(--veil); border: 1px solid var(--edge); color: var(--text-2); font: 600 var(--fs-meta)/1 var(--font); }
+.mdet.wide .mfoot .chip svg { width: var(--icon-sm); height: var(--icon-sm); }
+/* a TV's own page: the whole screen, its backdrop inside the card; the TV's remote has volume and power */
+.mdet.page { height: calc(100vh - 2 * var(--page-pad-y, var(--page-pad))); padding: var(--sp-24); border-radius: var(--panel-radius); overflow: hidden; isolation: isolate; }
+/* the page on a phone: between the status bar and the tab bar, nothing scrolls. Upright: the art as large as the room
+   left over the song and the controls allows; on its side: the art on the left, as tall as the card, the rest beside it. */
+:root[data-profile="phone"] .mdet.page { height: calc(100vh - var(--tabbar-h) - var(--safe-bottom) - var(--safe-top) - var(--vtabs-h, 0px) - 2 * var(--page-pad) - 6px); height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - var(--safe-top) - var(--vtabs-h, 0px) - 2 * var(--page-pad) - 6px); padding: var(--sp-18); }
+.mdet.page:not(.wide) { grid-template-rows: minmax(0, 1fr); }
+.mdet.page:not(.wide) .mmain { container-type: size; height: 100%; min-height: 0; justify-content: space-between; }
+.mdet.page:not(.wide) .mart, :root[data-profile="phone"] .mdet.page:not(.wide) .mart { width: min(100cqw, calc(100cqh - (300px + var(--mpills, 0px)) * var(--s))); max-width: none; margin: auto 0; }
+.mdet.page:not(.wide):has(.mqrow .mpill:not([hidden])) { --mpills: 74px; }   /* a row of pills (Up next, the other app) under the transport */
+.mdet.page:not(.wide) .mcol { flex: none; }
+/* six buttons across: spread over the card, a small gap at the least on a narrow phone, no wider apart than on a wide page */
+.mdet.page:not(.wide) .mctl { justify-content: space-between; gap: var(--sp-8); width: 100%; max-width: calc(470px * var(--s)); align-self: center; }
+@media (orientation: landscape) {
+  .mdet.page:not(.wide) .mmain { flex-direction: row; align-items: center; gap: var(--sp-24); }
+  .mdet.page:not(.wide) .mart, :root[data-profile="phone"] .mdet.page:not(.wide) .mart { width: min(100cqh, 38cqw); margin: 0; }
+  .mdet.page:not(.wide) .mcol { flex: 1; gap: var(--sp-12); }
+  .mdet.page:not(.wide) .mtrack { -webkit-line-clamp: 1; }
+  .mdet.page:not(.wide) .mctl .mplay { --rbtn: calc(64px * var(--s)); }
+}
+/* a short wide screen (a phone opened on its side): the art and the song's name give way so the controls stay on the page */
+@media (max-height: 500px) {
+  .mdet.wide.page.noside .mart { width: min(calc(300px * var(--s)), 44vh); height: min(calc(300px * var(--s)), 44vh); }
+  .mdet.wide.page.noside .mtrack { font-size: var(--fs-title); -webkit-line-clamp: 1; }
+  .mdet.wide.page.noside .martist { font-size: var(--fs-name); }
+  .mdet.wide.page { padding: var(--sp-14) var(--sp-18); }
+}
+/* a page has no volume / power row (a TV's remote has those; its Stop is beside Rooms); while its music plays in several
+   rooms (.grouped) it has the group's: All rooms' volume and mute, Leave group. A page with the volume row (.pvol: a
+   phone as the player) has no Stop while it plays alone */
+.mdet.page.pvol:not(.grouped) .mfoot { display: none; }
+.mdet.page.pvol:not(.wide) .mart, :root[data-profile="phone"] .mdet.page.pvol:not(.wide) .mart, .mdet.page.grouped:not(.wide) .mart, :root[data-profile="phone"] .mdet.page.grouped:not(.wide) .mart { width: min(100cqw, calc(100cqh - (360px + var(--mpills, 0px)) * var(--s))); }
+/* a pop-up without a Remote: the queue pane's least height gives the size; the art uses the height that gives */
+.mdet.wide:not(.page):not(.noside) .mart { width: min(calc(280px * var(--s)), 36vh); height: min(calc(280px * var(--s)), 36vh); }
+/* ---- over a photo of the artist (.photo): the art small, with the song low on the left above the controls, so the picture
+   has the screen; the panel narrower and darker so its list still reads ---- */
+.mdet.wide.photo .mmeta { text-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 2px 22px rgba(0, 0, 0, .55); }
+.mdet.wide.photo .mapp, .mdet.wide.photo .malbum { color: rgba(var(--text-rgb), .82); }
+.mdet.wide.page.photo { grid-template-rows: 1fr auto auto auto auto; }
+.mdet.wide.photo .mart, .mdet.wide.photo:not(.page):not(.noside) .mart { width: calc(132px * var(--s)); height: calc(132px * var(--s)); border-radius: var(--r-14); align-self: end; }
+.mdet.wide.photo .mmeta { margin-top: var(--sp-12); }
+.mdet.wide.photo.noside { gap: 0 var(--sp-22); }
+.mdet.wide.photo.noside .mart { grid-row: 2 / 4; }
+.mdet.wide.photo.noside .mmeta { align-self: end; margin-top: 0; }
+.mdet.wide.photo.noside .mtrack { font-size: var(--fs-big); }
+.mdet.wide.photo:not(.noside) { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.mdet.wide.photo:not(.page):not(.noside) .mart { grid-row: 2; }
+.mdet.wide.photo:not(.page) { grid-template-rows: 1fr auto auto auto auto; }
+.mdet.wide.photo .mbar, .mdet.wide.photo .mvbar { background: rgba(var(--text-rgb), .22); }
+.mdet.wide.photo .mctl .rbtn:not(.mplay), .mdet.wide.photo .mpill, .mdet.wide.photo .mfoot .chip { background: rgba(var(--scrim-rgb), .5); }
+}

@@ -14,7 +14,7 @@ function spills(root) {
       if (/auto|scroll/.test(s.overflowY) || s.display === 'none' || s.display === 'contents') continue;   // contents: no box of its own
       const r = box.getBoundingClientRect(); if (!r.height) continue;
       let low = -Infinity;
-      for (const k of box.children) { const ks = getComputedStyle(k); if (ks.position === 'absolute' || ks.position === 'fixed' || ks.display === 'none') continue; low = Math.max(low, k.getBoundingClientRect().bottom); }
+      for (const k of box.children) { const ks = getComputedStyle(k); if (ks.position === 'absolute' || ks.position === 'fixed' || ks.display === 'none') continue; low = Math.max(low, k.getBoundingClientRect().bottom + Math.min(0, parseFloat(ks.marginBottom) || 0)); }   // a negative margin is a deliberate bleed (a sideways row's room for its highlights), not a spill
       if (low - r.bottom > 8) return true;
     }
   }

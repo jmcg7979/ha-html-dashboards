@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- timer alarm: takes the whole screen until stopped ---------- */
 .alarm { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; cursor: pointer;
   background: radial-gradient(circle at 50% 45%, rgb(196, 70, 50), rgb(120, 22, 12) 60%, rgb(36, 8, 5)); animation: alarm-bg 1s ease-in-out infinite; }
@@ -13,4 +14,4 @@
 @keyframes alarm-bg { 50% { filter: brightness(1.25); } }
 @keyframes alarm-ring { to { box-shadow: 0 0 0 calc(40px * var(--s)) rgba(255, 255, 255, 0); } }
 @keyframes alarm-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
-
+}

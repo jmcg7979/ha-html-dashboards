@@ -1,0 +1,24 @@
+@layer cards {
+/* ---------- Playing: one row per player (cards/media.js). Scoped to the card: the Music page has rows and lists of its own ---------- */
+.media .mlist { display: flex; flex-direction: column; gap: var(--gap); }
+.media .mrow { position: relative; overflow: hidden; height: calc(68px * var(--s)); border-radius: var(--tile-radius); background: var(--veil); display: flex; align-items: center; gap: var(--sp-12); padding: 0 var(--sp-12) 0 var(--sp-10); cursor: pointer; }
+.media .mrbg { position: absolute; inset: -30px; background-size: cover; background-position: center; filter: blur(26px) saturate(1.4) brightness(.55); opacity: .9; pointer-events: none; }
+.media .mrow > *:not(.mrbg) { position: relative; }
+.media .mrow .art { width: calc(54px * var(--s)); height: calc(54px * var(--s)); border-radius: var(--r-10); overflow: hidden; background: var(--veil-2); display: flex; align-items: center; justify-content: center; flex: none; box-shadow: 0 6px 16px rgba(0, 0, 0, .4); }
+.media .mrow .art img { width: 100%; height: 100%; object-fit: cover; }
+.media .mrow .tx { flex: 1; min-width: 0; }
+.media .mrow .mname { font-size: var(--fs-small); color: var(--text-2); }
+.media .mrow .mtrack, .media .mrow .martist { font-size: var(--fs-sub); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.media .mrow .mtrack { color: var(--text); font-weight: var(--fw-strong); }
+.media .mrow .martist { color: var(--text-2); }
+.media .mrow .subs { display: flex; gap: var(--sp-6); }
+.media .mrow .sb { padding: 0; background: var(--hairline); color: var(--text); }
+.media .mrow .sb.play { background: rgba(var(--t), var(--a-90)); color: var(--ink); }
+
+/* an app with no art: its logo on a dark tile, its color washed across the row (core/apps.js sets --app) */
+.media .mrow.branded .mrbg { inset: 0; filter: none; opacity: 1; background: linear-gradient(100deg, rgba(var(--app), var(--a-26)), transparent 72%); }
+.media .mrow.branded .art { background: var(--ink); color: rgb(var(--app)); }
+.media .mrow.branded .art svg { width: var(--icon-btn); height: var(--icon-btn); }
+.wordmark { font: 700 var(--fs-small) var(--font-display); letter-spacing: -0.01em; text-align: center; }
+.mrow { box-shadow: inset 0 0 0 1px var(--edge); }   /* idle: a visible outline */
+}

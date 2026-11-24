@@ -1,10 +1,12 @@
+@layer cards {
 /* ---------- alarm card (pop-up left side): hero, readiness checklist, big modes, PIN keypad ---------- */
 .alarmcard { height: 100%; min-height: calc(470px * var(--s)); border-radius: var(--tile-radius); padding: var(--sp-18); display: flex; flex-direction: column; gap: var(--sp-14);
   background: radial-gradient(80% 50% at 20% 0%, rgba(var(--t), var(--a-20)), transparent 70%), var(--veil); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-26)); transition: background .3s; }
 :root[data-profile="phone"] .alarmcard { height: auto; min-height: 0; }
 .alarmcard.alerting { animation: alarm-bg 1s ease-in-out infinite; background: radial-gradient(90% 60% at 30% 0%, rgba(var(--ember), var(--a-45)), transparent 75%), var(--veil); }
 .ahero { display: flex; align-items: center; gap: var(--sp-16); }
-.ashield { width: var(--ic-hero) !important; height: var(--ic-hero) !important; background: rgba(var(--t), var(--a-20)) !important; color: rgb(var(--t)) !important; box-shadow: 0 0 30px rgba(var(--t), var(--a-35)); }
+/* over the icon circle it is (.ic, .ic.on in base.css: an earlier layer) */
+.ashield { width: var(--ic-hero); height: var(--ic-hero); background: rgba(var(--t), var(--a-20)); color: rgb(var(--t)); box-shadow: 0 0 30px rgba(var(--t), var(--a-35)); }
 .ashield svg { width: var(--icon-hero); height: var(--icon-hero); }
 .astate { font: 600 var(--fs-big)/1.1 var(--font-display); letter-spacing: -0.02em; }
 .aready { font-size: var(--fs-name); color: var(--text-2); margin-top: 3px; }
@@ -31,7 +33,17 @@
 .akey { height: calc(54px * var(--s)); border-radius: var(--r-14); background: var(--veil-2); box-shadow: inset 0 0 0 1px var(--edge); font: 600 var(--fs-figure-m) var(--font-display); display: flex; align-items: center; justify-content: center; }
 .akey:active { background: rgba(255, 255, 255, .2); }
 .akey.ok { background: rgba(var(--sage), var(--a-26)); color: rgb(var(--sage)); }
+/* a short screen (a TV): the keypad takes the place of the checks while a code is typed, or it ran out under the card */
+@media (max-height: 640px) { .alarmcard:has(.akeypad:not([hidden])) .achecks { display: none; } }
 .alarmcard.wrong .akeypad { animation: shake .4s; }
 .alarmcard.wrong .adots::after { content: "Wrong code"; font-size: var(--fs-sub); letter-spacing: 0; color: rgb(var(--ember)); }
 @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-
+/* alarm card: smaller shield and state, readiness checks one per row (fine at 390 px phones' ~300 px; tight at 280 px) */
+@container cell (max-width: 260px) {
+  .ahero { gap: var(--sp-12); }
+  .ashield { width: calc(56px * var(--s)); height: calc(56px * var(--s)); }
+  .ashield svg { width: var(--icon-btn); height: var(--icon-btn); }
+  .astate { font-size: var(--fs-figure-m); }
+  .achecks { grid-template-columns: minmax(0, 1fr); }
+}
+}

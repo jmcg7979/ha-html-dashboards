@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- radar: now + HRRR forecast loop (cards/radar.js) ---------- */
 .radar { position: relative; border-radius: var(--panel-radius); overflow: hidden; background: rgb(var(--deep-rgb)); }
 .radar .rmap { position: absolute; inset: 0; background: rgb(var(--deep-rgb)); }
@@ -23,4 +24,4 @@
 .radar .rtick.now.on { background: rgb(var(--sage)); }
 .radar .rrng { display: flex; gap: var(--sp-6); }
 .radar .rrng .chip { flex: none; padding: 0 var(--sp-12); }
-
+}

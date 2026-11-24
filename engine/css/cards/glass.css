@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- glass card: one card's own panel (Weather, Calendar), heading sits above it like the other columns ---------- */
 .cell.glass { background: var(--glass); border: 1px solid var(--hairline); border-radius: var(--panel-radius); padding: var(--sp-12); }
-
+}

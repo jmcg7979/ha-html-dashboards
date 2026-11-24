@@ -111,7 +111,7 @@ template:
     variables:
       max_age_min: 75
       night: "{{ is_state('sun.sun', 'below_horizon') }}"
-      # each source normalised to one shape: time (unix s), condition (HA condition), °F, %, mph, degrees, inHg, mi
+      # each source normalized to one shape: time (unix s), condition (HA condition), °F, %, mph, degrees, inHg, mi
       nws: >-
         {% set a = states.sensor.weather_source_nws.attributes if states.sensor.weather_source_nws is not none else {} %}
         {% set t = as_timestamp(states('sensor.weather_source_nws'), none) %}

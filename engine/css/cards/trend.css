@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- trend: the #trend history pop-up (cards/trend.js) + the drill-in cue on Systems readings ---------- */
 .trend { display: flex; flex-direction: column; gap: var(--sp-12); }
 .tr-bar { display: flex; align-items: center; gap: var(--sp-12); flex-wrap: wrap; }
@@ -9,8 +10,6 @@
   background: var(--pit); box-shadow: inset 0 0 0 1px var(--edge); padding: var(--sp-10) var(--sp-8) 0 0; transition: opacity .2s; }
 .tr-plot.loading { opacity: .45; }
 .tr-plot .csvg { position: absolute; inset: var(--sp-10) var(--sp-8) 0 0; width: calc(100% - var(--sp-8)); height: calc(100% - var(--sp-10)); }
-.cgrid.v.major { stroke: var(--edge-strong); stroke-dasharray: 3 3; }
-.cx.major { fill: var(--text-2); font-weight: 600; }
 .cunit { text-anchor: end; }
 .tr-band { opacity: .16; }
 .tr-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
@@ -18,7 +17,7 @@
 .tr-thl { fill: var(--text-2); font: 600 var(--fs-micro) var(--font); text-anchor: middle; dominant-baseline: central; }
 .tr-thb { fill: rgba(13, 16, 23, .9); stroke-width: 1; }
 .tr-none { fill: var(--veil-faint); }
-.tr-dot { stroke: var(--popup-bg, #0d1017); stroke-width: 2; }
+.tr-dot { stroke: var(--ink); stroke-width: 2; }
 .trend .ctip strong { color: var(--text); font-weight: 600; margin-right: 4px; }
 .trend .ctip em { font-style: normal; color: var(--text-3); margin-left: 6px; }
 .tr-note { font-size: var(--fs-small); color: var(--text-3); min-height: 1.3em; }   /* kept, so the pop-up doesn't change height when a note appears */
@@ -37,3 +36,4 @@
 .mtr-hi .chev, .fact .chev { color: var(--text-3); margin-left: 3px; }
 .fact.drill .flab { text-decoration: underline dotted rgba(255, 255, 255, .25); text-underline-offset: 3px; }
 @media (hover: hover) { .meter.drill:hover, .bay.drill:hover, .dv.drill:hover, .cap.drill:hover, .fact.drill:hover { background-color: var(--veil-faint); } }
+}

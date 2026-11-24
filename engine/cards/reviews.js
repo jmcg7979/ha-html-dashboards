@@ -7,7 +7,9 @@
 import { h, esc, icon, toggle, setHTML } from '../core/dom.js';
 import { run } from '../core/actions.js';
 import { watch } from '../core/store.js';
+import { onDispose } from '../core/scope.js';
 import { onReady } from '../core/ha.js';
+import { pick } from '../core/pick.js';
 import { instance, camId, getReviews, sign, thumbPath, select, sel, fmtTime, fmtDay, fmtDur, labels } from '../core/frigate.js';
 
 export const panel = true;   // on a page: its own glass panel (core/layout.js)
@@ -18,16 +20,18 @@ export default function reviews(cfg) {
   const inst = () => instance(cams[0].entity);
   let sev = 'alert', cam = null, list = [], prev = null, visible = false, t = 0, loading = 0, failed = false, seq = 0;
   const C = cfg.compact;
-  const el = h(C ? `<div class="reviews compact"><div class="rvhead"><b>${esc(C.title || 'Alerts')}</b>${C.more ? `<button class="rbtn rvmore">${icon(C.icon || 'filmstrip-box-multiple')}</button>` : ''}</div><div class="rvlist"></div></div>` : `<div class="reviews">
-    <div class="rvf"><button class="chip" data-sev="alert">${icon('alert-circle-outline')}Alerts</button><button class="chip" data-sev="">${icon('format-list-bulleted')}All</button></div>
-    <div class="rvc"><button class="chip on" data-cam="">All cameras</button>${cams.map((c) => `<button class="chip" data-cam="${c.id}">${esc(c.name)}</button>`).join('')}</div>
+  const el = h(C ? `<div class="reviews compact"><div class="rvhead"><b>${esc(C.title || 'Alerts')}</b>${C.more ? `<button class="rbtn rvmore" aria-label="See all">${icon(C.icon || 'filmstrip-box-multiple')}</button>` : ''}</div><div class="rvlist"></div></div>` : `<div class="reviews">
+    <div class="rvf"><button class="chip" data-sev="alert">${icon('alert-circle-outline')}Alerts</button><button class="chip" data-sev="">${icon('format-list-bulleted')}All</button><i data-slot="cam"></i></div>
     <div class="rvlist"></div></div>`);
   el.style.setProperty('--t', 'var(--mist)');
   const box = el.querySelector('.rvlist');
+  // which camera's events: a chip that opens the cameras (core/pick.js), beside Alerts / All
+  const slot = el.querySelector('[data-slot="cam"]');
+  if (slot) slot.replaceWith(pick({ label: 'Camera', icon: 'cctv', options: [{ id: '', name: 'All' }, ...cams.map((c) => ({ id: c.id, name: c.name }))], value: '',
+    onChange: (v) => { cam = v || null; list = []; draw(); load(); } }).el);
 
   const draw = () => {
-    [...el.querySelectorAll('.rvf .chip')].forEach((c) => toggle(c, 'on', c.dataset.sev === sev));
-    [...el.querySelectorAll('.rvc .chip')].forEach((c) => toggle(c, 'on', c.dataset.cam === (cam || '')));
+    [...el.querySelectorAll('.rvf .chip[data-sev]')].forEach((c) => toggle(c, 'on', c.dataset.sev === sev));
     if (!list.length) { setHTML(box, `<div class="rvempty">${loading ? 'Loading…' : failed ? 'Couldn’t load events.' : sev ? 'No alerts this week.' : 'Nothing recorded yet.'}</div>`); return; }
     let day = '', html = '';
     list.forEach((r, i) => {
@@ -45,7 +49,8 @@ export default function reviews(cfg) {
   };
 
   const load = () => {
-    clearTimeout(t); t = setTimeout(load, 120e3);
+    clearTimeout(t); if (gone) return;
+    t = setTimeout(load, 120e3);
     if (!visible) return;
     loading++; if (!list.length) draw();
     const my = ++seq;
@@ -60,8 +65,7 @@ export default function reviews(cfg) {
 
   el.addEventListener('click', (ev) => {
     if (ev.target.closest('.rvmore')) { run(C.more, { el: ev.target.closest('.rvmore'), ev }); return; }
-    const f = ev.target.closest('.rvf .chip'); if (f) { sev = f.dataset.sev; list = []; draw(); load(); return; }
-    const c = ev.target.closest('.rvc .chip'); if (c) { cam = c.dataset.cam || null; list = []; draw(); load(); return; }
+    const f = ev.target.closest('.rvf .chip[data-sev]'); if (f) { sev = f.dataset.sev; list = []; draw(); load(); return; }
     const it = ev.target.closest('.rvi'); if (!it) return;
     // the player marks it reviewed in Frigate (frigate/reviews/viewed) when it plays; setting the flag here first made the
     // player think it was already reviewed, so Frigate was never told and the dot came back on the next refresh
@@ -70,6 +74,8 @@ export default function reviews(cfg) {
     location.hash = cfg.nav || '#review';
   });
   watch(cams.map((c) => (cfg.review || ((id) => `sensor.${id}_review_status`))(c.id)), () => { clearTimeout(t); t = setTimeout(load, 1500); });
+  let gone = false;
+  onDispose(() => { gone = true; clearTimeout(t); });   // its view unloaded: the refresh stops with it
   new IntersectionObserver((en) => { const v = en[en.length - 1].isIntersecting; if (v && !visible) { visible = true; load(); } visible = v; }).observe(el);
   onReady(() => { if (visible) load(); });
   draw();

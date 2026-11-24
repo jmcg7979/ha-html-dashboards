@@ -1,0 +1,7 @@
+@layer cards {
+/* ---------- segments: one of a few, side by side ---------- */
+.segments { display: flex; gap: var(--sp-6); }
+.segments .seg { height: calc(var(--chip-h) + 6px * var(--s)); border-radius: var(--r-14); }
+/* the label is its own box so a narrow segment ends in an ellipsis instead of clipping mid-letter (a flex button can't show one) */
+.seglbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}

@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- Systems (dashboards/systems.js): full-height pages, map, host panels, meters, traces ---------- */
 :root:not([data-profile="phone"]) .pview:has(> .vpage.fill:not([hidden])) { height: 100vh; height: 100dvh; }
 :root:not([data-profile="phone"]) .vpage.fill { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
@@ -40,8 +41,10 @@
 .mtr-t { fill: none; stroke: var(--grid-line); stroke-width: 8; stroke-linecap: round; }
 .mtr-v { fill: none; stroke: rgb(var(--t)); stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 0 5px rgba(var(--t), var(--a-50))); }
 .mtr-n { position: absolute; left: 0; right: 0; bottom: -3px; text-align: center; font: 600 var(--fs-figure)/1 var(--font-display); }
+/* a figure of five characters or more (3.327) is wider than the dial's opening: one step smaller, so it stays inside the arc */
+.mtr-n.long { font-size: var(--fs-name); }
 .mtr-n small { font-size: .55em; font-weight: 500; color: var(--text-2); margin-left: 1px; }
-.mtr-l { font-size: var(--fs-row); font-weight: 600; margin-top: var(--sp-6); }
+.mtr-l { font-size: var(--fs-row); font-weight: 600; margin-top: var(--sp-6); text-align: center; }
 .mtr-d { font-size: var(--fs-meta); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .mtr-d:empty { display: none; }
 .mtr-s { position: relative; border-left: 1px solid var(--hairline); }
@@ -50,7 +53,7 @@
 .hmeters.lines { flex: none; gap: var(--sp-6); }
 .hmeters.lines .meter { flex: none; min-height: calc(40px * var(--s)); grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.2fr); align-items: center; column-gap: var(--sp-12); padding: 0 var(--sp-12); }
 .hmeters.lines .mtr-a { display: contents; }
-.hmeters.lines .mtr-l { order: 1; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hmeters.lines .mtr-l { order: 1; margin: 0; text-align: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hmeters.lines .mtr-g { order: 2; width: auto; max-width: none; }
 .hmeters.lines .mtr-g svg, .hmeters.lines .mtr-d, .hmeters.lines .mtr-hi { display: none; }
 .hmeters.lines .mtr-n { position: static; font-size: var(--fs-name); color: rgb(var(--t)); text-align: right; }
@@ -79,15 +82,6 @@
 .hctl .sb { flex: 1; justify-content: center; }
 .hctl.note { height: var(--chip-h); align-items: center; justify-content: center; gap: var(--sp-6); border-radius: var(--r-pill); background: var(--veil-faint); color: var(--text-3); font-size: var(--fs-sub); }
 .hctl.note svg { width: var(--icon-xs); height: var(--icon-xs); }
-/* access points: narrow panels */
-.ap .host { gap: var(--sp-10); }
-.ap .hh .ic { width: var(--ic-s); height: var(--ic-s); }
-.ap .hname { font-size: var(--fs-name); }
-.ap .hbadge { padding: 0; width: calc(28px * var(--s)); justify-content: center; }
-.ap .hbadge span, .ap .hwhy { display: none; }
-.ap .hmeters { min-height: calc(120px * var(--s)); }
-.ap .mtr-n { font-size: var(--fs-title); }
-.ap .flab { display: none; }
 
 /* the map */
 .cell.topo-cell { padding: var(--sp-16); }
@@ -95,6 +89,7 @@
 .tlinks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .tl { fill: none; stroke: var(--edge-strong); stroke-width: 2; }
 .tl.l1 { stroke: rgba(var(--lamp), var(--a-50)); }
+.tl.l2 { stroke: rgba(var(--ember), var(--a-80)); }
 .tdot { position: absolute; left: calc(-2.5px * var(--s)); top: calc(-2.5px * var(--s)); width: calc(5px * var(--s)); height: calc(5px * var(--s)); border-radius: 50%; pointer-events: none; z-index: 0;
   background: rgb(var(--mist)); box-shadow: 0 0 6px 1px rgba(var(--mist), var(--a-80)); will-change: transform; }
 .tnode { position: relative; z-index: 1; align-self: center; display: flex; align-items: center; gap: var(--sp-8); min-width: 0; padding: var(--sp-8) var(--sp-8) var(--sp-8) var(--sp-8);
@@ -129,12 +124,13 @@
 /* needs a look + backups */
 .attn { display: flex; flex-direction: column; height: 100%; gap: var(--sp-10); min-height: 0; }
 .atop { display: flex; align-items: center; justify-content: space-between; }
-.atop .atitle { font: 600 var(--fs-name)/1.2 var(--font-display); }   /* scoped: the agenda has its own .atitle */
+.attn-title { font-size: var(--fs-item); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.atop .attn-title { font: 600 var(--fs-name)/1.2 var(--font-display); }
 .acount { min-width: calc(26px * var(--s)); height: calc(26px * var(--s)); padding: 0 8px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; background: rgba(var(--t), var(--a-20)); color: rgb(var(--t)); font-weight: 600; }
 .acount:empty { display: none; }
-.alist .amore { align-self: flex-start; color: var(--text-2); font-size: var(--fs-meta); padding: 0 var(--sp-4); }
-.alist .aitem[hidden] { display: none; }
-.alist { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-6); scrollbar-width: none; }
+.attn-more { align-self: flex-start; color: var(--text-2); font-size: var(--fs-meta); padding: 0 var(--sp-4); }
+.attn-list .aitem[hidden] { display: none; }
+.attn-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-6); scrollbar-width: none; }
 .aitem { display: flex; gap: var(--sp-10); align-items: center; padding: var(--sp-10) var(--sp-10); border-radius: var(--r-14); background: rgba(var(--t), var(--a-08)); box-shadow: inset 0 0 0 1px rgba(var(--t), var(--a-16)); text-align: left; flex: none; }
 .aic { width: calc(32px * var(--s)); height: calc(32px * var(--s)); border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(var(--t), var(--a-16)); color: rgb(var(--t)); }
 .aic svg { width: var(--icon-sm); height: var(--icon-sm); }
@@ -162,7 +158,7 @@
   padding: var(--sp-12) var(--sp-12); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto 1fr; align-items: center; column-gap: var(--sp-8); --t: var(--sage); }
 .bled { width: calc(8px * var(--s)); height: calc(8px * var(--s)); border-radius: 50%; background: rgb(var(--t)); box-shadow: 0 0 8px rgb(var(--t)); }
 .bname { font-weight: 600; z-index: 1; }
-.btemp { font: 600 var(--fs-figure)/1 var(--font-display); z-index: 1; color: rgb(var(--t)); }   /* colour-coded like the bay's LED */
+.btemp { font: 600 var(--fs-figure)/1 var(--font-display); z-index: 1; color: rgb(var(--t)); }   /* color-coded like the bay's LED */
 .bst { grid-column: 1 / -1; font-size: var(--fs-small); color: var(--text-2); z-index: 1; margin-top: 2px; }
 .bay .spark { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; opacity: .75; }
 .cell.bays-cell { padding: var(--sp-10); }
@@ -183,4 +179,17 @@
 .kpair .spark { position: absolute; inset: 0; }
 .kpv { display: inline-flex; align-items: baseline; margin-right: var(--sp-12); }
 .kpv i { font-style: normal; font-size: .6em; color: rgb(var(--t)); margin-right: 2px; }
-
+/* Systems on narrow screens (NAS bays: systems.css, by the bays' own width); device list drops its trace (at 2 per row on the Portal it left names 12 px wide); KPI header drops the detail text */
+@container cell (max-width: 360px) {
+  .dv { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .dv .dvsp { display: none; }
+}
+@container cell (max-width: 200px) {
+  .kdet { display: none; }
+}
+/* a machine card in a narrow column (TV, small windows): the status badge keeps only its icon, so the name has room */
+@container cell (max-width: 300px) {
+  .host .hbadge { padding: 0; width: calc(30px * var(--s)); justify-content: center; }
+  .host .hbadge span { display: none; }
+}
+}

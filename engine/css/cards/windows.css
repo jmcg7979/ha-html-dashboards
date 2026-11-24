@@ -1,3 +1,4 @@
+@layer cards {
 /* ---------- windows: floor chips, then one row per room with its panes ---------- */
 .wins { display: flex; flex-direction: column; gap: var(--gap); }
 .wfloors { margin-bottom: var(--sp-4); }
@@ -17,4 +18,8 @@
 /* column 3 fits 800 px with its headings outside the panels */
 .agenda.compact { gap: var(--sp-8); }
 .agenda.compact .aev { padding-top: var(--sp-6); padding-bottom: var(--sp-6); }
-
+/* narrow: one room per row */
+@container cell (max-width: 560px) {
+  .wfloor { grid-template-columns: minmax(0, 1fr); }
+}
+}

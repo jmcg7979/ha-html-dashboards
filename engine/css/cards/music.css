@@ -1,0 +1,208 @@
+@layer cards {
+/* Music page (cards/music.js and its parts in cards/music/): For you / Moods / DJ sets / Search / Rooms / Party / Videos, and a
+   playlist's page. Built for the TV first (960x540, no page scrolling: lists scroll inside the card). The sheet is
+   music-sheet.css, the rooms' tiles in it and under Party are picker.css. */
+.music { position: relative; display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.mbody { display: flex; flex-direction: column; gap: var(--sp-10); min-height: 0; flex: 1; }
+.music .label.caption { color: var(--text-2); }
+.mempty { color: var(--text-3); font-size: var(--fs-sub); padding: var(--sp-8) var(--sp-2); }
+
+/* artwork: MA's picture, or the item's own color with its kind's icon */
+.music .mart { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; aspect-ratio: 1; border-radius: var(--r-10); background: var(--veil); color: var(--text-2); box-shadow: 0 24px 56px rgba(0, 0, 0, .5); }
+.music .mart svg { width: var(--icon-art); height: var(--icon-art); }
+.music .mart img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.music .mart.gen { background: linear-gradient(140deg, hsl(var(--h) 45% 38%), hsl(calc(var(--h) + 40) 50% 22%)); color: rgba(255, 255, 255, .8); }
+.music .mart.gen svg { width: 42%; height: 42%; }
+
+.mtx { display: flex; flex-direction: column; min-width: 0; gap: var(--sp-2); text-align: left; }
+.mtx b { font: 600 var(--fs-item)/1.25 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mtx small { font-size: var(--fs-meta); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* For you: three labeled groups of wide tiles (art + name). Made for you and Pinned are one row each and scroll sideways;
+   Recently played (.mfill > .mwrap) wraps three to a row, takes the rest of the card and scrolls in it */
+.mrows { display: flex; flex-direction: column; gap: var(--sp-12); min-height: 0; flex: 1; }
+.mgroup { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+.mline { display: flex; gap: var(--sp-12); overflow: hidden; padding: var(--sp-8); margin: calc(var(--sp-8) * -1); }
+.mtile { flex: 0 0 calc((100% - 3 * var(--sp-12)) / 3.4); min-width: 0; display: flex; align-items: center; gap: var(--sp-10); padding: var(--sp-8); border-radius: var(--tile-radius); background: var(--veil); border: 1px solid var(--edge); }
+.mtile .mart { width: calc(64px * var(--s)); height: calc(64px * var(--s)); }
+.mline .mempty { padding: var(--sp-10) var(--sp-8); }
+.mgroup.mfill { flex: 1; min-height: 0; }
+/* its heading: the name, then Search's filters for what is in the list (kinds, a chip for each service) */
+.mline.mwrap { flex: 0 1 auto; min-height: 0; flex-wrap: wrap; align-content: flex-start; overflow: hidden auto; scrollbar-width: none; }
+.mline.mwrap::-webkit-scrollbar { display: none; }
+.mwrap .mtile { flex-basis: calc((100% - 2 * var(--sp-12)) / 3); }
+
+/* Moods / DJ sets / Search: a row of chips, then a list that scrolls inside the card */
+.mchips { display: flex; gap: var(--sp-8); flex: none; overflow: hidden; padding: var(--sp-6) var(--sp-6); }   /* room for the ring inside the row */
+.mchip { flex: none; display: flex; align-items: center; gap: var(--sp-6); padding: var(--sp-8) var(--sp-14); border-radius: var(--r-pill); background: var(--veil); border: 1px solid var(--edge); color: var(--text-2); font: 600 var(--fs-sub)/1 var(--font); }
+.mchip svg { width: var(--icon-sm); height: var(--icon-sm); }
+.mchip.on { background: rgba(var(--plum), var(--a-20)); border-color: rgba(var(--plum), var(--a-50)); color: var(--text); }
+.mhead { flex: none; padding-top: var(--sp-4); }
+.music .mlist { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4); }
+.music .mlist::-webkit-scrollbar { display: none; }
+.music .mlist .mhead { padding: var(--sp-8) var(--sp-4) var(--sp-2); }
+.music .mrow { flex: none; position: relative; overflow: hidden; height: calc(68px * var(--s)); cursor: pointer; display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-6) var(--sp-12) var(--sp-6) var(--sp-6); border-radius: var(--r-12); background: var(--veil); border: 1px solid var(--edge); }
+.music .mrow > * { position: relative; }   /* a row's pin sits in the row, after its text */
+.music .mrow .mart { width: calc(44px * var(--s)); height: calc(44px * var(--s)); border-radius: var(--r-8); }
+.music .mrow .mtx { flex: 1; }
+.mlen, .msize, .mkind { flex: none; font-size: var(--fs-sub); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.mlen.set { font: 700 var(--fs-name)/1 var(--font); color: rgb(var(--plum)); }   /* a set's length is what tells it from a song */
+.mpin { position: absolute; top: var(--sp-4); right: var(--sp-4); color: rgb(var(--lamp)); display: flex; }
+.mpin svg { width: var(--icon-inline); height: var(--icon-inline); }
+.mtile { position: relative; }
+
+/* what others think of it (a heart: saves / likes; a flame: Spotify's popularity), over the length or size */
+.mrmeta { flex: none; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: var(--sp-2); }
+.mrate { display: inline-flex; align-items: center; gap: var(--sp-2); font: 600 var(--fs-meta)/1 var(--font); color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mrate:empty { display: none; }
+.mrate svg { width: var(--icon-inline); height: var(--icon-inline); }
+.mrate svg { color: rgb(var(--plum)); }   /* media's color: a number about the music */
+.mnum { flex: none; min-width: calc(24px * var(--s)); text-align: right; font-size: var(--fs-meta); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.mmore, .mend { text-align: center; }
+/* a caption with the Sort chip at its end (Moods, DJ sets); the Sort chip ends the filter row (Search) */
+.mheadrow { flex: none; display: flex; align-items: center; gap: var(--sp-8); }
+.mheadrow .mhead { flex: 1; min-width: 0; padding-top: 0; }
+.mheadrow .mchip { padding: var(--sp-6) var(--sp-12); }
+/* the chips that open their choices (core/pick.js: Source, Sort, Type), at the end of their row */
+.mpicks { flex: none; display: flex; align-items: center; gap: var(--sp-8); margin-left: auto; }
+.mheadrow > .msort { margin-left: auto; }
+.mchip.pick.set { border-color: rgba(var(--plum), var(--a-50)); box-shadow: none; }
+
+/* a playlist's page: over the card like the sheet; what it is, Play / Shuffle / Pin, then its songs */
+.mpl { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-20) var(--sp-24) var(--sp-8); border-radius: var(--panel-radius); background: rgba(var(--scrim-rgb), .94); backdrop-filter: blur(14px); }
+.mplhead { flex: none; display: flex; align-items: center; gap: var(--sp-16); padding-right: calc(40px * var(--s)); }
+.mplhead .mart { width: calc(96px * var(--s)); height: calc(96px * var(--s)); border-radius: var(--r-14); }
+.mplhead .mtx b { font: 600 var(--fs-big)/1.15 var(--font-display); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mplhead .mtx small { font-size: var(--fs-sub); }
+.mplhead .mrate { font-size: var(--fs-sub); }
+.mplbar { flex: none; display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.mplbar .mact.prim { background: rgb(var(--plum)); border-color: rgb(var(--plum)); color: #fff; }
+.mpl .mlist { margin: 0 calc(var(--sp-4) * -1); }
+:root[data-profile="tv"] .mpl { padding-top: var(--sp-12); gap: var(--sp-8); }
+:root[data-profile="tv"] .mplhead .mart { width: calc(64px * var(--s)); height: calc(64px * var(--s)); }
+:root[data-profile="tv"] .mplhead .mtx b { font-size: var(--fs-title); -webkit-line-clamp: 1; }
+:root[data-profile="phone"] .mpl { position: fixed; inset: 0 0 calc(var(--tabbar-h) + var(--safe-bottom)) 0; z-index: 23; border-radius: 0; padding: calc(var(--sp-16) + env(safe-area-inset-top)) var(--sp-16) 0; background: rgba(var(--scrim-rgb), .97); }
+:root[data-profile="phone"] .mplhead .mart { width: calc(72px * var(--s)); height: calc(72px * var(--s)); }
+:root[data-profile="phone"] .mplhead .mtx b { font-size: var(--fs-title); }
+:root[data-profile="phone"] .mplbar .mact { flex: 1 1 0; justify-content: center; }
+:root[data-profile="phone"] .mpl .mnum { display: none; }
+
+/* Search: the box, and beside it a chip per service searched (lit: searched) */
+.msearch { flex: none; display: flex; align-items: center; gap: var(--sp-8); padding: 0 var(--sp-6); }
+.msearch .mbox { flex: 1; min-width: 0; }
+.mbox .mboxbtn { flex: none; display: grid; place-items: center; width: calc(40px * var(--s)); height: calc(40px * var(--s)); margin-right: calc(var(--sp-10) * -1); border-radius: 50%; background: none; border: 0; color: var(--text-2); }
+.mbox .mboxbtn svg { width: var(--icon-sm); height: var(--icon-sm); }
+.mbox .mboxbtn[hidden] { display: none; }
+.mbox input::-webkit-search-cancel-button { display: none; }   /* the remote can't reach it: ours (.mclr) instead */
+.mmic.on { background: rgba(var(--plum), var(--a-20)); color: var(--text); }   /* pressed, the mic not open yet */
+.mmic.on.live { background: rgba(var(--plum), var(--a-50)); animation: mmic-pulse 1.2s ease-in-out infinite; }   /* listening */
+@keyframes mmic-pulse { 50% { background: rgba(var(--plum), var(--a-20)); } }
+.msearch.hearing .mbox { border-color: rgba(var(--plum), var(--a-80)); }
+@media (prefers-reduced-motion: reduce) { .mmic.on.live { animation: none; } }
+:root[data-profile="phone"] .msearch { flex-wrap: wrap; padding: 0; }
+:root[data-profile="phone"] .msearch .mbox { flex: 1 0 100%; }
+.mbox { display: flex; align-items: center; gap: var(--sp-10); padding: 0 var(--sp-16); height: calc(52px * var(--s)); border-radius: var(--r-pill); background: var(--veil-2); border: 1px solid var(--edge); color: var(--text-2); }
+.mbox svg { width: var(--icon-sm); height: var(--icon-sm); flex: none; }
+.mbox input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: 0; color: var(--text); font: 500 var(--fs-title)/1 var(--font); }
+.mbox input::placeholder { color: var(--text-3); }
+.mbox:has(input:focus) { border-color: rgba(var(--plum), var(--a-80)); }
+
+/* Rooms: a card per player / group; lit while it plays */
+.mroomsw { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: var(--sp-14); padding: var(--sp-4); }
+.mroomsw::-webkit-scrollbar { display: none; }
+.mrooms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-10); }
+.mroom { position: relative; display: flex; flex-direction: column; min-height: 0; border-radius: var(--tile-radius); background: var(--veil); border: 1px solid var(--edge); overflow: hidden; }
+.mroom.live { background: rgba(var(--plum), var(--a-12)); border-color: rgba(var(--plum), var(--a-35)); }
+.mrmain { flex: 1; min-height: 0; display: flex; align-items: center; gap: var(--sp-10); padding: var(--sp-10); border-radius: inherit; }
+.mrart { flex: none; width: calc(48px * var(--s)); height: calc(48px * var(--s)); border-radius: var(--r-8); background: var(--veil-2); display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--text-3); }
+.mrart img { width: 100%; height: 100%; object-fit: cover; }
+.mrart svg { width: 50%; height: 50%; }
+.mroom .label.caption { display: flex; align-items: center; gap: var(--sp-4); white-space: nowrap; overflow: hidden; }
+.mroom .label.caption svg { width: var(--icon-inline); height: var(--icon-inline); flex: none; }
+.mroom:not(.live) .mtx b { color: var(--text-3); font-weight: 500; }
+.mrbtns { flex: none; display: flex; align-items: center; gap: var(--sp-6); padding: 0 var(--sp-10) var(--sp-10); }
+.mroom:not(.live):not(.stopped) .mrbtns { display: none; }   /* a stopped MA queue keeps its play button: it resumes */
+.mroom.stopped:not(.live) { flex-direction: row; align-items: center; }   /* beside the text: the tile stays as short as an idle one */
+.mroom.stopped:not(.live) .mrmain { flex: 1; min-width: 0; }
+.mroom.stopped:not(.live) .mrbtns { padding: 0 var(--sp-10) 0 0; }
+.mroom .rbtn { --rbtn: calc(30px * var(--s)); }
+/* a short screen (a TV): every room on the screen with its name in full. Three rooms a row, the groups without their
+   picture, a playing room's buttons beside its song; Move here is its icon alone (its name: core/tips.js) */
+@media (max-height: 640px) {
+  :root:not([data-profile="phone"]) .mrooms:not(:has(.mroom.group)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  :root:not([data-profile="phone"]) .mroom { min-height: 0; }
+  :root:not([data-profile="phone"]) .mroom.group .mrart { display: none; }
+  :root:not([data-profile="phone"]) .mroom.live { flex-direction: row; align-items: center; }
+  :root:not([data-profile="phone"]) .mroom.live .mrmain { flex: 1; min-width: 0; }
+  :root:not([data-profile="phone"]) .mroom.live .mrbtns { padding: 0 var(--sp-10) 0 0; }
+  :root:not([data-profile="phone"]) .mroom .mact { padding: var(--sp-6); }
+  :root:not([data-profile="phone"]) .mroom .mact span { display: none; }
+}
+.mhere { flex: none; padding: var(--sp-2) var(--sp-6); border-radius: var(--r-pill); background: rgba(var(--sage), var(--a-20)); color: rgb(var(--sage)); font-size: var(--fs-micro); letter-spacing: 0; }
+
+/* buttons in the sheet and on Rooms */
+.mact { display: inline-flex; align-items: center; gap: var(--sp-6); padding: var(--sp-8) var(--sp-16); border-radius: var(--r-pill); background: var(--veil-2); border: 1px solid var(--edge); color: var(--text); font: 600 var(--fs-sub)/1 var(--font); }
+.mact svg { width: var(--icon-sm); height: var(--icon-sm); }
+.mact.on { background: rgba(var(--plum), var(--a-30)); border-color: rgba(var(--plum), var(--a-80)); }
+.mroom .mact { padding: var(--sp-6) var(--sp-10); font-size: var(--fs-meta); white-space: nowrap; }
+
+.mclose { position: absolute; top: var(--sp-12); right: var(--sp-12); display: flex; padding: var(--sp-8); border-radius: var(--r-pill); background: var(--veil-2); color: var(--text-2); }
+.mclose svg { width: var(--icon-sm); height: var(--icon-sm); }
+html.remote .mclose { display: none; }
+
+/* Party: the code big, the rules beside it */
+.mparty { flex: 1; min-height: 0; display: flex; align-items: center; gap: var(--sp-32); padding: 0 var(--sp-16); }
+.mqr { flex: none; height: min(100%, calc(380px * var(--s))); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+.mqr svg { width: 100%; height: 100%; border-radius: var(--r-14); }
+.mptx { display: flex; flex-direction: column; gap: var(--sp-10); min-width: 0; }
+.mptx h2 { margin: 0; font: 600 var(--fs-hero)/1.1 var(--font-display); color: var(--text); }
+.mpwhere { margin: 0; font-size: var(--fs-title); color: rgb(var(--plum)); }
+.mpplay { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+.mpplay[hidden], .mpwhere[hidden] { display: none; }
+.mprules { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: var(--sp-6); font-size: var(--fs-name); color: var(--text-2); }
+.mpnote { margin: var(--sp-8) 0 0; font-size: var(--fs-meta); color: var(--text-3); }
+
+/* Videos: big genre tiles */
+.mvids { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: var(--sp-12); flex: 1; min-height: 0; }
+.mvid { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: var(--sp-6); padding: var(--sp-14); border-radius: var(--tile-radius); color: #fff;
+  background: linear-gradient(140deg, hsl(var(--h) 50% 40%), hsl(calc(var(--h) + 50) 55% 20%)); }
+.mvid svg { width: var(--icon-lg); height: var(--icon-lg); opacity: .85; }
+.mvid b { font: 600 var(--fs-title)/1.1 var(--font-display); }
+.mrname { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Touch screens (no remote): rows that run off the side scroll with a swipe */
+html:not(.remote) .mline, html:not(.remote) .mchips { overflow-x: auto; scrollbar-width: none; }
+html:not(.remote) .mline::-webkit-scrollbar, html:not(.remote) .mchips::-webkit-scrollbar { display: none; }
+
+/* Phone: one column. For you's tiles stand up (art over name), Rooms is a list, Party stacks the code over the rules,
+   the sheet's players wrap */
+:root[data-profile="phone"] .mrows { overflow-y: auto; scrollbar-width: none; flex: 1; }
+:root[data-profile="phone"] .mline { padding: var(--sp-4); margin: calc(var(--sp-4) * -1); }
+:root[data-profile="phone"] .mtile { flex: 0 0 calc(132px * var(--s)); flex-direction: column; align-items: stretch; gap: var(--sp-6); }
+:root[data-profile="phone"] .mgroup.mfill { flex: none; }
+:root[data-profile="phone"] .mline.mwrap { overflow: visible; }
+:root[data-profile="phone"] .mwrap .mtile { flex-basis: calc((100% - 2 * var(--sp-12)) / 3); }
+:root[data-profile="phone"] .mtile .mart { width: 100%; height: auto; aspect-ratio: 1; }
+:root[data-profile="phone"] .mtile .mtx b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+:root[data-profile="phone"] .mroom { flex-direction: row; align-items: center; min-height: 0; }
+:root[data-profile="phone"] .mrbtns { padding: 0 var(--sp-10) 0 0; }
+:root[data-profile="phone"] .mparty { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: var(--sp-16); padding: 0; overflow-y: auto; }
+:root[data-profile="phone"] .mqr { height: auto; width: min(100%, calc(300px * var(--s))); align-self: center; }
+:root[data-profile="phone"] .mptx h2 { font-size: var(--fs-big); }
+
+:root[data-profile="phone"] .mrooms { grid-template-columns: minmax(0, 1fr); }
+/* Party: the code stays put; the column beside it (Plays on, the rules) scrolls inside the card on a TV */
+.mparty .mptx { align-self: stretch; overflow-y: auto; scrollbar-width: none; padding: var(--sp-8) var(--sp-4); justify-content: safe center; }
+.mparty .mptx::-webkit-scrollbar { display: none; }
+.mpwho .mpgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+:root[data-profile="phone"] .mparty .mptx { overflow: visible; align-self: auto; }
+}
+
+/* with the remote: the ring on the whole search box, not the text inside it, over the remote's own rule (remote.css, same layer) */
+@layer profile {
+html.remote .mbox input:focus { outline: none; }
+html.remote .mbox:has(input:focus) { outline: var(--focus-w) solid rgb(var(--lamp)); outline-offset: calc(var(--focus-w) * -1); }   /* the text's ring on the whole box; the × and the mic in it have their own */
+/* a Rooms tile: its main button's ring is drawn by the tile, inside its rounded edge (the tile crops what it holds) */
+html.remote .mroom > .mrmain:focus { outline: none; }
+html.remote .mroom:has(> .mrmain:focus) { outline: var(--focus-w) solid rgb(var(--lamp)); outline-offset: calc(var(--focus-w) * -1); }
+}

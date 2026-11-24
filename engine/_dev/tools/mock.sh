@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs the fake Home Assistant on http://localhost:8125/local/dash/index.html?d=main until Ctrl-C.
+# Runs the fake Home Assistant on http://localhost:8125/local/dash/index.html?d=main until Ctrl-C. It listens on this machine
+# only; MOCK_HOST=0.0.0.0 opens it to the network (a TV pointed at the mock).
 #   mock.sh [site]     (MOCK_* variables pass through)
 set -euo pipefail
 DEV="$(cd "$(dirname "$0")/.." && pwd)"

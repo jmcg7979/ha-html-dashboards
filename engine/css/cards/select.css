@@ -1,0 +1,9 @@
+@layer cards {
+/* ---------- select: a tile that opens its options ---------- */
+.select .tile { cursor: pointer; }
+.select .chev { margin-right: var(--sp-14); color: var(--text-3); transition: transform .15s; }
+.select.open .chev { transform: rotate(180deg); }
+.select .opts { display: flex; flex-wrap: wrap; gap: var(--sp-6); padding: var(--gap) 0 0; max-height: calc(220px * var(--s)); overflow-y: auto; overscroll-behavior: contain; }
+/* a phone scrolls the page: the list opens in full, no scroll box inside a scroll box */
+:root[data-profile="phone"] .select .opts { max-height: none; overflow: visible; overscroll-behavior: auto; }
+}

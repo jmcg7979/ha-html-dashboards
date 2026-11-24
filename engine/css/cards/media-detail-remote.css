@@ -1,0 +1,39 @@
+@layer cards {
+/* The Remote of a TV's media pop-up (cards/media-detail/remote.js): a d-pad, keys and the app buttons, on a dark glass;
+   as the card's right-hand panel on large screens, and smaller on short ones. */
+.mside { display: flex; flex-direction: column; gap: var(--sp-12); padding: var(--sp-14); border-radius: var(--r-20); background: rgba(8, 8, 12, .3); box-shadow: inset 0 0 0 1px var(--grid-line); min-width: 0; }
+.mside[hidden] { display: none; }
+.mside > .label.caption { color: var(--text-2); }
+.mdpad { position: relative; width: calc(200px * var(--s)); height: calc(200px * var(--s)); margin: var(--sp-4) auto 0; border-radius: 50%; background: radial-gradient(circle at 50% 40%, var(--edge-strong), var(--veil)); box-shadow: inset 0 0 0 1px var(--hairline); }
+.mdpad .dk { position: absolute; width: calc(56px * var(--s)); height: calc(56px * var(--s)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text); }
+.mdpad .dk svg { width: var(--icon-btn); height: var(--icon-btn); }
+.mdpad .dk:active { background: var(--veil-2); }
+.mdpad .up { left: calc(72px * var(--s)); top: var(--sp-6); }
+.mdpad .down { left: calc(72px * var(--s)); bottom: var(--sp-6); }
+.mdpad .left { left: var(--sp-6); top: calc(72px * var(--s)); }
+.mdpad .right { right: var(--sp-6); top: calc(72px * var(--s)); }
+.mdpad .ok { left: calc(58px * var(--s)); top: calc(58px * var(--s)); width: calc(84px * var(--s)); height: calc(84px * var(--s)); background: var(--edge-strong); font-weight: 700; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
+.mkeys { display: flex; justify-content: space-between; }
+.mkeys .rbtn { --rbtn: calc(44px * var(--s)); color: var(--text); background: var(--hairline); }
+.mapps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-6); }
+.mapps .chip { height: calc(40px * var(--s)); font-size: var(--fs-small); }
+.mdet.mdet.idle.tvon > .mside:not([hidden]) { display: flex; }
+.mdet.wide > .mside { grid-column: 2; grid-row: 1 / 5; border-radius: var(--tile-radius); background: rgba(var(--scrim-rgb), .35); box-shadow: none; }
+.mdet.wide .mapps { grid-template-columns: repeat(3, minmax(0, 1fr)); }   /* the panel is wide: three across keeps it short enough that the pop-up fits a laptop's window (two made it taller than Up next, and the volume row fell off the bottom) */
+/* a TV's pop-up keeps one size whichever panel is picked: the Remote, the tallest, stays in the layout unseen (.behind) behind Up next
+   or Lyrics and gives the height, which those two fill (they have no height of their own: contain: size) */
+.mdet.wide.panes > .mside.behind { visibility: hidden; pointer-events: none; }
+/* a window of middling height (a small laptop, 720 px): the Remote a little smaller, so the pop-up fits without scrolling */
+@media (max-height: 800px) {
+  .mdet.wide > .mside > .label { display: none; }
+  .mdet.wide .mdpad { zoom: .85; margin-top: 0; }
+}
+/* a short screen (a TV's 540 px): the Remote panel packs tighter so the pop-up still fits */
+@media (max-height: 620px) {
+  .mdet.wide > .mside { gap: var(--sp-8); padding: var(--sp-10); }
+  .mdet.wide > .mside > .label { display: none; }
+  .mdet.wide .mdpad { zoom: .56; margin-top: 0; }   /* (.7 left the volume and power row of another room's player under the card's edge) */
+  .mdet.wide .mapps .chip { height: calc(34px * var(--s)); }
+}
+.mdet.wide.photo > .mside { background: rgba(var(--scrim-rgb), .7); }
+}

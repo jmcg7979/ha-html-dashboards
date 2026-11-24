@@ -2,7 +2,7 @@
 // The row split is worked out for the screen it is on: of every way to break the list (kept in order) into rows, the one
 // whose smallest tile is biggest wins (ties: most picture overall). A wide panorama and a 4:3 doorbell can share a row.
 // Height = the viewport below the wall's top, so the whole wall shows without scrolling; when the best split is still too
-// tall, the wall scales down and centres. Tiles are the normal camera card (tap = full screen, history button, mute).
+// tall, the wall scales down and centers. Tiles are the normal camera card (tap = full screen, history button, mute).
 // { type: 'camera-wall', cameras: [{ entity, name, stream, fullStream, fit, ratio: '8/3' }],
 //   history: [entities] (or true = all)   cameras with a recordings button
 //   review: (id) => 'sensor.<id>_review_status'   red ring on a tile while its Frigate review is ALERT
@@ -13,9 +13,10 @@ import camera from './camera.js';
 
 const parse = (r) => { const [a, b] = String(r || '16/9').split('/').map(Number); return b ? a / b : a || 16 / 9; };
 
-// best rows for ratios R in a W x H box: { rows: [[i…]], h: [row height], w: [row width] }
+// best rows for ratios R in a W x H box: { rows: [[i…]], h: [row height], w: [row width] } (no cameras: no rows)
 export function pack(R, W, H, gap, maxRows = 4) {
   const n = R.length; let best = null;
+  if (!n) return { rows: [], h: [], w: [] };
   for (let mask = 0; mask < 1 << (n - 1); mask++) {
     const rows = [[0]];
     for (let i = 1; i < n; i++) { if ((mask >> (i - 1)) & 1) rows.push([i]); else rows[rows.length - 1].push(i); }
@@ -35,6 +36,7 @@ export default function cameraWall(cfg) {
   const el = document.createElement('div');
   el.className = 'cwall';
   const cams = cfg.cameras.slice(0, 12);   // 2^11 splits to try at most
+  if (cfg.cameras.length > 12) console.warn(`camera-wall: ${cfg.cameras.length} cameras, only the first 12 are shown`);
   const hist = (c) => cfg.history === true || (cfg.history || []).includes(c.entity);
   const tiles = cams.map((c) => {
     const t = camera({ ...c, history: hist(c), review: cfg.review });

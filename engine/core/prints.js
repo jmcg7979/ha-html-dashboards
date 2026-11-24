@@ -15,7 +15,7 @@ async function history(ids, days) {
   return request({ type: 'history/history_during_period', start_time: start.toISOString(), end_time: end.toISOString(), entity_ids: ids,
     minimal_response: false, no_attributes: true, significant_changes_only: false });
 }
-export async function exportsList(rec) {
+async function exportsList(rec) {
   try {
     const r = await request({ type: 'call_service', domain: 'script', service: (rec.exports || 'script.printer_exports').replace(/^script\./, ''), service_data: {}, return_response: true });
     const res = (r && r.response) || {};
@@ -44,7 +44,7 @@ export async function load(rec, force = false, status) {
   if (e0 && !ends.some((v) => Math.abs(v - e0) < 5) && Math.abs(e0 - (ce.lc || 0)) < 120) ends.push(e0);
   ends.sort((a, b) => a - b);
   const nowS = Date.now() / 1000, cutoff = nowS - days * 86400;
-  const list = ex.list.filter((x) => !x.in_progress || true);
+  const list = ex.list;
   const printing = !status || ACTIVE.includes((st(status) || {}).state);
   const jobs = [...new Set(starts)].sort((a, b) => b - a).map((start, i, sorted) => {
     const next = sorted[i - 1] || Infinity;   // newest first: the print after this one
